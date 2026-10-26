@@ -105,20 +105,27 @@ int spr_load_sheet(const char *dir, const char *sheet)
 		}
 		else if (line[0] == 'A' && sscanf(line, "A\t%63s\t%d\t%d\t%d", name, &a, &b, &c) == 4)
 		{
+			/* SpriteLibrary.cs: frames go into an ordered list; the XML
+			 * 'frame' attribute is only a label, the order of appearance is
+			 * what animates. 'index' picks the frame image. */
 			Sprite *s = GetOrAddSprite(name, index);
-			if (a >= 1 && a <= MAX_FRAMES)
+			if (s->nframes < MAX_FRAMES)
 			{
-				s->frames[a - 1].image = b;
-				s->frames[a - 1].duration = c > 0 ? c : 1;
-				if (a > s->nframes) s->nframes = a;
+				s->frames[s->nframes].image = b;
+				s->frames[s->nframes].duration = c > 0 ? c : 1;
+				s->lastFrame = s->nframes;
+				s->nframes += 1;
 			}
 		}
 		else if (line[0] == 'R' && sscanf(line, "R\t%63s\t%d\t%d\t%d\t%d\t%d\t%f\t%d", name, &a, &b, &c, &d, &e, &fr, &g) == 8)
 		{
+			/* The converter emits an R right after its A line; the original
+			 * attaches hitboxes to the last frame data added (SpriteLibrary
+			 * AddHitboxToLastFrameData). */
 			Sprite *s = GetOrAddSprite(name, index);
-			if (a >= 1 && a <= MAX_FRAMES && s->frames[a - 1].nrects < MAX_RECTS)
+			if (s->lastFrame >= 0 && s->frames[s->lastFrame].nrects < MAX_RECTS)
 			{
-				Hitbox *r = &s->frames[a - 1].rects[s->frames[a - 1].nrects++];
+				Hitbox *r = &s->frames[s->lastFrame].rects[s->frames[s->lastFrame].nrects++];
 				r->x = b; r->y = c; r->w = d; r->h = e; r->rotation = fr; r->type = g;
 			}
 		}
@@ -152,6 +159,24 @@ int spr_find_character(const char *name)
 const Sprite *spr_get(int i)
 {
 	return (i >= 0 && i < nsprites) ? &sprites[i] : NULL;
+}
+
+int spr_frame_at(int sprite, double ticks)
+{
+	const Sprite *s = spr_get(sprite);
+	int total = 0, i, t;
+	if (s == NULL || s->nframes == 0) return 0;
+	/* SpriteObj.cs: a frame with duration N is shown for N animation ticks
+	 * (each tick one AnimationDelay long), then the animation loops. */
+	for (i = 0; i < s->nframes; i += 1) total += s->frames[i].duration > 0 ? s->frames[i].duration : 1;
+	t = ((int) ticks) % total;
+	if (t < 0) t += total;
+	for (i = 0; i < s->nframes; i += 1)
+	{
+		t -= s->frames[i].duration > 0 ? s->frames[i].duration : 1;
+		if (t < 0) return i;
+	}
+	return s->nframes - 1;
 }
 
 const Character *spr_get_character(int i)

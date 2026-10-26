@@ -37,6 +37,7 @@ typedef struct Sprite
 	char name[64];
 	int sheet;          /* index into the loaded sheet textures */
 	int nimages, nframes;
+	int lastFrame;      /* frame index of the last 'A' record seen (-1) */
 	Image images[MAX_FRAMES];
 	Frame frames[MAX_FRAMES];
 } Sprite;
@@ -59,6 +60,8 @@ int spr_load_sheet(const char *dir, const char *sheet);
 int spr_find(const char *spriteName);          /* -1 if unknown */
 int spr_find_character(const char *name);      /* -1 if unknown */
 const Sprite *spr_get(int sprite);
+/* Frame index after 'ticks' animation ticks (see the .spr durations) */
+int spr_frame_at(int sprite, double ticks);
 const Character *spr_get_character(int character);
 const Texture *spr_texture(int sheet);
 

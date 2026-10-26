@@ -5,14 +5,27 @@
  */
 #include "platform.h"
 #include <SDL.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static uint32_t frame[SCREEN_W * SCREEN_H];
 
+/* Dev-only headless testing: RL_SHOT=path saves the frame as a PPM and
+ * quits RL_SHOT_MS later; RL_BTN=<hex bitmask> fakes held buttons. */
+static const char *shotPath;
+static double shotAt = -1.0;
+static uint32_t fakeButtons = 0;
+static double buttonsAt = 0.0;
+static int quitAfterShot;
+static double startTime;   /* performance counter at init: plat_time is
+                            * seconds since start (platform.h contract) */
+
 int plat_init(void)
 {
+	const char *s;
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) return 0;
 	window = SDL_CreateWindow("Rogue Legacy C", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		SCREEN_W * 2, SCREEN_H * 2, 0);
@@ -21,6 +34,15 @@ int plat_init(void)
 	if (renderer == NULL) renderer = SDL_CreateRenderer(window, -1, 0);
 	if (renderer == NULL) return 0;
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H);
+	startTime = SDL_GetPerformanceCounter() / (double) SDL_GetPerformanceFrequency();
+	shotPath = getenv("RL_SHOT");
+	s = getenv("RL_SHOT_MS");
+	if (shotPath != NULL && s != NULL) shotAt = atof(s) / 1000.0;
+	s = getenv("RL_BTN");
+	if (s != NULL) fakeButtons = (uint32_t) strtoul(s, NULL, 0);
+	s = getenv("RL_BTN_MS");
+	if (s != NULL) buttonsAt = atof(s) / 1000.0;
+	quitAfterShot = getenv("RL_SHOT_QUIT") != NULL;
 	return texture != NULL;
 }
 
@@ -39,6 +61,25 @@ void plat_present(void)
 	SDL_UpdateTexture(texture, NULL, frame, SCREEN_W * 4);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
+	if (shotPath != NULL && shotAt >= 0.0 && plat_time() >= shotAt)
+	{
+		FILE *f = fopen(shotPath, "wb");
+		if (f != NULL)
+		{
+			int i;
+			fputs("P6\n640 480\n255\n", f);
+			for (i = 0; i < SCREEN_W * SCREEN_H; i += 1)
+			{
+				uint32_t p = frame[i];
+				fputc((p >> 16) & 0xFF, f);
+				fputc((p >> 8) & 0xFF, f);
+				fputc(p & 0xFF, f);
+			}
+			fclose(f);
+		}
+		shotAt = -1.0;
+		if (quitAfterShot) exit(0);
+	}
 }
 
 static uint32_t KeyBit(SDL_Keycode k)
@@ -67,6 +108,7 @@ static uint32_t KeyBit(SDL_Keycode k)
 int plat_poll(uint32_t *buttons)
 {
 	SDL_Event e;
+	*buttons |= plat_time() >= buttonsAt ? fakeButtons : 0;
 	while (SDL_PollEvent(&e))
 	{
 		if (e.type == SDL_QUIT) return 0;
@@ -77,12 +119,13 @@ int plat_poll(uint32_t *buttons)
 			else *buttons &= ~bit;
 		}
 	}
+	if (quitAfterShot && shotAt < 0.0) return 0;
 	return !(*buttons & BTN_MENU);
 }
 
 double plat_time(void)
 {
-	return SDL_GetPerformanceCounter() / (double) SDL_GetPerformanceFrequency();
+	return SDL_GetPerformanceCounter() / (double) SDL_GetPerformanceFrequency() - startTime;
 }
 
 void plat_sleep(double seconds)

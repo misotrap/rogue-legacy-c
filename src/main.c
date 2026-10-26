@@ -11,6 +11,11 @@
 #define VIEW_Y 60          /* top of the letterboxed play area */
 #define TICK (1.0 / 60.0)  /* fixed game step */
 
+/* The player's terrain box bottom sits 40 world units below his position:
+ * PlayerIdleLegs_Sprite hitbox (childY -31, rect y=12 h=39) at part scale 2
+ * (PhysicsObj.cs UpdateCollisionBoxes, CollisionBox.cs RotatedPoint). */
+#define FEET_OFFSET 40.0f
+
 typedef struct Player
 {
 	float x, y, vx, vy;   /* world units, origin at the feet centre */
@@ -19,10 +24,13 @@ typedef struct Player
 	double animTime;
 } Player;
 
-/* Parts the default knight does not show (see PlayerObj.cs for the rules) */
+/* Parts hidden for the default male knight (PlayerObj.cs UpdateEquipmentObjs):
+ * wings are Dragon only, Boobs/Bowtie are female, Glasses are a special item,
+ * the spelunker light is the Extra part. Hair IS visible (Baldness only).
+ */
 static int HiddenPart(const char *name)
 {
-	static const char *hidden[] = { "DragonWings", "Boobs", "Bowtie", "Glasses", "Spelunker", "Hair", NULL };
+	static const char *hidden[] = { "DragonWings", "Boobs", "Bowtie", "Glasses", "Spelunker", NULL };
 	int i;
 	for (i = 0; hidden[i]; i += 1)
 		if (strstr(name, hidden[i])) return 1;
@@ -40,8 +48,9 @@ static void DrawCharacter(int character, double time, float sx, float sy, float 
 		const Sprite *s = spr_get(p->sprite);
 		int frame;
 		if (s == NULL || s->nframes == 0 || HiddenPart(s->name)) continue;
-		/* Animation speed: PlayerObj uses AnimationDelay = 1/10 s per tick */
-		frame = (int) (time * 10.0) % s->nframes;
+		/* AnimationDelay = 1/10 s per tick, each frame lasts its duration in
+		 * ticks (PlayerObj.cs line 236, SpriteObj.cs GoToNextFrame). */
+		frame = spr_frame_at(p->sprite, time * 10.0);
 		spr_draw(p->sprite, frame, sx + (flip ? -p->x : p->x) * scale, sy + p->y * scale, scale, flip);
 	}
 }
@@ -67,7 +76,7 @@ int main(int argc, char **argv)
 
 	memset(&pl, 0, sizeof(pl));
 	pl.x = 660.0f;
-	pl.y = floorY;
+	pl.y = floorY - FEET_OFFSET;   /* feet (terrain bottom) on the floor */
 	pl.character = idle;
 	last = plat_time();
 
@@ -92,9 +101,9 @@ int main(int argc, char **argv)
 			pl.vy += 2400.0f * (float) TICK;
 			pl.x += pl.vx * (float) TICK;
 			pl.y += pl.vy * (float) TICK;
-			if (pl.y >= floorY)
+			if (pl.y >= floorY - FEET_OFFSET)
 			{
-				pl.y = floorY;
+				pl.y = floorY - FEET_OFFSET;
 				pl.vy = 0.0f;
 				pl.onGround = 1;
 			}
