@@ -56,10 +56,10 @@ Formats (documented at the top of `tools/convert_assets.py`):
   Difficulty), DoorObj, ChestObj, HazardObj, PhysicsObj, SpriteObj,
   ObjContainer, PhysicsObjContainer, EnemyOrbObj.
 
-Not converted yet: 3 sheets use DXT5 compression (surface format 6):
+DXT5 sheets (surface format 6) are decoded by the converter:
 `titleScreen3Spritesheet`, `parallaxBGSpritesheet`, `getItemScreenSpritesheet`.
-Add a DXT5 decoder to the converter when they are needed (FNA's
-`DxtUtil.cs` shows the algorithm). Fonts (`Content/Fonts`) and sounds are
+(decoded like FNA's DxtUtil.cs).
+Fonts (`Content/Fonts`) and sounds are
 not converted yet either.
 
 ## Architecture (keep it)

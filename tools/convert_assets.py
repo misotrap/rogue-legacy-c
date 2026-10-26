@@ -45,6 +45,45 @@ def read_string(data, pos):
     return data[pos:pos + n].decode('utf-8'), pos + n
 
 
+def decode_dxt5(data, w, h):
+    """DXT5 (BC3) blocks -> RGBA bytes (same algorithm as FNA's DxtUtil.cs)."""
+    out = bytearray(w * h * 4)
+    bw, bh = (w + 3) // 4, (h + 3) // 4
+    p = 0
+    for by in range(bh):
+        for bx in range(bw):
+            a0, a1 = data[p], data[p + 1]
+            abits = int.from_bytes(data[p + 2:p + 8], 'little')
+            c0, c1, cbits = struct.unpack_from('<HHI', data, p + 8)
+            p += 16
+            alphas = [a0, a1]
+            if a0 > a1:
+                alphas += [((6 - i) * a0 + (1 + i) * a1) // 7 for i in range(6)]
+            else:
+                alphas += [((4 - i) * a0 + (1 + i) * a1) // 5 for i in range(4)] + [0, 255]
+
+            def rgb(c):
+                r, g, b = (c >> 11) & 31, (c >> 5) & 63, c & 31
+                return (r << 3 | r >> 2, g << 2 | g >> 4, b << 3 | b >> 2)
+            k0, k1 = rgb(c0), rgb(c1)
+            cols = [k0, k1,
+                    tuple((2 * x + y) // 3 for x, y in zip(k0, k1)),
+                    tuple((x + 2 * y) // 3 for x, y in zip(k0, k1))]
+            for j in range(4):
+                y = by * 4 + j
+                if y >= h:
+                    break
+                for i in range(4):
+                    x = bx * 4 + i
+                    if x >= w:
+                        continue
+                    n = j * 4 + i
+                    r, g, b = cols[(cbits >> (2 * n)) & 3]
+                    o = (y * w + x) * 4
+                    out[o:o + 4] = bytes((r, g, b, alphas[(abits >> (3 * n)) & 7]))
+    return bytes(out)
+
+
 def convert_texture(src, dst):
     data = open(src, 'rb').read()
     if data[:3] != b'XNB':
@@ -61,11 +100,13 @@ def convert_texture(src, dst):
     _, pos = read_7bit(data, pos)  # type id of the asset
     fmt, w, h, levels = struct.unpack_from('<iIII', data, pos)
     pos += 16
-    if fmt != 0:
-        raise ValueError('surface format %d (only Color is handled)' % fmt)
+    if fmt not in (0, 6):
+        raise ValueError('surface format %d (only Color and Dxt5 are handled)' % fmt)
     size, = struct.unpack_from('<I', data, pos)
     pos += 4
     px = data[pos:pos + size]
+    if fmt == 6:
+        px = decode_dxt5(px, w, h)
     out = bytearray(px[:w * h * 4])
     # RGBA -> BGRA (little-endian 0xAARRGGBB); XNA content is premultiplied
     out[0::4], out[2::4] = px[2:w * h * 4:4], px[0:w * h * 4:4]
