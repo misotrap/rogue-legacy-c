@@ -106,6 +106,13 @@ Rendering rules:
    eye, slime), then the rest, porting their AI from EnemyObjs.
 5. **Castle**: LevelBuilder2 generation with the 4 areas, room transitions
    through doors, minimap.
+   **Generation done** in `src/RogueCastle/Levels/` (LevelParser,
+   LevelBuilder2: one template per room, area and mirroring applied on
+   placement, ~115 rooms in under 10 ms). `make castletest &&
+   ./castletest 1 10 map.ppm` checks it. Still to do in game code: room
+   transitions, special room behaviour (bonus/boss/challenge rooms keep
+   their template name and tag), teleporters of linker and boss entrance
+   rooms, garden floating rocks (HoverObj), the minimap.
 6. **Lineage**: heirs, classes, traits, gold, manor/skill tree, blacksmith,
    enchantress, saves (own simple format in the app folder).
 7. **Spells**, bosses, HUD and menus, fonts, sound (later, optional).

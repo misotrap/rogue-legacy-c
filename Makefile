@@ -16,3 +16,7 @@ clean:
 	rm -rf rlc build
 
 .PHONY: miyoo clean
+
+# Castle generation check (no graphics): ./castletest [seed] [count] [map.ppm]
+castletest: tools/castletest.cpp src/RogueCastle/Levels/*.cpp src/RogueCastle/Levels/*.h
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/castletest.cpp src/RogueCastle/Levels/*.cpp
