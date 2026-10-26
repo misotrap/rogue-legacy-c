@@ -1,0 +1,121 @@
+/* Miyoo Mini (Plus) platform: /dev/fb0 (640x480, 32 bpp, mounted upside
+ * down, two pages flipped with FBIOPAN_DISPLAY) and /dev/input/event0.
+ * No SDL: the binary is linked statically and runs on stock OnionOS.
+ */
+#include "platform.h"
+#include <fcntl.h>
+#include <linux/fb.h>
+#include <linux/input.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <time.h>
+#include <unistd.h>
+
+static int fbFd = -1, inFd = -1;
+static uint8_t *fbMem;
+static struct fb_var_screeninfo vinfo;
+static struct fb_fix_screeninfo finfo;
+static int pages = 1, page;
+static uint32_t frame[SCREEN_W * SCREEN_H];
+static struct timespec start;
+
+int plat_init(void)
+{
+	size_t len;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	fbFd = open("/dev/fb0", O_RDWR);
+	if (fbFd < 0) return 0;
+	if (ioctl(fbFd, FBIOGET_VSCREENINFO, &vinfo) < 0 || ioctl(fbFd, FBIOGET_FSCREENINFO, &finfo) < 0) return 0;
+	vinfo.yres_virtual = vinfo.yres * 2;
+	vinfo.bits_per_pixel = 32;
+	if (ioctl(fbFd, FBIOPUT_VSCREENINFO, &vinfo) == 0 && vinfo.yres_virtual >= vinfo.yres * 2) pages = 2;
+	ioctl(fbFd, FBIOGET_VSCREENINFO, &vinfo);
+	ioctl(fbFd, FBIOGET_FSCREENINFO, &finfo);
+	len = (size_t) finfo.line_length * vinfo.yres_virtual;
+	fbMem = (uint8_t*) mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fbFd, 0);
+	if (fbMem == MAP_FAILED) return 0;
+	inFd = open("/dev/input/event0", O_RDONLY | O_NONBLOCK);
+	return 1;
+}
+
+void plat_quit(void)
+{
+	if (fbFd >= 0)
+	{
+		vinfo.yoffset = 0;
+		ioctl(fbFd, FBIOPAN_DISPLAY, &vinfo);
+		memset(fbMem, 0, (size_t) finfo.line_length * vinfo.yres);
+	}
+}
+
+uint32_t *plat_frame(void)
+{
+	return frame;
+}
+
+void plat_present(void)
+{
+	int target = (pages > 1) ? (page ^ 1) : 0;
+	uint8_t *base = fbMem + (size_t) target * vinfo.yres * finfo.line_length;
+	int y, x;
+	/* The panel is mounted upside down: rotate 180 degrees while copying */
+	for (y = 0; y < SCREEN_H; y += 1)
+	{
+		const uint32_t *src = frame + (size_t) (SCREEN_H - 1 - y) * SCREEN_W + (SCREEN_W - 1);
+		uint32_t *dst = (uint32_t*) (base + (size_t) y * finfo.line_length);
+		for (x = 0; x < SCREEN_W; x += 1) dst[x] = *src-- | 0xFF000000u;
+	}
+	if (pages > 1)
+	{
+		vinfo.yoffset = target * vinfo.yres;
+		if (ioctl(fbFd, FBIOPAN_DISPLAY, &vinfo) == 0) page = target;
+	}
+}
+
+static uint32_t KeyBit(int code)
+{
+	switch (code)
+	{
+	case 103: return BTN_UP;
+	case 108: return BTN_DOWN;
+	case 105: return BTN_LEFT;
+	case 106: return BTN_RIGHT;
+	case 57: return BTN_A;
+	case 29: return BTN_B;
+	case 42: return BTN_X;
+	case 56: return BTN_Y;
+	case 18: return BTN_L1;
+	case 20: return BTN_R1;
+	case 15: return BTN_L2;
+	case 14: return BTN_R2;
+	case 28: return BTN_START;
+	case 97: return BTN_SELECT;
+	case 1: return BTN_MENU;
+	default: return 0;
+	}
+}
+
+int plat_poll(uint32_t *buttons)
+{
+	struct input_event ev;
+	while (inFd >= 0 && read(inFd, &ev, sizeof(ev)) == (ssize_t) sizeof(ev))
+	{
+		if (ev.type != EV_KEY) continue;
+		if (ev.value) *buttons |= KeyBit(ev.code);
+		else *buttons &= ~KeyBit(ev.code);
+	}
+	return !(*buttons & BTN_MENU);
+}
+
+double plat_time(void)
+{
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) * 1e-9;
+}
+
+void plat_sleep(double seconds)
+{
+	if (seconds > 0) usleep((useconds_t) (seconds * 1e6));
+}

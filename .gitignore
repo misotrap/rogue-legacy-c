@@ -1,0 +1,5 @@
+assets/
+ref/
+build/
+rlc
+*.o
