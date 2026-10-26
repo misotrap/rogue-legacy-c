@@ -1,4 +1,4 @@
-# Rogue Legacy, native C port for the Miyoo Mini Plus
+# Rogue Legacy, native C++ port for the Miyoo Mini Plus
 
 Read this whole file before changing anything. It is the brief.
 
@@ -15,9 +15,11 @@ screen) and **starts in a few seconds**. Priorities, in order:
    lineage). Graphics may be simplified: plain-colour backgrounds and walls
    are fine; no sky, rain, lightning, parallax or colour effects needed.
 
-Why C: the previous port ran the original C# game through Mono on the
-console. It reached about 14 fps and took minutes to start because the game
-loads ~240 MB into 128 MB of RAM. Do not go back to Mono, .NET or FNA.
+Why C++: the port transposes the C# game code almost line by line: same
+classes, same method names, same file structure as the original source.
+(Why not C# on the console: the previous port ran the original game through
+Mono at about 14 fps, loading ~240 MB into 128 MB of RAM and taking minutes
+to start. Do not go back to Mono, .NET or FNA.)
 
 ## Reference source (the rules to port)
 
@@ -36,7 +38,41 @@ Port behaviour from it, file by file. Key files:
 - `RogueCastle/src/Managers/PhysicsManager*`, `DS2DEngine/src/...`:
   collisions (CollHullObj), physics, camera, sprite animation.
 - `SpriteSystem/`: sprite sheet, animation and hitbox semantics.
-- `RogueCastle/src/*EV.cs` (GameEV, LevelEV, PlayerEV, EnemyEV): constants.
+- `RogueCastle/src/EVs/*.cs` (GameEV, LevelEV, PlayerEV, EnemyEV,
+  SpellEV, GlobalEV): constants, converted automatically (see below).
+
+## Porting rules (C++17)
+
+The port is **C++17, compiled with `-fno-exceptions -fno-rtti`, static
+link on the console**. Transpose the C# code file by file:
+
+- Mirror the file structure: `src/DS2DEngine/GameObjs/ObjContainer.cpp`
+  for `DS2DEngine/src/GameObjs/ObjContainer.cs`,
+  `src/RogueCastle/GameObjects/Player/PlayerObj.cpp` for
+  `RogueCastle/src/Game Objects/Player/PlayerObj.cs`, and so on (spaces
+  in the C# directories are dropped). One C# class = one C++ class with
+  the same name, in the same namespace.
+- C# properties become a getter/setter pair with the property name:
+  `obj.X`, `obj.X = 5` become `obj.X()`, `obj.X(5)`.
+- The `as`/`is` casts are emulated without RTTI: `GameObj` has virtual
+  `AsSpriteObj()`-style helpers; no `dynamic_cast`.
+- No exceptions: C# `throw` becomes a returned null / default value, and
+  callers must handle it. `new` failure aborts (fine for this project).
+- C# `null` is `nullptr`; ownership: containers delete their children.
+- Keep a `// C# filename.cs line N` comment on ported methods.
+
+### Constants: the *EV.cs converter
+
+`tools/convert_ev.py` converts the constant classes (*EV.cs and the
+simple Types/*.cs) into C++ headers:
+
+    make ev        # = python3 tools/convert_ev.py ref/RogueLegacy1 src
+
+The generated headers are COMMITTED (src/RogueCastle/EVs/*.h,
+src/RogueCastle/Types/*.h, src/DS2DEngine/Consts.h, EngineEV.h) because
+ref/ is git-ignored. C# `GameEV.X` becomes C++ `GameEV::X`. Unsupported
+statements (methods, enums, string[,]) appear as `// TODO C++` comments
+and are reported by the converter: port those by hand.
 
 ## Game data
 
@@ -65,13 +101,17 @@ not converted yet either.
 ## Architecture (keep it)
 
 - `src/platform.h`: 640x480 XRGB frame, buttons, clock.
-  - `platform_sdl.c`: computer build (SDL2 window), for development.
-  - `platform_miyoo.c`: console build, `/dev/fb0` (rotated 180 degrees, two
+  - `platform_sdl.cpp`: computer build (SDL2 window), for development.
+  - `platform_miyoo.cpp`: console build, `/dev/fb0` (rotated 180 degrees, two
     pages) and `/dev/input/event0`. **No SDL on the console**, binary linked
     statically.
-- `src/gfx.c`: software blitter, premultiplied alpha, nearest scaling, flip.
-- `src/sprites.c`: sprite sheets, animations, hitboxes, characters.
-- `src/main.c`: game loop. **Fixed 60 Hz logic steps**, drawing once per
+- `src/gfx.cpp`: software blitter, premultiplied alpha, nearest scaling,
+  flip. Rotation is still missing (the player parts never rotate).
+- `src/DS2DEngine/`, `src/SpriteSystem/`, `src/RogueCastle/` and
+  `src/InputSystem/`: the C# projects transposed class by class
+  (GameObj, SpriteObj, ObjContainer, PhysicsObj, PhysicsObjContainer,
+  CollisionBox, Camera2D, PhysicsManager, SpriteLibrary, PlayerObj...).
+- `src/main.cpp`: game loop. **Fixed 60 Hz logic steps**, drawing once per
   loop; never tie game speed to the frame rate.
 
 Rendering rules:
@@ -88,22 +128,27 @@ Rendering rules:
 ## Milestones (do them in order, test each on the computer first)
 
 0. **Done**: converter, platforms, blitter, sprite library, the knight
-   walking and jumping on a flat floor (`make && ./rlc`).
-   First task: check the knight looks right (parts aligned, anchors,
-   flipping). If parts are offset, fix the anchor or container offset
-   convention in `spr_draw` / `DrawCharacter` against `SpriteSystem` and
-   `ObjContainer.cs`. Rotated parts need rotation support in `gfx_blit`.
+   walking and jumping on a flat floor (`make && ./rlc`), pixel-verified
+   against the original drawing semantics. The knight assembly (anchors,
+   flip, hair visible, shield hidden like PlayerObj.cs
+   UpdateEquipmentObjs) and the animation timing (1/10 s ticks, per-frame
+   durations) are ported. The C++ classes (GameObj, SpriteObj,
+   ObjContainer, PhysicsObj, PhysicsObjContainer, PhysicsManager,
+   PlayerObj) carry the real physics: Speed 500, JumpHeight 1180,
+   DoubleJumpHeight 845, gravity 1830 (GlobalEV.GRAVITY), terminal
+   velocity 2000.
 1. **One room**: load `rooms.txt`, show a room's CollHullObj as walls,
-   doors, and collide the player with them (port PlayerObj physics values:
-   speed, jump height, gravity, terminal velocity, drop-through platforms).
-   Camera follows the player inside the room bounds.
-2. **Player moves**: all states from PlayerObj (idle, walk, jump, fall,
-   attack, air attack/down attack, dash, block, hurt, death) with the right
-   characters and animation timing (AnimationDelay and per-frame duration).
+   doors, and collide the player with them (terrain collision response,
+   drop-through platforms). Camera follows the player inside the room
+   bounds.
+2. **Player moves**: the remaining states from PlayerObj (attack, air
+   attack/down attack, dash, block, hurt, death) with the right characters
+   and animation timing.
 3. **Combat**: sword hitbox from the attack frames (`R` records), breakable
    objects, damage, knockback, invincibility frames.
 4. **Enemies**: start with the common ones (skeleton, knight, bat/flying
-   eye, slime), then the rest, porting their AI from EnemyObjs.
+   eye, slime), then the rest, porting their AI from EnemyObjs
+   (EnemyEV.h has their constants).
 5. **Castle**: LevelBuilder2 generation with the 4 areas, room transitions
    through doors, minimap.
 6. **Lineage**: heirs, classes, traits, gold, manor/skill tree, blacksmith,
@@ -129,8 +174,12 @@ Miyoo buttons are mapped in `platform_miyoo.c` (evdev key codes). MENU quits.
 
 - Small steps: build (`make`), run, check, then the next step. Also run
   `make miyoo` regularly so the console build never breaks.
-- Plain C99, no external libraries on the console (libc and libm only).
-- Keep files focused (one subsystem per file); comment the why.
+- C++17, `-fno-exceptions -fno-rtti`; on the console only libc, libm and
+  the static C++ runtime (no external libraries).
+- Transpose the C# code class by class (see "Porting rules"); keep the
+  same class, method and file names as the original source.
+- Keep files focused (one C# file = one .h/.cpp pair); comment the why.
 - Port numbers and rules from the C# source instead of guessing; note the
-  source file in a comment.
+  source file (and line) in a comment. Use the generated *EV headers
+  (make ev) instead of retyping constants.
 - Never add game assets or the `ref/` source to the repository.
