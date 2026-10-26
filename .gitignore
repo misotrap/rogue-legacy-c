@@ -3,3 +3,4 @@ ref/
 build/
 rlc
 *.o
+castletest
