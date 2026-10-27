@@ -46,3 +46,7 @@ equiptest: tools/equiptest.cpp src/RogueCastle/Equipment/*.cpp src/RogueCastle/E
 # Regenerate src/RogueCastle/Equipment/EquipmentData.h from ref/
 equipment:
 	python3 tools/convert_equipment.py ref/RogueLegacy1 src
+
+# Save system check (no graphics): ./savetest
+savetest: tools/savetest.cpp src/RogueCastle/Save/*.cpp src/RogueCastle/Lineage/*.cpp src/RogueCastle/Skills/*.cpp src/RogueCastle/Equipment/*.cpp
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ $^

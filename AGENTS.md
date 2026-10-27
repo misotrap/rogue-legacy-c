@@ -165,6 +165,12 @@ Rendering rules:
    `make equipment`; the Equipment*Type constants live there, do not
    generate them again with convert_ev.py). Checks: `make lineagetest
    skilltest equiptest`.
+   **Save done**: `src/RogueCastle/Save` (Save::GameState = PlayerStats,
+   family tree, offered heirs, bestiary, castle seed and visited rooms,
+   manor, equipment; text file written through a .tmp and a rename, the
+   previous save kept as .bak, a cut-short file falls back to it).
+   Check: `make savetest`. Save after each room change and at death, in
+   the app folder (e.g. `save.txt` next to `rlc`).
    enchantress, saves (own simple format in the app folder).
 7. **Spells**, bosses, HUD and menus, fonts, sound (later, optional).
 
