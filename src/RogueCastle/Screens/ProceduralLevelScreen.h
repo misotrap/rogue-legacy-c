@@ -26,6 +26,11 @@ public:
 	void Update(GameTime *gameTime);
 	void Draw(DS2DEngine::Camera2D *camera);
 
+	/* The ProjectileManager subset: bones and later the spells. */
+	void FireProjectile(const char *spriteName, Vector2 position,
+	                    Vector2 heading, float speed, int damage,
+	                    Vector2 scale, bool weighted, class EnemyObj *source);
+
 	PlayerObj *Player() const { return m_player; }
 	RoomObj *CurrentRoom() const { return m_currentRoom; }
 	const std::vector<RoomObj *> &RoomList() const { return m_roomList; }
@@ -36,6 +41,7 @@ private:
 	void UpdateCamera();               /* ProceduralLevelScreen.cs line 1621 */
 	void CheckForRoomTransition();     /* ProceduralLevelScreen.cs line 1189 */
 
+	std::vector<class ProjectileObj *> m_projectiles;   /* owned */
 	Levels::Castle m_castle;
 	std::vector<RoomObj *> m_roomList;
 	std::vector<DS2DEngine::IPhysicsObj *> m_allTerrain;

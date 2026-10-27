@@ -1,5 +1,10 @@
 /* Port of RogueCastle/src/Game Objects/RoomObjs/RoomObj.cs (subset). */
 #include "RoomObj.h"
+#include "../EnemyObjs/EnemyObj.h"
+#include "../EnemyObjs/EnemyObj_Skeleton.h"
+#include "../Player/PlayerObj.h"
+#include "../../Types/EnemyType.h"
+#include <cstdlib>
 #include "../../../gfx.h"
 #include "../../../DS2DEngine/Consts.h"
 
@@ -18,9 +23,34 @@ RoomObj::~RoomObj()
 		delete terrain;
 	for (DS2DEngine::PhysicsObjContainer *obj : m_gameObjList)
 		delete obj;
+	for (EnemyObj *enemy : m_enemyList)
+		delete enemy;
 }
 
-void RoomObj::LoadRoom(const Levels::PlacedRoom &placed)
+/* Creates an enemy from its EnemyObj room data (the C# spawns every
+ * template enemy when the room loads); returns nullptr for the enemy
+ * types that are not ported yet. */
+static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
+{
+	using Diff = EnemyObj::EnemyDifficulty;
+	Diff diff = Diff::BASIC;
+	if (obj.difficulty == "ADVANCED")
+		diff = Diff::ADVANCED;
+	else if (obj.difficulty == "EXPERT")
+		diff = Diff::EXPERT;
+	else if (obj.difficulty == "MINIBOSS")
+		diff = Diff::MINIBOSS;
+
+	switch (obj.enemyType)
+	{
+	case EnemyType::Skeleton:
+		return new EnemyObj_Skeleton(player, diff);
+	default:
+		return nullptr;   /* not ported yet (knight, eyeball, blob...) */
+	}
+}
+
+void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 {
 	m_name = placed.name;
 	m_tag = placed.tag;
@@ -106,6 +136,44 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed)
 		m_gameObjList.push_back(container);
 		m_drawableList.push_back(container);
 	}
+
+	/* The room's enemies (LevelBuilder2 resolved the procedural ones into
+	 * a type + difficulty). */
+	for (const Levels::ObjData &obj : placed.objs)
+	{
+		if (obj.type != "EnemyObj")
+			continue;
+		EnemyObj *enemy = CreateEnemy(obj, player);
+		if (enemy == nullptr)
+			continue;
+		enemy->X(obj.x);
+		enemy->Y(obj.y);
+		enemy->Initialize();
+		m_enemyList.push_back(enemy);
+		m_drawableList.push_back(enemy);
+	}
+}
+
+void RoomObj::Update(GameTime *gameTime)
+{
+	/* CurrentRoom.Update(gameTime): the enemies of the active room. */
+	for (EnemyObj *enemy : m_enemyList)
+	{
+		enemy->Update(gameTime);
+		if (getenv("RL_DEBUG_TRACE") != nullptr)
+			fprintf(stderr, "e: %s %s vis=%d killed=%d x=%.0f y=%.0f hp=%.0f\n",
+			        Name().c_str(), enemy->SpriteName().c_str(), (int) enemy->Visible(),
+			        (int) enemy->IsKilled, enemy->X(), enemy->Y(), enemy->CurrentHealth);
+	}
+}
+
+int RoomObj::ActiveEnemies() const
+{
+	int n = 0;
+	for (const EnemyObj *enemy : m_enemyList)
+		if (!enemy->IsKilled)
+			n++;
+	return n;
 }
 
 uint32_t RoomObj::BackgroundColour() const

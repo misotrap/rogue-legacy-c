@@ -27,7 +27,10 @@ public:
 	void CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType) override;
 
 	/* --- IPhysicsObj --- */
+	using ObjContainer::Visible;   /* keep the bool setter next to the getter */
 	bool Visible() const override { return ObjContainer::Visible(); }
+	Vector2 Acceleration() const { return m_acceleration; }
+	void Acceleration(const Vector2 &value) { m_acceleration = value; }
 	bool DisableAllWeight() const override { return DisableAllWeightFlag; }
 	bool IsWeighted() const override { return IsWeightedFlag; }
 	bool AccelerationXEnabled() const override { return AccelerationXFlag; }

@@ -45,6 +45,9 @@ public:
 	virtual bool CollidesBottom() const = 0;
 	virtual bool CollidesLeft() const = 0;
 	virtual bool CollidesRight() const = 0;
+
+	/* C# IDealsDamageObj: the damage this object's weapon boxes deal. */
+	virtual int DealsDamage() const { return 0; }
 };
 
 } // namespace DS2DEngine

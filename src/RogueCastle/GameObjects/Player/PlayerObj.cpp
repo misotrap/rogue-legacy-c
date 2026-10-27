@@ -157,6 +157,12 @@ void PlayerObj::Update(GameTime *gameTime)
 	/* PlayerObj.cs line 1254 (Update). */
 	if (m_dropThroughGroundTimer > 0)
 		m_dropThroughGroundTimer -= elapsedSeconds;
+	if (m_invincibleCounter > 0)
+		m_invincibleCounter -= elapsedSeconds;
+	if (m_blinkCounter > 0)
+		m_blinkCounter -= elapsedSeconds;
+	for (int i = 0; i < NumChildren(); i++)
+		GetChildAt(i)->TextureColor(m_blinkCounter > 0 ? m_blinkColour : Color(255, 255, 255));
 
 	if (!ControlsLocked)
 	{
@@ -369,6 +375,68 @@ void PlayerObj::RoomTransitionReset()
 {
 	/* PlayerObj.cs line 2504: only spell state is reset here; the port has
 	 * no spells yet. */
+}
+
+void PlayerObj::Blink(Color colour, float blinkTime)
+{
+	m_blinkColour = colour;
+	m_blinkCounter = blinkTime;
+}
+
+void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
+{
+	/* PlayerObj.cs line 2245 (HitPlayer), subset: no demented/projectile
+	 * special cases, no damage reduction (no equipment yet). */
+	(void) attackPosition;
+	Blink(Color(255, 0, 0), 0.1f);
+	AccelerationYFlag = true;   /* in case the acceleration was disabled (dash) */
+	UnlockControls();
+
+	CurrentHealth -= damage;
+	m_isJumping = false;
+
+	if (CurrentHealth > 0)
+	{
+		/* Knockback: away from the attack (HitPlayer continues at line 2335). */
+		State = STATE_HURT;
+		m_invincibleCounter = BaseInvincibilityTime;
+		CurrentSpeed(0);
+		if (AccelerationX() > 0 || HeadingX() > 0)
+			AccelerationX(-KnockBack.X);
+		else
+			AccelerationX(KnockBack.X);
+		AccelerationY(-KnockBack.Y);
+	}
+	else
+	{
+		/* TODO C++: death animation and the lineage handoff. */
+		IsKilled = true;
+		LockControls();
+		Visible(false);
+	}
+}
+
+void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType)
+{
+	/* PlayerObj.cs line 2053: an enemy weapon touching the player's body
+	 * hits (blocking comes with the Knight2 class). */
+	if (thisBox->Type() == Consts::BODY_HITBOX && otherBox->Type() == Consts::WEAPON_HITBOX
+	    && (collisionResponseType == Consts::COLLISIONRESPONSE_FIRSTBOXHIT
+	        || collisionResponseType == Consts::COLLISIONRESPONSE_SECONDBOXHIT))
+	{
+		IPhysicsObj *otherParent = otherBox->PhysicsParent();
+		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 3 /* enemy */
+		    && State != STATE_HURT && m_invincibleCounter <= 0)
+		{
+			if (m_invincibleCounter <= 0)
+				HitPlayer(otherParent->DealsDamage(),
+				          Vector2((float) otherBox->AbsRect().X, (float) otherBox->AbsRect().Y));
+			return;
+		}
+	}
+
+	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN)
+		PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);
 }
 
 void PlayerObj::UpdateAnimationState()

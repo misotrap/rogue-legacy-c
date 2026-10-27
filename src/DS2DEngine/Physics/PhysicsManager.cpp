@@ -2,6 +2,8 @@
 #include "PhysicsManager.h"
 #include "../CollisionMath.h"
 #include "../Consts.h"
+#include <cstdio>
+#include <cstdlib>
 
 namespace DS2DEngine
 {
@@ -117,23 +119,22 @@ void PhysicsManager::Update(GameTime *gameTime)
 					else if ((firstBox->Type() == Consts::WEAPON_HITBOX && secondBox->Type() == Consts::BODY_HITBOX)
 					         || (firstBox->Type() == Consts::BODY_HITBOX && secondBox->Type() == Consts::WEAPON_HITBOX))
 					{
-						if (getenv("RL_DEBUG_HITS") != nullptr)
-							fprintf(stderr, "WxB pair: t1=%d t2=%d f=[%d,%d %dx%d] s=[%d,%d %dx%d] int=%d\n",
-							        firstObj->CollisionTypeTag(), secondObj->CollisionTypeTag(),
-							        firstBox->AbsRect().X, firstBox->AbsRect().Y, firstBox->AbsRect().Width, firstBox->AbsRect().Height,
-							        secondBox->AbsRect().X, secondBox->AbsRect().Y, secondBox->AbsRect().Width, secondBox->AbsRect().Height,
-							        (int) CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()));
 						if (CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()))
 						{
+							/* PhysicsManager.cs line 170: the object whose
+							 * box is the BODY receives FIRSTBOXHIT, the one
+							 * whose box is the WEAPON receives SECONDBOXHIT
+							 * (EnemyObj handles FIRSTBOXHIT = "player has
+							 * hit enemy", PlayerObj checks the box types). */
 							if (firstBox->Type() == Consts::WEAPON_HITBOX)
-							{
-								firstObj->CollisionResponse(firstBox, secondBox, Consts::COLLISIONRESPONSE_FIRSTBOXHIT);
-								secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_SECONDBOXHIT);
-							}
-							else
 							{
 								firstObj->CollisionResponse(firstBox, secondBox, Consts::COLLISIONRESPONSE_SECONDBOXHIT);
 								secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_FIRSTBOXHIT);
+							}
+							else
+							{
+								firstObj->CollisionResponse(firstBox, secondBox, Consts::COLLISIONRESPONSE_FIRSTBOXHIT);
+								secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_SECONDBOXHIT);
 							}
 						}
 					}

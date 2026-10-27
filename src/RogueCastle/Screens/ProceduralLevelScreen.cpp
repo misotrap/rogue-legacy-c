@@ -2,6 +2,8 @@
 #include "ProceduralLevelScreen.h"
 #include "../EVs/GlobalEV.h"
 #include "../Game.h"
+#include "../GameObjects/EnemyObjs/EnemyObj.h"
+#include "../GameObjects/ProjectileObj.h"
 #include "../../DS2DEngine/CollisionMath.h"
 #include "../../gfx.h"
 #include <chrono>
@@ -21,6 +23,9 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 		return;
 	/* The area decorations and breakables (asset-swap objects). */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "castleTerrainSpritesheet");
+	/* The enemies and their projectiles (the ported ones live in these). */
+	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinalSpritesheetBig");
+	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinal2Spritesheet");
 	std::vector<Levels::RoomTemplate> templates;
 	char path[512];
 	snprintf(path, sizeof(path), "%s/rooms.txt", assets);
@@ -55,10 +60,15 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 		return;
 	}
 
+	/* The player exists before the rooms: he is the enemies' target. */
+	m_player = new PlayerObj();
+	m_player->SetTerrain(&m_allTerrain);
+	m_physicsManager.AddObject(m_player);
+
 	for (const Levels::PlacedRoom &placed : m_castle.rooms)
 	{
 		RoomObj *room = new RoomObj();
-		room->LoadRoom(placed);
+		room->LoadRoom(placed, m_player);
 		m_roomList.push_back(room);
 	}
 
@@ -73,13 +83,15 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 		}
 		for (DS2DEngine::PhysicsObjContainer *obj : room->GameObjList())
 			m_physicsManager.AddObject(obj);
+		for (EnemyObj *enemy : room->EnemyList())
+		{
+			enemy->SetPlayerTarget(m_player);
+			enemy->SetLevelScreen(this);
+			enemy->SetTerrain(&m_allTerrain);
+			m_physicsManager.AddObject(enemy);
+		}
 	}
 
-	/* The player starts in the castle's starting room (rooms[0]), dropped
-	 * onto its floor. */
-	m_player = new PlayerObj();
-	m_player->SetTerrain(&m_allTerrain);
-	m_physicsManager.AddObject(m_player);
 	m_currentRoom = m_roomList[0];
 	RoomObj *start = m_roomList[0];
 	m_player->X(start->X() + start->Width() * 0.5f);
@@ -108,9 +120,14 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 				        d.attached ? "" : " CLOSED");
 			fprintf(stderr, "\n");
 			for (const Levels::ObjData &o : r.objs)
+			{
 				if ((o.type == "ObjContainer" || o.type == "PhysicsObjContainer") && !o.sprite.empty())
 					fprintf(stderr, "  obj %s%s (%.0f,%.0f)\n", o.sprite.c_str(),
 					        o.breakable ? " [breakable]" : "", o.x, o.y);
+				if (o.type == "EnemyObj")
+					fprintf(stderr, "  enemy type=%d %s (%.0f,%.0f)\n", o.enemyType,
+					        o.difficulty.c_str(), o.x, o.y);
+			}
 		}
 	}
 
@@ -127,11 +144,30 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 
 	/* ProceduralLevelScreen.cs line 1536: room, player, then physics. */
 	if (m_currentRoom != nullptr)
-	{
-		/* CurrentRoom.Update(gameTime): enemies etc. later. */
-	}
+		m_currentRoom->Update(gameTime);
 	if (m_player != nullptr)
 		m_player->Update(gameTime);
+
+	/* m_projectileManager.Update(gameTime): move the projectiles and
+	 * destroy the dead or out-of-play ones. */
+	for (size_t i = 0; i < m_projectiles.size(); )
+	{
+		ProjectileObj *proj = m_projectiles[i];
+		proj->Update(gameTime);
+		Rectangle level = m_currentRoom != nullptr
+		    ? m_currentRoom->Bounds()
+		    : Rectangle(-100000, -100000, 200000, 200000);
+		bool outOfPlay = proj->X() < level.X - 600 || proj->X() > level.Right() + 600
+		              || proj->Y() > level.Bottom() + 600 || proj->Y() < level.Y - 1200;
+		if (proj->IsKilled || outOfPlay)
+		{
+			m_physicsManager.RemoveObject(proj);
+			delete proj;
+			m_projectiles.erase(m_projectiles.begin() + i);
+		}
+		else
+			i++;
+	}
 
 	/* Only simulate the objects near the current room (performance: the
 	 * pair pass is O(n*n) and a castle has thousands of walls). */
@@ -205,7 +241,12 @@ void ProceduralLevelScreen::CheckForRoomTransition()
 	{
 		if (roomObj != m_currentRoom && roomObj->Contains((int) m_player->X(), (int) m_player->Y()))
 		{
+			if (m_currentRoom != nullptr)
+				for (EnemyObj *enemy : m_currentRoom->EnemyList())
+					enemy->ResetState();
 			m_currentRoom = roomObj;
+			for (EnemyObj *enemy : roomObj->EnemyList())
+				enemy->ResetState();
 			m_player->RoomTransitionReset();
 			if (getenv("RL_DEBUG_TRANSITIONS") != nullptr)
 				fprintf(stderr, "room transition -> %s (%.0f, %.0f)\n",
@@ -228,8 +269,21 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 	for (RoomObj *room : m_roomList)
 		room->Draw(camera);
 
+	for (ProjectileObj *proj : m_projectiles)
+		proj->Draw(camera);
 	if (m_player != nullptr)
 		m_player->Draw(camera);
+}
+
+void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,
+                                           Vector2 heading, float speed, int damage,
+                                           Vector2 scale, bool weighted, EnemyObj *source)
+{
+	ProjectileObj *proj = new ProjectileObj(spriteName, position, heading, speed,
+	                                        damage, scale, weighted);
+	proj->Source = source;
+	m_projectiles.push_back(proj);
+	m_physicsManager.AddObject(proj);
 }
 
 } // namespace RogueCastle

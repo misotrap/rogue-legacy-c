@@ -21,6 +21,8 @@ inline Vector2 operator*(const Vector2 &a, float s) { return Vector2(a.X * s, a.
 inline Vector2 operator*(const Vector2 &a, const Vector2 &b) { return Vector2(a.X * b.X, a.Y * b.Y); }
 inline Vector2 operator*(float s, const Vector2 &a) { return a * s; }
 inline Vector2 operator-(const Vector2 &a) { return Vector2(-a.X, -a.Y); }
+inline bool operator==(const Vector2 &a, const Vector2 &b) { return a.X == b.X && a.Y == b.Y; }
+inline bool operator!=(const Vector2 &a, const Vector2 &b) { return !(a == b); }
 
 struct Vector3
 {

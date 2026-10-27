@@ -22,8 +22,10 @@ public:
 	RoomObj();
 	~RoomObj();
 
-	/* Builds the room from the LevelBuilder2 output (castle coordinates). */
-	void LoadRoom(const Levels::PlacedRoom &placed);
+	/* Builds the room from the LevelBuilder2 output (castle coordinates).
+	 * The player is passed as the enemies' target. */
+	void LoadRoom(const Levels::PlacedRoom &placed, class PlayerObj *player);
+	void Update(GameTime *gameTime);
 	void Draw(DS2DEngine::Camera2D *camera);
 
 	const std::string &Name() const { return m_name; }
@@ -48,6 +50,8 @@ public:
 	const std::vector<TerrainObj *> &TerrainObjList() const { return m_terrainList; }
 	/* Breakables and decoration containers, drawn and simulated by the room. */
 	const std::vector<DS2DEngine::PhysicsObjContainer *> &GameObjList() const { return m_gameObjList; }
+	const std::vector<class EnemyObj *> &EnemyList() const { return m_enemyList; }
+	int ActiveEnemies() const;
 	const std::vector<DS2DEngine::GameObj *> &DrawableObjList() const { return m_drawableList; }
 
 	/* Colours: one background and wall tone per area (AGENTS.md). */
@@ -65,6 +69,7 @@ private:
 	int m_linkedRoom = -1;
 	std::vector<TerrainObj *> m_terrainList;
 	std::vector<DS2DEngine::PhysicsObjContainer *> m_gameObjList;   /* owned */
+	std::vector<class EnemyObj *> m_enemyList;                     /* owned */
 	std::vector<DS2DEngine::GameObj *> m_drawableList;               /* = m_gameObjList */
 
 	struct DoorInfo

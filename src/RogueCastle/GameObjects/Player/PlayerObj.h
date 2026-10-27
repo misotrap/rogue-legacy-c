@@ -38,6 +38,27 @@ public:
 	void UpdatePlayerCollision();
 	void SetTerrain(const std::vector<DS2DEngine::IPhysicsObj *> *terrain) { m_attachedTerrain = terrain; }
 
+	/* PlayerObj.cs HitPlayer (line 2245): damage, knockback, invincibility
+	 * and the hurt state; death TODO with the death animation. */
+	void HitPlayer(int damage, Vector2 attackPosition);
+	void CollisionResponse(DS2DEngine::CollisionBox *thisBox, DS2DEngine::CollisionBox *otherBox,
+	                       int collisionResponseType) override;
+
+	/* Health / damage (InitializeEV, PlayerObj.cs line 216). */
+	float MaxHealth = 100;
+	float CurrentHealth = 100;
+	float TotalDamage() const { return 25; }      /* BaseDamage * mods */
+	float TotalCritChance() const { return 0; }
+	float BaseInvincibilityTime = 1.0f;
+	float AirAttackKnockBack = 1425;              /* PlayerEV */
+	int NumSequentialAttacks = 0;
+	bool IsKilled = false;
+	float m_invincibleCounter = 0;
+	/* Damage blink (the C# blinks red through the OutlineColour). */
+	void Blink(Color colour, float blinkTime);
+	float m_blinkCounter = 0;
+	Color m_blinkColour = Color(255, 0, 0);
+
 	int State = STATE_IDLE;
 	bool m_isTouchingGround = false;
 	bool m_isJumping = false;

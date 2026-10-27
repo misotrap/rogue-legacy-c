@@ -17,8 +17,8 @@ static uint32_t frame[SCREEN_W * SCREEN_H];
  * quits RL_SHOT_MS later; RL_BTN=<hex bitmask> fakes held buttons. */
 static const char *shotPath;
 static double shotAt = -1.0;
-static uint32_t fakeButtons = 0;
-static double buttonsAt = 0.0;
+static uint32_t fakeButtons = 0, fakeButtons2 = 0;
+static double buttonsAt = 0.0, buttons2At = 0.0;
 static int quitAfterShot;
 static double startTime;   /* performance counter at init: plat_time is
                             * seconds since start (platform.h contract) */
@@ -42,6 +42,10 @@ int plat_init(void)
 	if (s != NULL) fakeButtons = (uint32_t) strtoul(s, NULL, 0);
 	s = getenv("RL_BTN_MS");
 	if (s != NULL) buttonsAt = atof(s) / 1000.0;
+	s = getenv("RL_BTN2");
+	if (s != NULL) fakeButtons2 = (uint32_t) strtoul(s, NULL, 0);
+	s = getenv("RL_BTN2_MS");
+	if (s != NULL) buttons2At = atof(s) / 1000.0;
 	quitAfterShot = getenv("RL_SHOT_QUIT") != NULL;
 	return texture != NULL;
 }
@@ -108,7 +112,18 @@ static uint32_t KeyBit(SDL_Keycode k)
 int plat_poll(uint32_t *buttons)
 {
 	SDL_Event e;
-	*buttons |= plat_time() >= buttonsAt ? fakeButtons : 0;
+	/* The second mask (RL_BTN2) replaces the first from RL_BTN2_MS, which
+	 * allows two-press test sequences (attack, then attack again). The
+	 * fake bits are replaced each poll so releases are seen too. */
+	double t = plat_time();
+	static uint32_t lastFake = 0;
+	uint32_t fake = 0;
+	if (t >= buttonsAt && (buttons2At == 0.0 || t < buttons2At - 0.05))
+		fake |= fakeButtons;
+	if (buttons2At > 0.0 && t >= buttons2At)
+		fake |= fakeButtons2;
+	*buttons = (*buttons & ~lastFake) | fake;
+	lastFake = fake;
 	while (SDL_PollEvent(&e))
 	{
 		if (e.type == SDL_QUIT) return 0;

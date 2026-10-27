@@ -20,6 +20,14 @@ namespace RogueCastle
 		Save::Read(m_save, savePath);
 		// A saved hero still alive goes straight back to the castle
 		if (!m_save.hero.name.empty() && !m_save.IsDead) StartCastle();
+		else if (getenv("RL_DEBUG_LEVEL") != nullptr)
+		{
+			// Dev/test: skip the heir choice and jump into a fresh castle.
+			std::vector<Lineage::Heir> heirs =
+			    m_generator.CreateBranches(m_save.skills.ClassUnlocks(false), m_save.FamilyTreeNames());
+			m_save.hero = heirs.empty() ? Lineage::Heir() : heirs.front();
+			StartCastle();
+		}
 		else
 		{
 			m_state = State::Lineage;
