@@ -21,7 +21,7 @@ ev:
 clean:
 	rm -rf rlc build
 
-.PHONY: miyoo ev clean castletest
+.PHONY: miyoo ev clean castletest package
 
 # Castle generation check (no graphics): ./castletest [seed] [count] [map.ppm]
 castletest: tools/castletest.cpp src/RogueCastle/Levels/*.cpp src/RogueCastle/Levels/*.h
@@ -78,3 +78,7 @@ equipscreentest: tools/equipscreentest.cpp $(SRC) $(shell find src -name "*.h")
 # HUD check (no window): ./hudtest out.ppm
 hudtest: tools/hudtest.cpp src/RogueCastle/HUD/*.cpp src/Text/Font.cpp src/gfx.cpp
 	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/hudtest.cpp src/RogueCastle/HUD/*.cpp src/Text/Font.cpp src/gfx.cpp
+
+# Folder for the Miyoo SD card: build/RogueLegacyC (copy to SD:/App/)
+package: miyoo
+	sh tools/package_miyoo.sh
