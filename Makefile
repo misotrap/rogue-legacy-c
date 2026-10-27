@@ -1,5 +1,7 @@
 # make          -> ./rlc        (computer, SDL2 from Homebrew: brew install sdl2)
-# make miyoo    -> build/miyoo/rlc  (static ARM binary for the Miyoo Mini)
+# make miyoo    -> build/miyoo/rlc  (ARM binary for the Miyoo Mini; C++ runtime built in,
+#                  glibc from the package's lib/: the toolchain's static glibc needs a
+#                  newer kernel than the console's, "FATAL: kernel too old")
 # make ev       -> regenerate the *EV.h / Types headers from ref/ (requires ref/)
 CXXFLAGS = -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -D_DEFAULT_SOURCE
 SRC = $(shell find src -name '*.cpp' ! -name 'platform_*.cpp')
@@ -11,7 +13,7 @@ rlc: $(SRC) $(shell find src -name '*.h')
 
 miyoo: $(SRC) $(shell find src -name '*.h')
 	mkdir -p build/miyoo
-	$(MIYOO_CXX) $(CXXFLAGS) $(MIYOO_FLAGS) -static -o build/miyoo/rlc $(SRC) src/platform_miyoo.cpp -lm
+	$(MIYOO_CXX) $(CXXFLAGS) $(MIYOO_FLAGS) -static-libstdc++ -static-libgcc -o build/miyoo/rlc $(SRC) src/platform_miyoo.cpp -lm
 
 ev:
 	python3 tools/convert_ev.py ref/RogueLegacy1 src

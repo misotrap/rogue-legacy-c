@@ -165,17 +165,33 @@ Rendering rules:
 ## Console package
 
 Folder on the SD card: `/mnt/SDCARD/App/RogueLegacyC/` with `rlc` (from
-`make miyoo`), `assets/`, `launch.sh`:
+`make miyoo`), `assets/` (only the files the game loads), `lib/` and
+`launch.sh`. Tested on the console (OnionOS):
 
-    #!/bin/sh
-    cd "$(dirname "$0")"
-    echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
-    ./rlc assets > log.txt 2>&1
+- **Never link glibc statically**: the toolchain's glibc refuses the
+  console's kernel ("FATAL: kernel too old"). `make miyoo` builds the C++
+  runtime in (`-static-libstdc++ -static-libgcc`) and uses glibc
+  dynamically.
+- `lib/` holds Debian bookworm armhf `ld-linux-armhf.so.3`, `libc.so.6`
+  and `libm.so.6` (the same files as the Mono port's `lib/`), and the game
+  starts through that loader:
 
-and `config.json` (OnionOS app entry):
-`{"label":"Rogue Legacy C","icon":"","launch":"launch.sh","description":"Rogue Legacy (C)"}`
+```sh
+#!/bin/sh
+cd "$(dirname "$0")"
+echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null
+echo "Rogue Legacy C, $(date)" > log.txt
+export LIBC_FATAL_STDERR_=1   # glibc fatal errors go to log.txt, not the tty
+./lib/ld-linux-armhf.so.3 --library-path ./lib ./rlc assets >> log.txt 2>&1
+echo "exited with status $?" >> log.txt
+echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null
+```
 
-Miyoo buttons are mapped in `platform_miyoo.c` (evdev key codes). MENU quits.
+- `config.json` (OnionOS app entry):
+  `{"label":"Rogue Legacy C","icon":"","launch":"launch.sh","description":"Rogue Legacy (C)"}`
+- Remove macOS `._*` files when copying from a Mac.
+
+Miyoo buttons are mapped in `platform_miyoo.cpp` (evdev key codes). MENU quits.
 
 ## Working rules
 
