@@ -154,7 +154,7 @@ void EnemyObj::Update(GameTime *gameTime)
 		}
 		if (m_actionTimer > 0)
 			m_actionTimer -= elapsedSeconds;
-		if (m_actionTimer <= 0 && m_actionActive)
+		if (m_actionActive && ActionComplete())
 		{
 			m_actionActive = false;
 			m_actionPhase = 0;

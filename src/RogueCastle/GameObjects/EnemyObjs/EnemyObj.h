@@ -99,6 +99,10 @@ protected:
 	bool m_actionActive = false;
 	float m_actionTimer = 0;      /* remaining time of the current action */
 	int m_actionPhase = 0;        /* step inside multi-phase actions */
+	/* The base ends the action when ActionComplete() says so; single-phase
+	 * actions (walks) just use the timer, multi-phase attacks (windup,
+	 * throw, recover) override it and finish on their last phase. */
+	virtual bool ActionComplete() { return m_actionTimer <= 0; }
 
 	/* Checks the terrain under the feet (simplified CheckGroundCollision)
 	 * and turns the enemy around at ledges when it cannot fall off them. */

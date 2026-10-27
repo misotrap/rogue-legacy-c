@@ -2,8 +2,6 @@
 #include "PhysicsManager.h"
 #include "../CollisionMath.h"
 #include "../Consts.h"
-#include <cstdio>
-#include <cstdlib>
 
 namespace DS2DEngine
 {
@@ -119,6 +117,24 @@ void PhysicsManager::Update(GameTime *gameTime)
 					else if ((firstBox->Type() == Consts::WEAPON_HITBOX && secondBox->Type() == Consts::BODY_HITBOX)
 					         || (firstBox->Type() == Consts::BODY_HITBOX && secondBox->Type() == Consts::WEAPON_HITBOX))
 					{
+						if (CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()))
+						{
+							firstObj->CollisionResponse(firstBox, secondBox, Consts::COLLISIONRESPONSE_TERRAIN);
+							secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_TERRAIN);
+						}
+					}
+					/* Weapon vs body (PhysicsManager.cs line 167): the
+					 * weapon owner gets FIRSTBOXHIT, the body owner
+					 * SECONDBOXHIT, and vice versa. */
+					else if ((firstBox->Type() == Consts::WEAPON_HITBOX && secondBox->Type() == Consts::BODY_HITBOX)
+					         || (firstBox->Type() == Consts::BODY_HITBOX && secondBox->Type() == Consts::WEAPON_HITBOX))
+					{
+						if (getenv("RL_DEBUG_HITS") != nullptr)
+							fprintf(stderr, "wxb: t1=%d t2=%d f=[%d,%d %dx%d] s=[%d,%d %dx%d] int=%d\n",
+							        firstObj->CollisionTypeTag(), secondObj->CollisionTypeTag(),
+							        firstBox->AbsRect().X, firstBox->AbsRect().Y, firstBox->AbsRect().Width, firstBox->AbsRect().Height,
+							        secondBox->AbsRect().X, secondBox->AbsRect().Y, secondBox->AbsRect().Width, secondBox->AbsRect().Height,
+							        (int) CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()));
 						if (CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()))
 						{
 							/* PhysicsManager.cs line 170: the object whose

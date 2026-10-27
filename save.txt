@@ -55,8 +55,8 @@ ChallengeBlobTimesUpgraded 0
 ChallengeSkullTimesUpgraded 0
 ChallengeLastBossTimesUpgraded 0
 ArchitectUsed 0
-hero Lancelot||0|1|1|0|0|21|5|1|3|4
-castle 1793136300
+hero Stark||1|1|2|21|13|18|5|3|1|5
+castle 1793136880
 visited -
 chests -
 skill 2 0 0

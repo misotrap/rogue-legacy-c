@@ -23,6 +23,13 @@ public:
 	                       int collisionResponseType) override;
 
 	int DealsDamage() const override { return Damage; }
+	/* The bone has no terrain box; its weapon box bounds stand in for the
+	 * active-bounds filter and the out-of-play check. */
+	Rectangle TerrainBounds() const override
+	{
+		Rectangle b = Bounds();
+		return Rectangle((int) X() + b.X, (int) Y() + b.Y, b.Width, b.Height);
+	}
 	int Damage = 5;
 	float RotationSpeed = 0;   /* TODO C++: spinning blits */
 	bool DestroysWithTerrain = false;

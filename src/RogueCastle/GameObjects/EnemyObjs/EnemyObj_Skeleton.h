@@ -44,6 +44,16 @@ private:
 	void UpdateAction();
 
 	Action m_action = ACTION_NONE;
+	bool ActionComplete() override
+	{
+		/* The throws end after their last animation phase, the walks on
+		 * their timer (the base rule). */
+		if (m_action == ACTION_THROW_FAR || m_action == ACTION_THROW_HIGH)
+			return m_actionPhase >= 2 && !IsAnimating();
+		if (m_action == ACTION_JUMP_THROW)
+			return m_actionPhase >= 2 && !IsAnimating();
+		return m_actionTimer <= 0;
+	}
 	float AttackDelay = 0.1f;
 	float JumpDelay = 0.25f;
 };

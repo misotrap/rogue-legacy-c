@@ -60,7 +60,7 @@ void ProjectileObj::Update(GameTime *gameTime)
 	 * elapsed); gravity comes from the physics manager like the original. */
 	float elapsed = (float) gameTime->ElapsedGameTime;
 	Position(Position() + Heading() * (m_speed * elapsed));
-	ObjContainer::Update(gameTime);
+ObjContainer::Update(gameTime);
 }
 
 } // namespace RogueCastle
