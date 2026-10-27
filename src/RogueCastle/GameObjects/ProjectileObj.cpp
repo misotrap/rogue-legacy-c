@@ -31,7 +31,7 @@ ProjectileObj::ProjectileObj(const std::string &spriteName, Vector2 position,
 	/* A weapon box over the whole sprite (the C# ProjectileObj adds its
 	 * collision box over its bounds). */
 	UpdateCollisionBoxes();
-	Rectangle b = Bounds();
+	Rectangle b = RelativeBounds();   /* AddCollisionBox takes relative coords */
 	AddCollisionBox(b.X, b.Y, b.Width, b.Height, Consts::WEAPON_HITBOX);
 	DisableHitboxUpdatingFlag = true;
 	UpdateTerrainBox();

@@ -6,6 +6,7 @@
 #include "../EnemyObjs/EnemyObj_Eyeball.h"
 #include "../EnemyObjs/EnemyObj_Blob.h"
 #include "../EnemyObjs/EnemyObj_Turret.h"
+#include "../EnemyObjs/EnemyObj_SpikeTrap.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -57,6 +58,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Blob(player, diff);
 	case EnemyType::Turret:
 		return new EnemyObj_Turret(player, diff);
+	case EnemyType::SpikeTrap:
+		return new EnemyObj_SpikeTrap(player, diff);
 	default:
 		return nullptr;
 	}
@@ -130,9 +133,9 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 		{
 			container->UpdateCollisionBoxes();
 			/* Solidity: a terrain box over the container bounds
-			 * (ProceduralLevelScreen.cs line 951). The container Bounds()
-			 * are relative to its origin, like the box coordinates. */
-			Rectangle b = container->Bounds();
+			 * (ProceduralLevelScreen.cs line 951); RelativeBounds() are
+			 * relative to its origin, like the box coordinates. */
+			Rectangle b = container->RelativeBounds();
 			container->AddCollisionBox(b.X, b.Y, b.Width, b.Height, Consts::TERRAIN_HITBOX);
 			/* ProceduralLevelScreen.cs line 955: the breakable's own boxes
 			 * are static, otherwise the per-frame UpdateCollisionBoxes

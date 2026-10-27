@@ -50,7 +50,14 @@ public:
 	void AnimationSpeed(int value) { m_animationSpeed = value; }
 
 	void CalculateBounds();
-	Rectangle Bounds() const override { return m_bounds; }
+	/* ObjContainer.cs line 476: Bounds is absolute (RelativeBounds is the
+	 * raw child-union rectangle). */
+	Rectangle Bounds() const override
+	{
+		return Rectangle((int) (m_bounds.X + X()), (int) (m_bounds.Y + Y()),
+		                 m_bounds.Width, m_bounds.Height);
+	}
+	Rectangle RelativeBounds() const { return m_bounds; }
 	ObjContainer *AsObjContainer() override { return this; }
 
 	float AnimationDelayValue = 0;

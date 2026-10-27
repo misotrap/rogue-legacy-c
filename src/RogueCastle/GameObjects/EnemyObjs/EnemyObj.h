@@ -45,7 +45,7 @@ public:
 	void SetPlayerTarget(PlayerObj *target) { m_target = target; }
 	void SetLevelScreen(ProceduralLevelScreen *levelScreen) { m_levelScreen = levelScreen; }
 	void SetTerrain(const std::vector<DS2DEngine::IPhysicsObj *> *terrain) { m_attachedTerrain = terrain; }
-	void ResetState();                 /* EnemyObj.cs line 1113 */
+	virtual void ResetState();       /* EnemyObj.cs line 1113 */
 
 	/* EVs, set by InitializeBaseEV + the per-enemy InitializeEV. */
 	float Speed = 1;
