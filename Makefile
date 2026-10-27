@@ -54,3 +54,11 @@ savetest: tools/savetest.cpp src/RogueCastle/Save/*.cpp src/RogueCastle/Lineage/
 # Font check (no window): ./texttest text.ppm
 texttest: tools/texttest.cpp src/Text/*.cpp src/Text/*.h src/gfx.cpp
 	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/texttest.cpp src/Text/*.cpp src/gfx.cpp
+
+# Translation check: ./loctest [fr|en|de...]
+loctest: tools/loctest.cpp src/Text/Loc.cpp src/Text/Loc.h src/Text/LocIDs.h
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/loctest.cpp src/Text/Loc.cpp
+
+# Regenerate assets/lang/*.txt and src/Text/LocIDs.h from ref/
+loc:
+	python3 tools/convert_loc.py ref/RogueLegacy1 assets src

@@ -98,6 +98,11 @@ DXT5 sheets (surface format 6) are decoded by the converter:
 Fonts are converted to `assets/fonts/<name>.tex/.fnt` and drawn by
 `src/Text` (Text::Font: Measure/Draw/DrawOutlined, UTF-8, same layout
 as SpriteFont; Junicode has the French accents). Check: `make texttest`.
+Translations: `make loc` writes `assets/lang/<code>.txt` (from the
+reference source's LocStrings*.resx) and `src/Text/LocIDs.h`;
+`Text::Loc::Load("assets", "fr")` then `Text::Loc::Get(id)` /
+`Format(id, ...)`. The player is French: default to "fr". Check:
+`make loctest`.
 Sounds are
 not converted yet either.
 
