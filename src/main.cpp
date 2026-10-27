@@ -3,7 +3,7 @@
  * transitions through the door openings (see AGENTS.md).
  */
 #include "RogueCastle/Game.h"
-#include "RogueCastle/Screens/ProceduralLevelScreen.h"
+#include "RogueCastle/GameFlow.h"
 #include "gfx.h"
 #include "platform.h"
 
@@ -21,14 +21,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	RogueCastle::ProceduralLevelScreen *level =
-		new RogueCastle::ProceduralLevelScreen(assets, 0 /* time-based seed */);
-	if (!level->IsValid())
-	{
-		fprintf(stderr, "level init failed\n");
-		plat_quit();
-		return 1;
-	}
+	/* Heir choice -> castle -> death -> manor -> heir choice (GameFlow) */
+	RogueCastle::GameFlow flow;
+	if (!flow.Init(assets, "save.txt"))
+		fprintf(stderr, "some content is missing (see assets/)\n");
 
 	last = plat_time();
 	lastDraw = last;
@@ -43,19 +39,13 @@ int main(int argc, char **argv)
 		/* Fixed 60 Hz logic, any number of steps per drawn frame. */
 		while (acc >= TICK)
 		{
-			GameTime gameTime(TICK);
-			RogueCastle::Game::GlobalInput.Update(buttons);
-			level->Update(&gameTime);
+			flow.Update(buttons, TICK);
 			acc -= TICK;
 		}
 
 		double drawElapsed = now - lastDraw;
 		lastDraw = now;
-
-		gfx_begin(plat_frame());
-		gfx_clear(0xFF000000u);
-		level->Camera()->ElapsedTotalSeconds(drawElapsed);
-		level->Draw(level->Camera());
+		flow.Draw(plat_frame(), drawElapsed);
 		plat_present();
 	}
 	plat_quit();

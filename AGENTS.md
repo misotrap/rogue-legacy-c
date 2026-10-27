@@ -199,7 +199,12 @@ Rendering rules:
    FirstColour/SecondColour on the armour parts).
    **In-game HUD done**: `src/RogueCastle/HUD/PlayerHUD` (LoadContent,
    Draw(frame, HUDValues{health, mana, gold, level, heroName}), drawn in the
-   top letterbox band). Check: `make hudtest && ./hudtest out.ppm`. Save after each room change and at death, in
+   top letterbox band). Check: `make hudtest && ./hudtest out.ppm`.
+   **Game flow wired** (`src/RogueCastle/GameFlow`, used by main.cpp):
+   save.txt -> heir choice -> castle + HUD -> death -> manor -> heir
+   choice. When the hero has health, call `GameFlow::OnPlayerDeath()` on
+   death (it adds the hero to the family tree and saves), fill the HUD
+   values from PlayerObj, and remove the SELECT+START test death. Save after each room change and at death, in
    the app folder (e.g. `save.txt` next to `rlc`).
    enchantress, saves (own simple format in the app folder).
 7. **Spells**, bosses, HUD and menus, fonts, sound (later, optional).
