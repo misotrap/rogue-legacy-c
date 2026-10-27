@@ -25,5 +25,8 @@ void gfx_fill(int x, int y, int w, int h, uint32_t color);
  * Rotation is not supported yet (see AGENTS.md).
  */
 void gfx_blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip);
+/* Same, multiplied by a colour 0xAARRGGBB (XNA's draw colour: TextureColor
+ * and Opacity). An opaque white colour takes the plain gfx_blit path. */
+void gfx_blit_tinted(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip, uint32_t colour);
 
 #endif

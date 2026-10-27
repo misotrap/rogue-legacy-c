@@ -73,6 +73,9 @@ public:
 	void Visible(bool value) { _visible = value; }
 	bool ForceDraw() const { return _forceDraw; }
 	void ForceDraw(bool value) { _forceDraw = value; }
+	/* C# GameObj.TextureColor: tint applied when drawing (white = none) */
+	Color TextureColor() const { return _textureColor; }
+	void TextureColor(const Color &value) { _textureColor = value; }
 	float Opacity() const { return _opacity; }
 	void Opacity(float value) { _opacity = value; }
 	float Layer() const { return _layer; }
@@ -136,6 +139,7 @@ protected:
 	float _height;
 	float _rotation;
 	float _opacity;
+	Color _textureColor = Color(255, 255, 255);
 	float _layer;
 	float _speed;             /* CurrentSpeed in C# */
 	SpriteEffects _flip;

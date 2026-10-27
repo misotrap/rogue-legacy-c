@@ -43,12 +43,13 @@ def function_body(text, start):
     return ''
 
 
-def id_functions(path):
-    """Parses 'public static string F(byte x[, bool isFemale])' switch tables."""
-    text = open(path, encoding='utf-8-sig').read()
+def id_functions(path, text=None):
+    """Parses 'public static string F(byte|int x[, bool isFemale])' switch tables."""
+    if text is None:
+        text = open(path, encoding='utf-8-sig').read()
     text = re.sub(r'//[^\n]*', '', text)
     funcs = []
-    for m in re.finditer(r'public\s+static\s+string\s+(\w+)\s*\(\s*byte\s+\w+\s*(,\s*bool\s+isFemale[^)]*)?\)', text):
+    for m in re.finditer(r'public\s+static\s+string\s+(\w+)\s*\(\s*(?:byte|int)\s+\w+\s*(,\s*bool\s+isFemale[^)]*)?\)', text):
         body = function_body(text, m.end())
         entries, pending = [], []
         for tok in re.finditer(r'case\s*\(?\s*(?:\w+\.)?(\w+)\s*\)?\s*:|return\s+([^;]+);', body):
@@ -94,6 +95,7 @@ def main():
            '#include "../RogueCastle/Types/ClassType.h"',
            '#include "../RogueCastle/Types/SpellType.h"',
            '#include "../RogueCastle/Types/TraitType.h"',
+           '#include "../RogueCastle/Equipment/EquipmentData.h"',
            '', 'namespace LocIDs', '{']
     for cls in ('ClassType', 'TraitType', 'SpellType'):
         for fname, female, entries in id_functions(os.path.join(src, cls + '.cs')):
@@ -111,6 +113,26 @@ def main():
                     out.append('        case %s::%s: return isFemale ? "%s" : "%s";' % (cls, const, fem, male))
                 else:
                     out.append('        case %s::%s: return "%s";' % (cls, const, male))
+            out.append('        default: return "";')
+            out.append('        }')
+            out.append('    }')
+            print('ids %s.%s: %d entries' % (cls, fname, len(entries)))
+    # EquipmentType.cs holds several classes: one table per class and function
+    eq = open(os.path.join(src, 'EquipmentType.cs'), encoding='utf-8-sig').read()
+    starts = [(m.start(), m.group(1)) for m in re.finditer(r'public\s+class\s+(\w+)', eq)]
+    for n, (start, cls) in enumerate(starts):
+        part = eq[start:starts[n + 1][0] if n + 1 < len(starts) else len(eq)]
+        for fname, female, entries in id_functions(None, part):
+            entries = [e for e in entries if e[1].startswith('LOC_ID') or e[1].endswith('_Sprite')]
+            if not entries or fname in ('ToStringEN', 'ShortDescription'):
+                continue
+            out.append('    // %s.%s' % (cls, fname))
+            out.append('    inline const char *%s_%s(int v)' % (cls, fname))
+            out.append('    {')
+            out.append('        switch (v)')
+            out.append('        {')
+            for const, male, fem in entries:
+                out.append('        case %s::%s: return "%s";' % (cls, const, male))
             out.append('        default: return "";')
             out.append('        }')
             out.append('    }')

@@ -70,3 +70,7 @@ lineagescreentest: tools/lineagescreentest.cpp $(SRC) $(shell find src -name "*.
 # Manor screen check (no window): ./manortest out -> out1.ppm out2.ppm
 manortest: tools/manortest.cpp $(SRC) $(shell find src -name "*.h")
 	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ tools/manortest.cpp $(filter-out src/main.cpp,$(SRC)) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm
+
+# Blacksmith / enchantress screens check (no window): ./equipscreentest out
+equipscreentest: tools/equipscreentest.cpp $(SRC) $(shell find src -name "*.h")
+	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ tools/equipscreentest.cpp $(filter-out src/main.cpp,$(SRC)) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm

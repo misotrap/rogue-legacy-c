@@ -216,6 +216,13 @@ void SpriteObj::GoToNextFrame()
 	}
 }
 
+/* XNA draw colour: TextureColor * Opacity (premultiplied) */
+static ::Color ColourOf(const ::Color &c, float opacity)
+{
+	float a = opacity < 0 ? 0 : (opacity > 1 ? 1 : opacity);
+	return ::Color((unsigned) (c.R * a + 0.5f), (unsigned) (c.G * a + 0.5f), (unsigned) (c.B * a + 0.5f), (unsigned) (c.A * a + 0.5f));
+}
+
 void SpriteObj::Draw(Camera2D *camera)
 {
 	if (!Visible())
@@ -229,12 +236,12 @@ void SpriteObj::Draw(Camera2D *camera)
 		/* Camera culling for standalone sprites; children rely on the
 		 * parent's test (SpriteObj.cs). */
 		if (ForceDraw() || Bounds().Intersects(camera->Bounds()))
-			camera->Draw(sprite, AbsPosition(), _ssRect, ::Color(255, 255, 255),
+			camera->Draw(sprite, AbsPosition(), _ssRect, ColourOf(TextureColor(), Opacity()),
 			             0, Anchor(), Scale(), Flip(), Layer());
 	}
 	else
 	{
-		camera->Draw(sprite, AbsPosition(), _ssRect, ::Color(255, 255, 255),
+		camera->Draw(sprite, AbsPosition(), _ssRect, ColourOf(TextureColor(), Opacity()),
 		             0, Anchor(), Parent()->Scale() * Scale(), Flip(), Layer());
 	}
 

@@ -4,6 +4,7 @@
 #include "../RogueCastle/Types/ClassType.h"
 #include "../RogueCastle/Types/SpellType.h"
 #include "../RogueCastle/Types/TraitType.h"
+#include "../RogueCastle/Equipment/EquipmentData.h"
 
 namespace LocIDs
 {
@@ -265,6 +266,158 @@ namespace LocIDs
         case SpellType::DragonFire: return "DragonFireIcon_Sprite";
         case SpellType::DragonFireNeo: return "DragonFireIcon_Sprite";
         case SpellType::RapidDagger: return "RapidDaggerIcon_Sprite";
+        default: return "";
+        }
+    }
+    // EquipmentCategoryType.ToStringID
+    inline const char *EquipmentCategoryType_ToStringID(int v)
+    {
+        switch (v)
+        {
+        case EquipmentCategoryType::Sword: return "LOC_ID_EQUIPMENT_CAT_1";
+        case EquipmentCategoryType::Cape: return "LOC_ID_EQUIPMENT_CAT_2";
+        case EquipmentCategoryType::Limbs: return "LOC_ID_EQUIPMENT_CAT_3";
+        case EquipmentCategoryType::Helm: return "LOC_ID_EQUIPMENT_CAT_4";
+        case EquipmentCategoryType::Chest: return "LOC_ID_EQUIPMENT_CAT_5";
+        default: return "";
+        }
+    }
+    // EquipmentCategoryType.ToStringID2
+    inline const char *EquipmentCategoryType_ToStringID2(int v)
+    {
+        switch (v)
+        {
+        case EquipmentCategoryType::Sword: return "LOC_ID_EQUIPMENT_CAT2_1";
+        case EquipmentCategoryType::Cape: return "LOC_ID_EQUIPMENT_CAT2_2";
+        case EquipmentCategoryType::Limbs: return "LOC_ID_EQUIPMENT_CAT2_3";
+        case EquipmentCategoryType::Helm: return "LOC_ID_EQUIPMENT_CAT2_4";
+        case EquipmentCategoryType::Chest: return "LOC_ID_EQUIPMENT_CAT2_5";
+        default: return "";
+        }
+    }
+    // EquipmentAbilityType.ToStringID
+    inline const char *EquipmentAbilityType_ToStringID(int v)
+    {
+        switch (v)
+        {
+        case EquipmentAbilityType::DoubleJump: return "LOC_ID_EQUIPMENT_ABILITY_1";
+        case EquipmentAbilityType::Dash: return "LOC_ID_EQUIPMENT_ABILITY_2";
+        case EquipmentAbilityType::Vampirism: return "LOC_ID_EQUIPMENT_ABILITY_3";
+        case EquipmentAbilityType::Flight: return "LOC_ID_EQUIPMENT_ABILITY_4";
+        case EquipmentAbilityType::ManaGain: return "LOC_ID_EQUIPMENT_ABILITY_5";
+        case EquipmentAbilityType::ManaHPGain: return "LOC_ID_EQUIPMENT_ABILITY_6";
+        case EquipmentAbilityType::DamageReturn: return "LOC_ID_EQUIPMENT_ABILITY_7";
+        case EquipmentAbilityType::GoldGain: return "LOC_ID_EQUIPMENT_ABILITY_8";
+        case EquipmentAbilityType::MovementSpeed: return "LOC_ID_EQUIPMENT_ABILITY_9";
+        case EquipmentAbilityType::RoomLevelUp: return "LOC_ID_EQUIPMENT_ABILITY_10";
+        case EquipmentAbilityType::RoomLevelDown: return "LOC_ID_EQUIPMENT_ABILITY_11";
+        case EquipmentAbilityType::ArchitectFee: return "LOC_ID_EQUIPMENT_ABILITY_12";
+        case EquipmentAbilityType::NewGamePlusGoldBonus: return "LOC_ID_EQUIPMENT_ABILITY_13";
+        default: return "";
+        }
+    }
+    // EquipmentAbilityType.ToStringID2
+    inline const char *EquipmentAbilityType_ToStringID2(int v)
+    {
+        switch (v)
+        {
+        case EquipmentAbilityType::DoubleJump: return "LOC_ID_EQUIPMENT_ABILITY2_1";
+        case EquipmentAbilityType::Dash: return "LOC_ID_EQUIPMENT_ABILITY2_2";
+        case EquipmentAbilityType::Vampirism: return "LOC_ID_EQUIPMENT_ABILITY2_3";
+        case EquipmentAbilityType::Flight: return "LOC_ID_EQUIPMENT_ABILITY2_4";
+        case EquipmentAbilityType::ManaGain: return "LOC_ID_EQUIPMENT_ABILITY2_5";
+        case EquipmentAbilityType::ManaHPGain: return "LOC_ID_EQUIPMENT_ABILITY2_6";
+        case EquipmentAbilityType::DamageReturn: return "LOC_ID_EQUIPMENT_ABILITY2_7";
+        case EquipmentAbilityType::GoldGain: return "LOC_ID_EQUIPMENT_ABILITY2_8";
+        case EquipmentAbilityType::MovementSpeed: return "LOC_ID_EQUIPMENT_ABILITY2_9";
+        case EquipmentAbilityType::RoomLevelUp: return "LOC_ID_EQUIPMENT_ABILITY2_10";
+        case EquipmentAbilityType::RoomLevelDown: return "LOC_ID_EQUIPMENT_ABILITY2_11";
+        case EquipmentAbilityType::ArchitectFee: return "LOC_ID_EQUIPMENT_ABILITY2_12";
+        case EquipmentAbilityType::NewGamePlusGoldBonus: return "LOC_ID_EQUIPMENT_ABILITY2_13";
+        default: return "";
+        }
+    }
+    // EquipmentAbilityType.DescriptionID
+    inline const char *EquipmentAbilityType_DescriptionID(int v)
+    {
+        switch (v)
+        {
+        case EquipmentAbilityType::DoubleJump: return "LOC_ID_EQUIPMENT_DESC_1";
+        case EquipmentAbilityType::Dash: return "LOC_ID_EQUIPMENT_DESC_2";
+        case EquipmentAbilityType::Vampirism: return "LOC_ID_EQUIPMENT_DESC_3";
+        case EquipmentAbilityType::Flight: return "LOC_ID_EQUIPMENT_DESC_4";
+        case EquipmentAbilityType::ManaGain: return "LOC_ID_EQUIPMENT_DESC_5";
+        case EquipmentAbilityType::ManaHPGain: return "LOC_ID_EQUIPMENT_DESC_6";
+        case EquipmentAbilityType::DamageReturn: return "LOC_ID_EQUIPMENT_DESC_7";
+        case EquipmentAbilityType::GoldGain: return "LOC_ID_EQUIPMENT_DESC_8";
+        case EquipmentAbilityType::MovementSpeed: return "LOC_ID_EQUIPMENT_DESC_9";
+        case EquipmentAbilityType::RoomLevelUp: return "LOC_ID_EQUIPMENT_DESC_10";
+        case EquipmentAbilityType::RoomLevelDown: return "LOC_ID_EQUIPMENT_DESC_11";
+        default: return "";
+        }
+    }
+    // EquipmentAbilityType.Icon
+    inline const char *EquipmentAbilityType_Icon(int v)
+    {
+        switch (v)
+        {
+        case EquipmentAbilityType::DoubleJump: return "EnchantressUI_DoubleJumpIcon_Sprite";
+        case EquipmentAbilityType::Dash: return "EnchantressUI_DashIcon_Sprite";
+        case EquipmentAbilityType::Vampirism: return "EnchantressUI_VampirismIcon_Sprite";
+        case EquipmentAbilityType::Flight: return "EnchantressUI_FlightIcon_Sprite";
+        case EquipmentAbilityType::ManaGain: return "EnchantressUI_ManaGainIcon_Sprite";
+        case EquipmentAbilityType::ManaHPGain: return "EnchantressUI_BalanceIcon_Sprite";
+        case EquipmentAbilityType::DamageReturn: return "EnchantressUI_DamageReturnIcon_Sprite";
+        case EquipmentAbilityType::GoldGain: return "Icon_Gold_Gain_Up_Sprite";
+        case EquipmentAbilityType::MovementSpeed: return "EnchantressUI_SpeedUpIcon_Sprite";
+        case EquipmentAbilityType::RoomLevelUp: return "EnchantressUI_CurseIcon_Sprite";
+        case EquipmentAbilityType::RoomLevelDown: return "EnchantressUI_BlessingIcon_Sprite";
+        default: return "";
+        }
+    }
+    // EquipmentBaseType.ToStringID
+    inline const char *EquipmentBaseType_ToStringID(int v)
+    {
+        switch (v)
+        {
+        case EquipmentBaseType::Bronze: return "LOC_ID_EQUIPMENT_BASE_1";
+        case EquipmentBaseType::Silver: return "LOC_ID_EQUIPMENT_BASE_2";
+        case EquipmentBaseType::Gold: return "LOC_ID_EQUIPMENT_BASE_3";
+        case EquipmentBaseType::Imperial: return "LOC_ID_EQUIPMENT_BASE_4";
+        case EquipmentBaseType::Royal: return "LOC_ID_EQUIPMENT_BASE_5";
+        case EquipmentBaseType::Knight: return "LOC_ID_EQUIPMENT_BASE_6";
+        case EquipmentBaseType::Earthen: return "LOC_ID_EQUIPMENT_BASE_7";
+        case EquipmentBaseType::Sky: return "LOC_ID_EQUIPMENT_BASE_8";
+        case EquipmentBaseType::Dragon: return "LOC_ID_EQUIPMENT_BASE_9";
+        case EquipmentBaseType::Eternal: return "LOC_ID_EQUIPMENT_BASE_10";
+        case EquipmentBaseType::Amethyst: return "LOC_ID_EQUIPMENT_BASE_11";
+        case EquipmentBaseType::Blood: return "LOC_ID_EQUIPMENT_BASE_12";
+        case EquipmentBaseType::Spike: return "LOC_ID_EQUIPMENT_BASE_13";
+        case EquipmentBaseType::Holy: return "LOC_ID_EQUIPMENT_BASE_14";
+        case EquipmentBaseType::Dark: return "LOC_ID_EQUIPMENT_BASE_15";
+        default: return "";
+        }
+    }
+    // EquipmentSecondaryDataType.ToStringID
+    inline const char *EquipmentSecondaryDataType_ToStringID(int v)
+    {
+        switch (v)
+        {
+        case EquipmentSecondaryDataType::CritChance: return "LOC_ID_EQUIPMENT_SEC_1";
+        case EquipmentSecondaryDataType::CritDamage: return "LOC_ID_EQUIPMENT_SEC_2";
+        case EquipmentSecondaryDataType::Vampirism: return "LOC_ID_EQUIPMENT_SEC_3";
+        case EquipmentSecondaryDataType::GoldBonus: return "LOC_ID_EQUIPMENT_SEC_4";
+        case EquipmentSecondaryDataType::ManaDrain: return "LOC_ID_EQUIPMENT_SEC_5";
+        case EquipmentSecondaryDataType::XpBonus: return "LOC_ID_EQUIPMENT_SEC_6";
+        case EquipmentSecondaryDataType::AirAttack: return "LOC_ID_EQUIPMENT_SEC_7";
+        case EquipmentSecondaryDataType::DoubleJump: return "LOC_ID_EQUIPMENT_SEC_8";
+        case EquipmentSecondaryDataType::DamageReturn: return "LOC_ID_EQUIPMENT_SEC_9";
+        case EquipmentSecondaryDataType::AirDash: return "LOC_ID_EQUIPMENT_SEC_10";
+        case EquipmentSecondaryDataType::Block: return "LOC_ID_EQUIPMENT_SEC_11";
+        case EquipmentSecondaryDataType::Float: return "LOC_ID_EQUIPMENT_SEC_12";
+        case EquipmentSecondaryDataType::AttackProjectiles: return "LOC_ID_EQUIPMENT_SEC_13";
+        case EquipmentSecondaryDataType::Flight: return "LOC_ID_EQUIPMENT_SEC_14";
+        case EquipmentSecondaryDataType::MoveSpeed: return "LOC_ID_EQUIPMENT_SEC_15";
         default: return "";
         }
     }

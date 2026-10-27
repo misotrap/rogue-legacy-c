@@ -32,7 +32,6 @@ Rectangle Camera2D::Bounds() const
 void Camera2D::Draw(const Texture *texture, Vector2 position, Rectangle srcRect, Color color,
                    float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layer)
 {
-	(void) color;
 	(void) layer;
 	(void) rotation;   /* TODO C++: no rotation in the blitter yet; player
 	                   * parts never rotate (the original ignores
@@ -45,8 +44,10 @@ void Camera2D::Draw(const Texture *texture, Vector2 position, Rectangle srcRect,
 	float dx = screen.X - origin.X * screenScale.X;
 	float dy = screen.Y - origin.Y * screenScale.Y;
 	float s = screenScale.X;
-	gfx_blit(texture, srcRect.X, srcRect.Y, srcRect.Width, srcRect.Height,
-	         dx, dy, s, effects == SpriteEffects::FlipHorizontally ? 1 : 0);
+	/* XNA draw colour (TextureColor * Opacity); white costs nothing extra */
+	uint32_t argb = ((uint32_t) color.A << 24) | ((uint32_t) color.R << 16) | ((uint32_t) color.G << 8) | color.B;
+	gfx_blit_tinted(texture, srcRect.X, srcRect.Y, srcRect.Width, srcRect.Height,
+	                dx, dy, s, effects == SpriteEffects::FlipHorizontally ? 1 : 0, argb);
 }
 
 void Camera2D::Draw(const Texture *texture, Vector2 position, Rectangle srcRect, Color color,
