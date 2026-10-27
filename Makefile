@@ -28,3 +28,11 @@ castletest: tools/castletest.cpp src/RogueCastle/Levels/*.cpp src/RogueCastle/Le
 # Heir generation check (no graphics): ./lineagetest [seed] [generations]
 lineagetest: tools/lineagetest.cpp src/RogueCastle/Lineage/*.cpp src/RogueCastle/Lineage/*.h
 	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/lineagetest.cpp src/RogueCastle/Lineage/*.cpp
+
+# Manor check (no graphics): ./skilltest [lives] [gold per life]
+skilltest: tools/skilltest.cpp src/RogueCastle/Skills/*.cpp src/RogueCastle/Skills/*.h
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/skilltest.cpp src/RogueCastle/Skills/*.cpp
+
+# Regenerate src/RogueCastle/Skills/SkillData.h from ref/
+skills:
+	python3 tools/convert_skills.py ref/RogueLegacy1 src
