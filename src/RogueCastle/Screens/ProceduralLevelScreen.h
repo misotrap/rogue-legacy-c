@@ -29,7 +29,8 @@ public:
 	/* The ProjectileManager subset: bones and later the spells. */
 	void FireProjectile(const char *spriteName, Vector2 position,
 	                    Vector2 heading, float speed, int damage,
-	                    Vector2 scale, bool weighted, class EnemyObj *source);
+	                    Vector2 scale, bool weighted, class EnemyObj *source,
+	                    float lifeSpan = 0);
 
 	PlayerObj *Player() const { return m_player; }
 	RoomObj *CurrentRoom() const { return m_currentRoom; }

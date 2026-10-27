@@ -60,7 +60,19 @@ void ProjectileObj::Update(GameTime *gameTime)
 	 * elapsed); gravity comes from the physics manager like the original. */
 	float elapsed = (float) gameTime->ElapsedGameTime;
 	Position(Position() + Heading() * (m_speed * elapsed));
-ObjContainer::Update(gameTime);
+	if (LifeSpan > 0)
+	{
+		m_elapsedLifeSpan += elapsed;
+		if (m_elapsedLifeSpan >= LifeSpan)
+		{
+			/* RunDestroyAnimation in the C#; the port just hides it, the
+			 * level screen frees it. */
+			IsKilled = true;
+			Visible(false);
+			IsCollidableFlag = false;
+		}
+	}
+	ObjContainer::Update(gameTime);
 }
 
 } // namespace RogueCastle

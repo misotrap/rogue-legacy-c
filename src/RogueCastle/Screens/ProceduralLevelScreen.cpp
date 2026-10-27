@@ -241,6 +241,14 @@ void ProceduralLevelScreen::CheckForRoomTransition()
 	{
 		if (roomObj != m_currentRoom && roomObj->Contains((int) m_player->X(), (int) m_player->Y()))
 		{
+			/* ProjectileManager: enemy projectiles do not survive room
+			 * transitions (ProjectileObj DestroyOnRoomTransition). */
+			for (ProjectileObj *proj : m_projectiles)
+			{
+				m_physicsManager.RemoveObject(proj);
+				delete proj;
+			}
+			m_projectiles.clear();
 			if (m_currentRoom != nullptr)
 				for (EnemyObj *enemy : m_currentRoom->EnemyList())
 					enemy->ResetState();
@@ -277,11 +285,13 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 
 void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,
                                            Vector2 heading, float speed, int damage,
-                                           Vector2 scale, bool weighted, EnemyObj *source)
+                                           Vector2 scale, bool weighted, EnemyObj *source,
+                                           float lifeSpan)
 {
 	ProjectileObj *proj = new ProjectileObj(spriteName, position, heading, speed,
 	                                        damage, scale, weighted);
 	proj->Source = source;
+	proj->LifeSpan = lifeSpan;
 	m_projectiles.push_back(proj);
 	m_physicsManager.AddObject(proj);
 	if (getenv("RL_DEBUG_TRACE") != nullptr)

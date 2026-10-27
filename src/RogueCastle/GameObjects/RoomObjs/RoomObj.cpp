@@ -4,6 +4,7 @@
 #include "../EnemyObjs/EnemyObj_Skeleton.h"
 #include "../EnemyObjs/EnemyObj_Knight.h"
 #include "../EnemyObjs/EnemyObj_Eyeball.h"
+#include "../EnemyObjs/EnemyObj_Blob.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -51,8 +52,10 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Knight(player, diff);
 	case EnemyType::Eyeball:
 		return new EnemyObj_Eyeball(player, diff);
+	case EnemyType::Blob:
+		return new EnemyObj_Blob(player, diff);
 	default:
-		return nullptr;   /* not ported yet (blob...) */
+		return nullptr;
 	}
 }
 

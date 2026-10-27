@@ -34,12 +34,16 @@ public:
 	float RotationSpeed = 0;   /* TODO C++: spinning blits */
 	bool DestroysWithTerrain = false;
 	bool IsKilled = false;
+	/* ProjectileObj.cs: projectiles are given a lifespan; 0 = live until
+	 * they hit something or leave play. */
+	float LifeSpan = 0;
 
 	/* The source (for the damage return and the debug); not owned. */
 	class EnemyObj *Source = nullptr;
 
 private:
 	float m_speed = 0;
+	float m_elapsedLifeSpan = 0;
 };
 
 } // namespace RogueCastle
