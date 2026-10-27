@@ -9,6 +9,7 @@
 #include "../EnemyObjs/EnemyObj_SpikeTrap.h"
 #include "../EnemyObjs/EnemyObj_BouncySpike.h"
 #include "../EnemyObjs/EnemyObj_SwordKnight.h"
+#include "../EnemyObjs/EnemyObj_Plant.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -66,6 +67,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_BouncySpike(player, diff);
 	case EnemyType::SwordKnight:
 		return new EnemyObj_SwordKnight(player, diff);
+	case EnemyType::Plant:
+		return new EnemyObj_Plant(player, diff);
 	default:
 		return nullptr;
 	}
