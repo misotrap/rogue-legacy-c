@@ -141,6 +141,37 @@ namespace Text
 		return w;
 	}
 
+	std::string Font::Wrap(const std::string &text, float scale, float maxWidth) const
+	{
+		std::string out, line, word;
+		auto flushWord = [&]()
+		{
+			if (word.empty()) return;
+			std::string tryLine = line.empty() ? word : line + " " + word;
+			if (!line.empty() && Width(tryLine.c_str()) * scale > maxWidth)
+			{
+				out += line + "\n";
+				line = word;
+			}
+			else
+				line = tryLine;
+			word.clear();
+		};
+		for (char c : text)
+		{
+			if (c == ' ') flushWord();
+			else if (c == '\n')
+			{
+				flushWord();
+				out += line + "\n";
+				line.clear();
+			}
+			else word += c;
+		}
+		flushWord();
+		return out + line;
+	}
+
 	// Tinted, scaled, premultiplied blit of one glyph (nearest texel)
 	static void BlitGlyph(uint32_t *fb, const Texture &t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, uint32_t colour)
 	{

@@ -26,38 +26,6 @@ namespace RogueCastle
 
 		const uint32_t GOLD = 0xFFF0C850u, WHITE = 0xFFFFFFFFu, GREY = 0xFFB4AAB4u, BLACK = 0xFF000000u;
 
-		// Breaks a text into lines no wider than maxWidth screen pixels
-		std::string Wrap(const Text::Font &font, const std::string &text, float scale, float maxWidth)
-		{
-			std::string out, line, word;
-			auto flushWord = [&]()
-			{
-				if (word.empty()) return;
-				std::string tryLine = line.empty() ? word : line + " " + word;
-				if (!line.empty() && font.Width(tryLine.c_str()) * scale > maxWidth)
-				{
-					out += line + "\n";
-					line = word;
-				}
-				else
-					line = tryLine;
-				word.clear();
-			};
-			for (char c : text)
-			{
-				if (c == ' ') flushWord();
-				else if (c == '\n')
-				{
-					flushWord();
-					out += line + "\n";
-					line.clear();
-				}
-				else word += c;
-			}
-			flushWord();
-			return out + line;
-		}
-
 		// "PlayerIdleHead1_Sprite" -> "PlayerIdleHead<piece>_Sprite"
 		std::string WithPiece(const std::string &spriteName, int piece)
 		{
@@ -272,7 +240,7 @@ namespace RogueCastle
 				if (h.trait1) traits += Text::Loc::Get(LocIDs::TraitType_ToStringID(h.trait1));
 				if (h.trait2) traits += std::string(h.trait1 ? ", " : "") + Text::Loc::Get(LocIDs::TraitType_ToStringID(h.trait2));
 			}
-			std::string wrapped = Wrap(m_textFont, traits, 0.3f, 190);
+			std::string wrapped = m_textFont.Wrap(traits, 0.3f, 190);
 			m_textFont.DrawOutlined(frame, wrapped.c_str(), cx, SY(446), 0.3f, GREY, BLACK, 1, Text::Align::Centre);
 		}
 
@@ -286,7 +254,7 @@ namespace RogueCastle
 			{
 				m_textFont.DrawOutlined(frame, head.c_str(), left, y, scale, GOLD, BLACK, 1);
 				y += m_textFont.LineSpacing() * scale;
-				std::string w = Wrap(m_textFont, body, scale, width);
+				std::string w = m_textFont.Wrap(body, scale, width);
 				m_textFont.Draw(frame, w.c_str(), left, y, scale, WHITE);
 				int lines = 1;
 				for (char c : w) lines += c == '\n';

@@ -101,43 +101,44 @@ namespace Skills
         int baseCost;
         int appreciation;        // extra cost per level of this skill
         int maxLevel;
+        bool displayStat;        // shows Current/Upgrade amounts
     };
 
     // Skills from Health_Up to SuperSecret (SkillSystem.Initialize: 2 .. DIVIDER-1)
     inline const SkillInfo SKILLS[] =
     {
-        { SkillType::Health_Up, "Health Up", "LOC_ID_SKILL_NAME_1", "LOC_ID_SKILL_DESC_1", "Icon_Health_UpLocked_Sprite", " hp", 10.0f, 50, 40, 75 },
-        { SkillType::Invuln_Time_Up, "Invuln Time Up", "LOC_ID_SKILL_NAME_2", "LOC_ID_SKILL_DESC_2", "Icon_InvulnTimeUpLocked_Sprite", " sec", 0.1f, 750, 1700, 5 },
-        { SkillType::Death_Dodge, "Death Defy", "LOC_ID_SKILL_NAME_3", "LOC_ID_SKILL_DESC_3", "Icon_DeathDefyLocked_Sprite", "%", 0.015f, 750, 1500, 10 },
-        { SkillType::Attack_Up, "Attack Up", "LOC_ID_SKILL_NAME_4", "LOC_ID_SKILL_DESC_4", "Icon_SwordLocked_Sprite", " str", 2.0f, 100, 85, 75 },
-        { SkillType::Down_Strike_Up, "Down Strike Up", "LOC_ID_SKILL_NAME_5", "LOC_ID_SKILL_DESC_5", "Icon_Attack_UpLocked_Sprite", "%", 0.05f, 750, 1500, 5 },
-        { SkillType::Crit_Chance_Up, "Crit Chance Up", "LOC_ID_SKILL_NAME_6", "LOC_ID_SKILL_DESC_6", "Icon_Crit_Chance_UpLocked_Sprite", "%", 0.02f, 150, 125, 25 },
-        { SkillType::Crit_Damage_Up, "Crit Damage Up", "LOC_ID_SKILL_NAME_7", "LOC_ID_SKILL_DESC_7", "Icon_Crit_Damage_UpLocked_Sprite", "%", 0.05f, 150, 125, 25 },
-        { SkillType::Magic_Damage_Up, "Magic Damage Up", "LOC_ID_SKILL_NAME_8", "LOC_ID_SKILL_DESC_8", "Icon_MagicDmgUpLocked_Sprite", " int", 2.0f, 100, 85, 75 },
-        { SkillType::Mana_Up, "Mana Up", "LOC_ID_SKILL_NAME_9", "LOC_ID_SKILL_DESC_9", "Icon_ManaUpLocked_Sprite", " mp", 10.0f, 50, 40, 75 },
-        { SkillType::Mana_Cost_Down, "Mana Cost Down", "LOC_ID_SKILL_NAME_23", "LOC_ID_SKILL_DESC_23", "Icon_ManaCostDownLocked_Sprite", "%", 0.05f, 750, 1700, 5 },
-        { SkillType::Smithy, "Smithy", "LOC_ID_SKILL_NAME_10", "LOC_ID_SKILL_DESC_10", "Icon_SmithyLocked_Sprite", "0", 1.0f, 50, 0, 1 },
-        { SkillType::Enchanter, "Enchantress", "LOC_ID_SKILL_NAME_11", "LOC_ID_SKILL_DESC_11", "Icon_EnchanterLocked_Sprite", "0", 1.0f, 50, 0, 1 },
-        { SkillType::Architect, "Architect", "LOC_ID_SKILL_NAME_12", "LOC_ID_SKILL_DESC_12", "Icon_ArchitectLocked_Sprite", "0", 1.0f, 50, 0, 1 },
-        { SkillType::Equip_Up, "Equip Up", "LOC_ID_SKILL_NAME_13", "LOC_ID_SKILL_DESC_13", "Icon_Equip_UpLocked_Sprite", " weight", 10.0f, 50, 40, 50 },
-        { SkillType::Armor_Up, "Armor Up", "LOC_ID_SKILL_NAME_14", "LOC_ID_SKILL_DESC_14", "Icon_ShieldLocked_Sprite", " armor", 4.0f, 125, 105, 50 },
-        { SkillType::Gold_Gain_Up, "Gold Gain Up", "LOC_ID_SKILL_NAME_15", "LOC_ID_SKILL_DESC_15", "Icon_Gold_Gain_UpLocked_Sprite", "%", 0.1f, 1000, 2150, 5 },
-        { SkillType::Prices_Down, "Haggle", "LOC_ID_SKILL_NAME_16", "LOC_ID_SKILL_DESC_16", "Icon_HaggleLocked_Sprite", "%", 0.1f, 500, 1000, 5 },
-        { SkillType::Potion_Up, "Potion Up", "LOC_ID_SKILL_NAME_17", "LOC_ID_SKILL_DESC_17", "Icon_PotionUpLocked_Sprite", "% hp/mp", 0.01f, 750, 1750, 5 },
-        { SkillType::Randomize_Children, "Randomize Children", "LOC_ID_SKILL_NAME_18", "LOC_ID_SKILL_DESC_18", "Icon_RandomizeChildrenLocked_Sprite", "%", 1.0f, 5000, 5000, 1 },
-        { SkillType::Lich_Unlock, "Unlock Lich", "LOC_ID_SKILL_NAME_19", "LOC_ID_SKILL_DESC_19", "Icon_LichUnlockLocked_Sprite", " hp", 1.0f, 850, 0, 1 },
-        { SkillType::Banker_Unlock, "Unlock Miner", "LOC_ID_SKILL_NAME_20", "LOC_ID_SKILL_DESC_20", "Icon_SpelunkerUnlockLocked_Sprite", " hp", 1.0f, 400, 0, 1 },
-        { SkillType::Spellsword_Unlock, "Unlock Spell Thief", "LOC_ID_SKILL_NAME_21", "LOC_ID_SKILL_DESC_21", "Icon_SpellswordUnlockLocked_Sprite", " hp", 1.0f, 850, 0, 1 },
-        { SkillType::Ninja_Unlock, "Unlock Shinobi", "LOC_ID_SKILL_NAME_22", "LOC_ID_SKILL_DESC_22", "Icon_NinjaUnlockLocked_Sprite", " hp", 1.0f, 400, 0, 1 },
-        { SkillType::Knight_Up, "Upgrade Knight", "LOC_ID_SKILL_NAME_24", "LOC_ID_SKILL_DESC_24", "Icon_KnightUpLocked_Sprite", " hp", 1.0f, 50, 0, 1 },
-        { SkillType::Mage_Up, "Upgrade Mage", "LOC_ID_SKILL_NAME_25", "LOC_ID_SKILL_DESC_25", "Icon_WizardUpLocked_Sprite", " hp", 1.0f, 300, 0, 1 },
-        { SkillType::Assassin_Up, "Upgrade Knave", "LOC_ID_SKILL_NAME_26", "LOC_ID_SKILL_DESC_26", "Icon_AssassinUpLocked_Sprite", " hp", 1.0f, 300, 0, 1 },
-        { SkillType::Banker_Up, "Upgrade Miner", "LOC_ID_SKILL_NAME_27", "LOC_ID_SKILL_DESC_27", "Icon_SpelunkerUpLocked_Sprite", " hp", 1.0f, 1750, 0, 1 },
-        { SkillType::Barbarian_Up, "Upgrade Barbarian", "LOC_ID_SKILL_NAME_28", "LOC_ID_SKILL_DESC_28", "Icon_BarbarianUpLocked_Sprite", " hp", 1.0f, 300, 0, 1 },
-        { SkillType::Lich_Up, "Upgrade Lich", "LOC_ID_SKILL_NAME_29", "LOC_ID_SKILL_DESC_29", "Icon_LichUpLocked_Sprite", " hp", 1.0f, 1500, 0, 1 },
-        { SkillType::Ninja_Up, "Upgrade Shinobi", "LOC_ID_SKILL_NAME_30", "LOC_ID_SKILL_DESC_30", "Icon_NinjaUpLocked_Sprite", " hp", 1.0f, 750, 0, 1 },
-        { SkillType::SpellSword_Up, "Upgrade Spell Thief", "LOC_ID_SKILL_NAME_31", "LOC_ID_SKILL_DESC_31", "Icon_SpellswordUpLocked_Sprite", " hp", 1.0f, 1500, 0, 1 },
-        { SkillType::SuperSecret, "Beastiality", "LOC_ID_SKILL_NAME_32", "LOC_ID_SKILL_DESC_32", "Icon_Display_Boss_RoomsLocked_Sprite", "hp", 10.0f, 5000, 30, 1 },
+        { SkillType::Health_Up, "Health Up", "LOC_ID_SKILL_NAME_1", "LOC_ID_SKILL_DESC_1", "Icon_Health_UpLocked_Sprite", " hp", 10.0f, 50, 40, 75, true },
+        { SkillType::Invuln_Time_Up, "Invuln Time Up", "LOC_ID_SKILL_NAME_2", "LOC_ID_SKILL_DESC_2", "Icon_InvulnTimeUpLocked_Sprite", " sec", 0.1f, 750, 1700, 5, true },
+        { SkillType::Death_Dodge, "Death Defy", "LOC_ID_SKILL_NAME_3", "LOC_ID_SKILL_DESC_3", "Icon_DeathDefyLocked_Sprite", "%", 0.015f, 750, 1500, 10, false },
+        { SkillType::Attack_Up, "Attack Up", "LOC_ID_SKILL_NAME_4", "LOC_ID_SKILL_DESC_4", "Icon_SwordLocked_Sprite", " str", 2.0f, 100, 85, 75, true },
+        { SkillType::Down_Strike_Up, "Down Strike Up", "LOC_ID_SKILL_NAME_5", "LOC_ID_SKILL_DESC_5", "Icon_Attack_UpLocked_Sprite", "%", 0.05f, 750, 1500, 5, false },
+        { SkillType::Crit_Chance_Up, "Crit Chance Up", "LOC_ID_SKILL_NAME_6", "LOC_ID_SKILL_DESC_6", "Icon_Crit_Chance_UpLocked_Sprite", "%", 0.02f, 150, 125, 25, false },
+        { SkillType::Crit_Damage_Up, "Crit Damage Up", "LOC_ID_SKILL_NAME_7", "LOC_ID_SKILL_DESC_7", "Icon_Crit_Damage_UpLocked_Sprite", "%", 0.05f, 150, 125, 25, false },
+        { SkillType::Magic_Damage_Up, "Magic Damage Up", "LOC_ID_SKILL_NAME_8", "LOC_ID_SKILL_DESC_8", "Icon_MagicDmgUpLocked_Sprite", " int", 2.0f, 100, 85, 75, false },
+        { SkillType::Mana_Up, "Mana Up", "LOC_ID_SKILL_NAME_9", "LOC_ID_SKILL_DESC_9", "Icon_ManaUpLocked_Sprite", " mp", 10.0f, 50, 40, 75, true },
+        { SkillType::Mana_Cost_Down, "Mana Cost Down", "LOC_ID_SKILL_NAME_23", "LOC_ID_SKILL_DESC_23", "Icon_ManaCostDownLocked_Sprite", "%", 0.05f, 750, 1700, 5, false },
+        { SkillType::Smithy, "Smithy", "LOC_ID_SKILL_NAME_10", "LOC_ID_SKILL_DESC_10", "Icon_SmithyLocked_Sprite", "0", 1.0f, 50, 0, 1, false },
+        { SkillType::Enchanter, "Enchantress", "LOC_ID_SKILL_NAME_11", "LOC_ID_SKILL_DESC_11", "Icon_EnchanterLocked_Sprite", "0", 1.0f, 50, 0, 1, false },
+        { SkillType::Architect, "Architect", "LOC_ID_SKILL_NAME_12", "LOC_ID_SKILL_DESC_12", "Icon_ArchitectLocked_Sprite", "0", 1.0f, 50, 0, 1, false },
+        { SkillType::Equip_Up, "Equip Up", "LOC_ID_SKILL_NAME_13", "LOC_ID_SKILL_DESC_13", "Icon_Equip_UpLocked_Sprite", " weight", 10.0f, 50, 40, 50, true },
+        { SkillType::Armor_Up, "Armor Up", "LOC_ID_SKILL_NAME_14", "LOC_ID_SKILL_DESC_14", "Icon_ShieldLocked_Sprite", " armor", 4.0f, 125, 105, 50, true },
+        { SkillType::Gold_Gain_Up, "Gold Gain Up", "LOC_ID_SKILL_NAME_15", "LOC_ID_SKILL_DESC_15", "Icon_Gold_Gain_UpLocked_Sprite", "%", 0.1f, 1000, 2150, 5, false },
+        { SkillType::Prices_Down, "Haggle", "LOC_ID_SKILL_NAME_16", "LOC_ID_SKILL_DESC_16", "Icon_HaggleLocked_Sprite", "%", 0.1f, 500, 1000, 5, false },
+        { SkillType::Potion_Up, "Potion Up", "LOC_ID_SKILL_NAME_17", "LOC_ID_SKILL_DESC_17", "Icon_PotionUpLocked_Sprite", "% hp/mp", 0.01f, 750, 1750, 5, false },
+        { SkillType::Randomize_Children, "Randomize Children", "LOC_ID_SKILL_NAME_18", "LOC_ID_SKILL_DESC_18", "Icon_RandomizeChildrenLocked_Sprite", "%", 1.0f, 5000, 5000, 1, false },
+        { SkillType::Lich_Unlock, "Unlock Lich", "LOC_ID_SKILL_NAME_19", "LOC_ID_SKILL_DESC_19", "Icon_LichUnlockLocked_Sprite", " hp", 1.0f, 850, 0, 1, true },
+        { SkillType::Banker_Unlock, "Unlock Miner", "LOC_ID_SKILL_NAME_20", "LOC_ID_SKILL_DESC_20", "Icon_SpelunkerUnlockLocked_Sprite", " hp", 1.0f, 400, 0, 1, true },
+        { SkillType::Spellsword_Unlock, "Unlock Spell Thief", "LOC_ID_SKILL_NAME_21", "LOC_ID_SKILL_DESC_21", "Icon_SpellswordUnlockLocked_Sprite", " hp", 1.0f, 850, 0, 1, true },
+        { SkillType::Ninja_Unlock, "Unlock Shinobi", "LOC_ID_SKILL_NAME_22", "LOC_ID_SKILL_DESC_22", "Icon_NinjaUnlockLocked_Sprite", " hp", 1.0f, 400, 0, 1, true },
+        { SkillType::Knight_Up, "Upgrade Knight", "LOC_ID_SKILL_NAME_24", "LOC_ID_SKILL_DESC_24", "Icon_KnightUpLocked_Sprite", " hp", 1.0f, 50, 0, 1, true },
+        { SkillType::Mage_Up, "Upgrade Mage", "LOC_ID_SKILL_NAME_25", "LOC_ID_SKILL_DESC_25", "Icon_WizardUpLocked_Sprite", " hp", 1.0f, 300, 0, 1, true },
+        { SkillType::Assassin_Up, "Upgrade Knave", "LOC_ID_SKILL_NAME_26", "LOC_ID_SKILL_DESC_26", "Icon_AssassinUpLocked_Sprite", " hp", 1.0f, 300, 0, 1, true },
+        { SkillType::Banker_Up, "Upgrade Miner", "LOC_ID_SKILL_NAME_27", "LOC_ID_SKILL_DESC_27", "Icon_SpelunkerUpLocked_Sprite", " hp", 1.0f, 1750, 0, 1, true },
+        { SkillType::Barbarian_Up, "Upgrade Barbarian", "LOC_ID_SKILL_NAME_28", "LOC_ID_SKILL_DESC_28", "Icon_BarbarianUpLocked_Sprite", " hp", 1.0f, 300, 0, 1, true },
+        { SkillType::Lich_Up, "Upgrade Lich", "LOC_ID_SKILL_NAME_29", "LOC_ID_SKILL_DESC_29", "Icon_LichUpLocked_Sprite", " hp", 1.0f, 1500, 0, 1, true },
+        { SkillType::Ninja_Up, "Upgrade Shinobi", "LOC_ID_SKILL_NAME_30", "LOC_ID_SKILL_DESC_30", "Icon_NinjaUpLocked_Sprite", " hp", 1.0f, 750, 0, 1, true },
+        { SkillType::SpellSword_Up, "Upgrade Spell Thief", "LOC_ID_SKILL_NAME_31", "LOC_ID_SKILL_DESC_31", "Icon_SpellswordUpLocked_Sprite", " hp", 1.0f, 1500, 0, 1, true },
+        { SkillType::SuperSecret, "Beastiality", "LOC_ID_SKILL_NAME_32", "LOC_ID_SKILL_DESC_32", "Icon_Display_Boss_RoomsLocked_Sprite", "hp", 10.0f, 5000, 30, 1, true },
     };
     constexpr int SKILL_COUNT = 32;
 
@@ -171,6 +172,65 @@ namespace Skills
         { -1, -1, 30, -1, -1, 28, -1, -1, -1, -1 },
         { -1, -1, -1, -1, -1, 26, 24, -1, -1, -1 },
     };
+
+    // Where each skill icon sits on the manor screen, in 1320x720 game
+    // coordinates (SkillSystem.m_skillPositionArray, [row][column])
+    struct IconPos { float x, y; };
+    inline const IconPos SKILL_POSITION[GRID_ROWS][GRID_COLS] =
+    {
+        { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 860, 125 }, { 0, 0 } },
+        { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 655, -100 }, { 735, 95 }, { 0, 0 } },
+        { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 655, 50 }, { 655, 125 }, { 0, 0 } },
+        { { 0, 0 }, { 0, 0 }, { 365, 150 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 655, 200 }, { 0, 0 } },
+        { { 0, 0 }, { 0, 0 }, { 185, 250 }, { 365, 250 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 735, 200 }, { 0, 0 } },
+        { { 110, 360 }, { 110, 460 }, { 185, 360 }, { 0, 0 }, { 275, 555 }, { 0, 0 }, { 735, 555 }, { 0, 0 }, { 735, 280 }, { 0, 0 } },
+        { { 40, 410 }, { 0, 0 }, { 185, 555 }, { 275, 360 }, { 275, 460 }, { 505, 315 }, { 735, 460 }, { 735, 360 }, { 860, 460 }, { 938, 415 } },
+        { { 0, 0 }, { 0, 0 }, { 185, 680 }, { 0, 0 }, { 0, 0 }, { 505, 410 }, { 0, 0 }, { 0, 0 }, { 860, 680 }, { 0, 0 } },
+        { { 0, 0 }, { 0, 0 }, { 275, 680 }, { 0, 0 }, { 0, 0 }, { 505, 490 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+        { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 505, 590 }, { 505, 680 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+    };
+
+    // Cursor moves on the manor screen (SkillBuilder.GetSkillLinker):
+    // from grid cell (x = column, y = row), the cell reached by up, down,
+    // left and right; -1 = no move
+    struct SkillLink { int x, y, upX, upY, downX, downY, leftX, leftY, rightX, rightY; };
+    inline const SkillLink SKILL_LINKS[] =
+    {
+        { 5, 9, 5, 8, 6, 9, 4, 5, 6, 5 },
+        { 8, 8, 5, 9, -1, -1, 2, 8, 8, 7 },
+        { 3, 4, 2, 3, 3, 6, 2, 4, 5, 6 },
+        { 4, 6, 3, 6, 4, 5, 1, 5, 5, 8 },
+        { 2, 8, 4, 5, -1, -1, 2, 7, 6, 9 },
+        { 2, 5, 2, 4, 2, 6, 0, 5, 3, 6 },
+        { 1, 5, 0, 5, -1, -1, 0, 6, 4, 6 },
+        { 8, 5, 8, 4, 7, 6, -1, -1, -1, -1 },
+        { 2, 6, 2, 5, 2, 7, -1, -1, 4, 5 },
+        { 5, 8, 5, 7, 5, 9, 4, 6, 6, 6 },
+        { 5, 6, -1, -1, 5, 7, 3, 4, 8, 3 },
+        { 3, 6, 3, 4, 4, 6, 2, 5, 5, 7 },
+        { 7, 6, 8, 5, 6, 6, 5, 7, -1, -1 },
+        { 6, 6, 7, 6, 6, 5, 5, 8, 8, 6 },
+        { 8, 6, -1, -1, 8, 7, 6, 6, 9, 6 },
+        { 8, 4, 8, 1, 8, 5, 8, 3, -1, -1 },
+        { 8, 7, 8, 6, -1, -1, 6, 9, -1, -1 },
+        { 2, 7, 2, 6, 2, 7, -1, -1, 2, 8 },
+        { 8, 3, 8, 2, -1, -1, 5, 6, 8, 4 },
+        { 8, 2, 7, 2, 8, 3, -1, -1, 8, 1 },
+        { 9, 6, -1, -1, -1, -1, 8, 6, -1, -1 },
+        { 2, 4, -1, -1, 2, 5, -1, -1, 3, 4 },
+        { 5, 7, 5, 6, 5, 8, 3, 6, 7, 6 },
+        { 4, 5, 4, 6, 2, 8, 2, 6, 5, 9 },
+        { 6, 5, 6, 6, -1, -1, 5, 9, -1, -1 },
+        { 2, 3, -1, -1, 3, 4, -1, -1, -1, -1 },
+        { 7, 2, 7, 1, 8, 2, -1, -1, -1, -1 },
+        { 7, 1, -1, -1, 7, 2, -1, -1, -1, -1 },
+        { 0, 5, -1, -1, 1, 5, 0, 6, 2, 5 },
+        { 0, 6, -1, -1, -11, -1, -1, -1, 0, 5 },
+        { 6, 9, 5, 9, -1, -1, 2, 8, 8, 7 },
+        { 8, 1, -1, -1, 8, 4, 8, 2, 8, 0 },
+        { 8, 0, -1, -1, -1, -1, 8, 1, -1, -1 },
+    };
+    constexpr int SKILL_LINK_COUNT = 33;
 
     constexpr SkillType STARTING_SKILL = SkillType::Smithy; // visible on a new game
     constexpr int SKILL_LEVEL_COST_INCREASE = 10;    // GameEV: cost added per player level

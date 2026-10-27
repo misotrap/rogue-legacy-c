@@ -66,3 +66,7 @@ loc:
 # Heir choice screen check (no window): ./lineagescreentest out -> out1.ppm out2.ppm
 lineagescreentest: tools/lineagescreentest.cpp $(SRC) $(shell find src -name "*.h")
 	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ tools/lineagescreentest.cpp $(filter-out src/main.cpp,$(SRC)) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm
+
+# Manor screen check (no window): ./manortest out -> out1.ppm out2.ppm
+manortest: tools/manortest.cpp $(SRC) $(shell find src -name "*.h")
+	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ tools/manortest.cpp $(filter-out src/main.cpp,$(SRC)) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm

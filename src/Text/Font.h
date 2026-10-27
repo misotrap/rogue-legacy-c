@@ -34,6 +34,8 @@ namespace Text
 		// Size of a UTF-8 string at scale 1, in font pixels (MeasureString)
 		void Measure(const char *utf8, float &width, float &height) const;
 		float Width(const char *utf8) const;
+		// Breaks text into lines no wider than maxWidth screen pixels at this scale
+		std::string Wrap(const std::string &text, float scale, float maxWidth) const;
 
 		// Draws a UTF-8 string with its top-left (or top-centre/right) at
 		// screen position (x, y). colour is 0xAARRGGBB (alpha = opacity).

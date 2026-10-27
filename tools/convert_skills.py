@@ -54,6 +54,21 @@ def main():
         return [re.findall(cell, r) for r in rows]
     type_grid = grid('m_skillTypeArray', r'SkillType\.(\w+)')
     piece_grid = grid('m_manorPieceArray', r'-?\d+')
+    def vec_grid(var):
+        block = text[text.index(var):]
+        block = block[block.index('{') + 1:]
+        rows = re.findall(r'\{((?:[^{}]|\([^()]*\))*)\}', block[:block.index('};')])
+        return [re.findall(r'new\s+Vector2\s*\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)', r) for r in rows]
+    pos_grid = vec_grid('m_skillPositionArray')
+    builder = open(os.path.join(src, 'SkillBuilder.cs'), encoding='utf-8-sig').read()
+    builder = re.sub(r'//[^\n]*', '', builder[builder.index('GetSkillLinker'):])
+    links = []
+    for m in re.finditer(r'if\s*\(\s*xIndex\s*==\s*(\d+)\s*&&\s*yIndex\s*==\s*(\d+)\s*\)\s*\{(.*?)\}', builder, re.S):
+        d = dict((k, v) for k, v in re.findall(r'link\.(\w+)Link\s*=\s*new\s+Vector2\s*\(\s*(-?\d+\s*,\s*-?\d+)\s*\)', m.group(3)))
+        def xy(k):
+            v = d.get(k, '-1, -1').replace(' ', '').split(',')
+            return v[0], v[1]
+        links.append((m.group(1), m.group(2), xy('Top'), xy('Bottom'), xy('Left'), xy('Right')))
     starting = re.search(r'StartingTrait\s*=\s*SkillType\.(\w+)', text).group(1)
     level_cost = re.search(r'SKILL_LEVEL_COST_INCREASE\s*=\s*(\d+)',
                            open(os.path.join(src, 'EVs', 'GameEV.cs'), encoding='utf-8-sig').read()).group(1)
@@ -92,6 +107,7 @@ def main():
             '        int baseCost;',
             '        int appreciation;        // extra cost per level of this skill',
             '        int maxLevel;',
+            '        bool displayStat;        // shows Current/Upgrade amounts',
             '    };', '',
             '    // Skills from Health_Up to SuperSecret (SkillSystem.Initialize: 2 .. DIVIDER-1)',
             '    inline const SkillInfo SKILLS[] =',
@@ -102,11 +118,12 @@ def main():
         if value < 2 or value >= divider:
             continue
         f = skills.get(name, {})
-        out.append('        { SkillType::%s, %s, %s, %s, %s, %s, %sf, %s, %s, %s },' % (
+        out.append('        { SkillType::%s, %s, %s, %s, %s, %s, %sf, %s, %s, %s, %s },' % (
             name, string(f.get('Name')), string(f.get('NameLocID')), string(f.get('DescLocID')),
             string(f.get('IconName')), string(f.get('UnitOfMeasurement')),
             num(f.get('PerLevelModifier')).rstrip('f') if '.' in num(f.get('PerLevelModifier')) else num(f.get('PerLevelModifier')) + '.0',
-            num(f.get('BaseCost')), num(f.get('Appreciation')), num(f.get('MaxLevel'))))
+            num(f.get('BaseCost')), num(f.get('Appreciation')), num(f.get('MaxLevel')),
+            'true' if f.get('DisplayStat', 'false').strip() == 'true' else 'false'))
         count += 1
     out += ['    };',
             '    constexpr int SKILL_COUNT = %d;' % count, '',
@@ -123,6 +140,25 @@ def main():
     for row in piece_grid:
         out.append('        { %s },' % ', '.join(row))
     out += ['    };', '',
+            '    // Where each skill icon sits on the manor screen, in 1320x720 game',
+            '    // coordinates (SkillSystem.m_skillPositionArray, [row][column])',
+            '    struct IconPos { float x, y; };',
+            '    inline const IconPos SKILL_POSITION[GRID_ROWS][GRID_COLS] =',
+            '    {']
+    for row in pos_grid:
+        out.append('        { %s },' % ', '.join('{ %s, %s }' % (x, y) for x, y in row))
+    out += ['    };', '',
+            '    // Cursor moves on the manor screen (SkillBuilder.GetSkillLinker):',
+            '    // from grid cell (x = column, y = row), the cell reached by up, down,',
+            '    // left and right; -1 = no move',
+            '    struct SkillLink { int x, y, upX, upY, downX, downY, leftX, leftY, rightX, rightY; };',
+            '    inline const SkillLink SKILL_LINKS[] =',
+            '    {']
+    for x, y, t, b, l, r in links:
+        out.append('        { %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },' % (x, y, t[0], t[1], b[0], b[1], l[0], l[1], r[0], r[1]))
+    out += ['    };',
+            '    constexpr int SKILL_LINK_COUNT = %d;' % len(links)]
+    out += ['',
             '    constexpr SkillType STARTING_SKILL = SkillType::%s; // visible on a new game' % starting,
             '    constexpr int SKILL_LEVEL_COST_INCREASE = %s;    // GameEV: cost added per player level' % level_cost,
             '}', '']
