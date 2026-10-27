@@ -12,8 +12,9 @@ screen) and **starts in a few seconds**. Priorities, in order:
    spells, enemies and hitboxes must feel like the original.
 2. Fast start (under 10 s) and low memory (under 60 MB).
 3. Faithful game rules (classes, traits, skills, castle generation, gold,
-   lineage). Graphics may be simplified: plain-colour backgrounds and walls
-   are fine; no sky, rain, lightning, parallax or colour effects needed.
+   lineage) AND the original look: the player wants the game to look as
+   close as possible to the original (decided 2026-10-27). Drawing costs
+   under 1 ms per frame on the console, so there is room for it.
 
 Why C++: the port transposes the C# game code almost line by line: same
 classes, same method names, same file structure as the original source.
@@ -127,8 +128,13 @@ Rendering rules:
   (660x360, letterboxed at y = 60 in 640x480). Most objects have scale 2,
   so their texels land exactly 1:1 on the screen: keep that, it is what
   makes the art crisp and blits cheap.
-- Walls = plain coloured rectangles from CollHullObj. Background = one
-  colour per area (castle, garden, tower, dungeon).
+- Look like the original: textured walls (the area's FG tile wrapped on
+  each CollHullObj, like the BWMask render target), BorderObj edges, the
+  area backgrounds, every room decoration (SpriteObj, ObjContainer,
+  PhysicsObj... in rooms.txt), armour colours (TextureColor), the
+  original HUD art. Only costly full-screen effects may be simplified
+  (dungeon darkness gradient, blurs). Claude does the room rendering in
+  parallel; enemies stay with Vibe. Plain colours are temporary.
 - Load only the sheets the current area needs; free the others.
 - Performance budget per frame on the console (16 ms at 60 fps): a few
   thousand blits at most. Measure with `plat_time()` and print fps.
