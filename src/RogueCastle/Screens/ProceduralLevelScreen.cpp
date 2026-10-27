@@ -126,9 +126,9 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	m_physicsManager.Update(gameTime);
 
 	if (getenv("RL_DEBUG_TRACE") != nullptr)
-		fprintf(stderr, "t: room=%s x=%.0f y=%.0f ground=%d cam=%.0f,%.0f\n",
-		        m_currentRoom->Name().c_str(), m_player->X(), m_player->Y(),
-		        (int) m_player->m_isTouchingGround, m_camera.X(), m_camera.Y());
+		fprintf(stderr, "t: room=%s sprite=%s x=%.0f y=%.0f ground=%d\n",
+		        m_currentRoom->Name().c_str(), m_player->SpriteName().c_str(), m_player->X(), m_player->Y(),
+		        (int) m_player->m_isTouchingGround);
 
 	/* Only check for room transitions if the player steps out of the
 	 * camera zone (ProceduralLevelScreen.cs line 1547). */

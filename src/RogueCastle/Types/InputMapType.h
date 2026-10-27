@@ -23,7 +23,8 @@ enum InputMapType
 	PLAYER_JUMP2 = BTN_B,
 	PLAYER_ATTACK = BTN_Y,
 	PLAYER_BLOCK = BTN_L1,
-	PLAYER_DASH = BTN_X,
+	PLAYER_DASHLEFT = BTN_L2,   /* C# default: Q key / left trigger */
+	PLAYER_DASHRIGHT = BTN_R2,  /* C# default: right trigger */
 	PLAYER_SPELL = BTN_A,
 	MENU_MAP = BTN_SELECT,
 	MENU_PAUSE = BTN_START

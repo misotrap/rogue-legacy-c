@@ -13,7 +13,11 @@ Output (in assets/):
   <sheet>.spr   text, one record per line, tab separated, coordinates in
                 ORIGINAL (full size) pixels:
                   I name index x y w h anchorX anchorY      frame image
-                  A name frame index duration               animation frame
+                  A name frame index duration label         animation frame
+                                                            (label is the original XML
+                                                            label, used by
+                                                            PlayAnimation("Start",
+                                                            "End") in the C#)
                   R name frame x y w h rotation type        hitbox of the
                                                             previous A line
                   C name child childX childY childRotation  character part
@@ -127,7 +131,8 @@ def convert_sheet_xml(src, dst):
                 a['name'], a['index'], a['posX'], a['posY'], a['width'], a['height'],
                 a['anchorX'], a['anchorY']))
         elif el.tag == 'animation':
-            lines.append('A\t%s\t%s\t%s\t%s' % (a['name'], a['frame'], a['index'], a['duration']))
+            lines.append('A\t%s\t%s\t%s\t%s\t%s' % (
+                a['name'], a['frame'], a['index'], a['duration'], a.get('label', '')))
             for r in el:
                 if r.tag == 'rectangle':
                     ra = r.attrib

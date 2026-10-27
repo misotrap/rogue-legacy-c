@@ -76,7 +76,24 @@ bool SpriteLibrary::LoadSheet(const char *dir, const char *sheet)
 		else if (line[0] == 'A' && sscanf(line, "A\t%127s\t%d\t%d\t%d", name, &a, &b, &c) == 4)
 		{
 			SpritesheetObj *sheetObj = GetOrAdd(name, sheetName);
-			sheetObj->AddFrameData(a, b, c, "");
+			/* The label (6th field, may be empty) is used by the C#
+			 * PlayAnimation("Start", "End") logic. */
+			std::string label;
+			int tabs = 0;
+			const char *t = line;
+			while (*t != '\0' && tabs < 5)
+			{
+				if (*t == '\t')
+					tabs++;
+				t++;
+			}
+			if (tabs == 5)
+			{
+				label = t;
+				while (!label.empty() && (label.back() == '\n' || label.back() == '\r'))
+					label.pop_back();
+			}
+			sheetObj->AddFrameData(a, b, c, label);
 			lastFrameName = name;
 			lastFrameSheet = sheetObj;
 		}

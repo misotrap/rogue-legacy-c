@@ -77,6 +77,76 @@ void PlayerObj::UpdateEquipmentObjs()
 		GetChildAt(PlayerPart::Hair)->Visible(true);
 }
 
+void PlayerObj::ExecuteLogicSet(ActiveLS ls)
+{
+	/* The actions of m_standingAttack3LogicSet / m_airAttackLS
+	 * (PlayerObj.cs InitializeLogic line 276), one step at a time:
+	 * each PlayAnimation step completes before the next one runs. */
+	m_activeLS = ls;
+	m_lsStep = 0;
+	UpdateLogicSet();
+}
+
+void PlayerObj::UpdateLogicSet()
+{
+	if (m_activeLS == LS_NONE)
+		return;
+	/* The current PlayAnimation step is still running. */
+	if (IsAnimating() && m_lsStep > 0)
+		return;
+
+	if (m_activeLS == LS_STANDING_ATTACK3)
+	{
+		switch (m_lsStep)
+		{
+		case 0:   /* ChangeSprite + AnimationDelay + PlayAnimation(2, 4) */
+			ChangeSprite("PlayerAttacking3_Character");
+			UpdateEquipmentObjs();
+			AnimationDelay(AttackAnimationDelay);
+			PlayAnimation(2, 4, false);
+			break;
+		case 1:   /* Delay(AttackDelay) then PlayAnimation("AttackStart","End") */
+			PlayAnimation("AttackStart", "End", false);
+			break;
+		case 2:   /* ChangeProperty AnimationDelay back */
+			AnimationDelay(1 / 10.0f);
+			m_activeLS = LS_NONE;
+			m_lsStep = 0;
+			return;
+		}
+		m_lsStep++;
+	}
+	else if (m_activeLS == LS_AIR_ATTACK)
+	{
+		switch (m_lsStep)
+		{
+		case 0:   /* IsAirAttacking + ChangeSprite + AnimationDelay */
+			IsAirAttacking = true;
+			ChangeSprite("PlayerAirAttack_Character");
+			UpdateEquipmentObjs();
+			AnimationDelay(AttackAnimationDelay);
+			PlayAnimation("Start", "Start", false);
+			break;
+		case 1:
+			PlayAnimation("Frame 3 Test", "Frame 3 Test", false);
+			break;
+		case 2:
+			PlayAnimation("Attack", "Attack", false);
+			break;
+		case 3:   /* Delay(AttackDelay) */
+			PlayAnimation("Attack", "End", false);
+			break;
+		case 4:
+			AnimationDelay(1 / 10.0f);
+			IsAirAttacking = false;
+			m_activeLS = LS_NONE;
+			m_lsStep = 0;
+			return;
+		}
+		m_lsStep++;
+	}
+}
+
 void PlayerObj::Update(GameTime *gameTime)
 {
 	float elapsedSeconds = (float) gameTime->ElapsedGameTime;
@@ -85,60 +155,139 @@ void PlayerObj::Update(GameTime *gameTime)
 	if (m_dropThroughGroundTimer > 0)
 		m_dropThroughGroundTimer -= elapsedSeconds;
 
-	/* Code for moving left and right (PlayerObj.cs line 798). */
-	if (State != STATE_BLOCKING && State != STATE_TANOOKI)
+	if (!ControlsLocked)
 	{
-		bool left = Game::GlobalInput.Pressed(PLAYER_LEFT1) || Game::GlobalInput.Pressed(PLAYER_LEFT2);
-		bool right = Game::GlobalInput.Pressed(PLAYER_RIGHT1) || Game::GlobalInput.Pressed(PLAYER_RIGHT2);
-		if (left || right)
+		/* Code for moving left and right (PlayerObj.cs line 798). */
+		if (State != STATE_BLOCKING && State != STATE_TANOOKI)
 		{
-			if (m_isTouchingGround)
-				State = STATE_WALKING;
+			bool left = Game::GlobalInput.Pressed(PLAYER_LEFT1) || Game::GlobalInput.Pressed(PLAYER_LEFT2);
+			bool right = Game::GlobalInput.Pressed(PLAYER_RIGHT1) || Game::GlobalInput.Pressed(PLAYER_RIGHT2);
+			if (left || right)
+			{
+				if (m_isTouchingGround)
+					State = STATE_WALKING;
 
-			if (right && (m_collidingRight == false || m_isTouchingGround))
-			{
-				HeadingX(1);
-				CurrentSpeed(TotalMovementSpeed());
-			}
-			else if (left && !right && (m_collidingLeft == false || m_isTouchingGround))
-			{
-				HeadingX(-1);
-				CurrentSpeed(TotalMovementSpeed());
+				if (right && (m_collidingRight == false || m_isTouchingGround))
+				{
+					HeadingX(1);
+					CurrentSpeed(TotalMovementSpeed());
+				}
+				else if (left && !right && (m_collidingLeft == false || m_isTouchingGround))
+				{
+					HeadingX(-1);
+					CurrentSpeed(TotalMovementSpeed());
+				}
+				else
+					CurrentSpeed(0);
+
+				/* PlayerObj.cs line 823: facing follows the input. */
+				if (right)
+					Flip(SpriteEffects::None);
+				else if (left)
+					Flip(SpriteEffects::FlipHorizontally);
 			}
 			else
+			{
+				if (m_isTouchingGround)
+					State = STATE_IDLE;
 				CurrentSpeed(0);
-
-			/* PlayerObj.cs line 823: facing follows the input. */
-			if (right)
-				Flip(SpriteEffects::None);
-			else if (left)
-				Flip(SpriteEffects::FlipHorizontally);
+			}
 		}
-		else
+
+		/* Code for jumping and double jumping (PlayerObj.cs line 854). */
+		if (State != STATE_BLOCKING && State != STATE_FLYING && State != STATE_TANOOKI)
 		{
-			if (m_isTouchingGround)
-				State = STATE_IDLE;
-			CurrentSpeed(0);
+			if ((Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2))
+			    && m_isTouchingGround)
+			{
+				State = STATE_JUMPING;
+				AccelerationY(-JumpHeight);
+				m_isJumping = true;
+			}
+			else if ((Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2))
+			         && !m_isTouchingGround && m_doubleJumpCount < TotalDoubleJumps)
+			{
+				State = STATE_JUMPING;
+				AccelerationY(-DoubleJumpHeight);
+				m_isJumping = true;
+				m_doubleJumpCount++;
+			}
+		}
+
+		/* Code for attacking (PlayerObj.cs line 926): only when no attack
+		 * animation is running. */
+		if (!IsLogicSetActive() && State != STATE_BLOCKING && State != STATE_TANOOKI
+		    && Game::GlobalInput.JustPressed(PLAYER_ATTACK))
+		{
+			if (State == STATE_JUMPING)
+			{
+				/* In the air the same attack set plays; holding down aims
+				 * it downward (the sprite is the same, PlayerObj.cs line
+				 * 944). */
+				ExecuteLogicSet(LS_AIR_ATTACK);
+			}
+			else
+			{
+				if (!m_isTouchingGround)
+					CurrentSpeed(0);
+
+				if (m_attackCounter > 0)
+					m_attackNumber++;
+				m_attackCounter = ComboDelay;
+				/* The original simplified every combo hit to the same
+				 * logic set (PlayerObj.cs line 963). */
+				ExecuteLogicSet(LS_STANDING_ATTACK3);
+				m_attackNumber = 0;
+				m_attackCounter = 0;
+			}
+		}
+
+		/* Code for dashing (PlayerObj.cs line 1109). */
+		if (m_dashCooldownCounter <= 0
+		    && (m_isTouchingGround || (!m_isTouchingGround && m_airDashCount < TotalAirDashes))
+		    && State != STATE_BLOCKING && State != STATE_TANOOKI && CanAirDash())
+		{
+			int dashDir = 0;
+			if (Game::GlobalInput.JustPressed(PLAYER_DASHLEFT))
+				dashDir = -1;
+			else if (Game::GlobalInput.JustPressed(PLAYER_DASHRIGHT))
+				dashDir = 1;
+			if (dashDir != 0)
+			{
+				m_airDashCount++;
+				State = STATE_DASHING;
+				AccelerationYFlag = false;
+				m_dashCooldownCounter = DashCoolDown;
+				m_dashCounter = DashTime;
+				LockControls();
+				CurrentSpeed(DashSpeed);
+				HeadingX((float) dashDir);
+				AccelerationY(0);
+				m_activeLS = LS_NONE;   /* Stop the running attack. */
+				AnimationDelay(1 / 10.0f);
+			}
 		}
 	}
 
-	/* Code for jumping and double jumping (PlayerObj.cs line 854). */
-	if (State != STATE_BLOCKING && State != STATE_FLYING && State != STATE_TANOOKI)
+	/* PlayerObj.cs line 1359: the counters of the logic-set framework. */
+	if (m_attackCounter > 0)
+		m_attackCounter -= elapsedSeconds;
+	else
+		m_attackNumber = 0;
+
+	UpdateLogicSet();
+
+	if (m_dashCooldownCounter > 0)
+		m_dashCooldownCounter -= elapsedSeconds;
+
+	if (m_dashCounter > 0)
 	{
-		if ((Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2))
-		    && m_isTouchingGround)
+		m_dashCounter -= elapsedSeconds;
+		if (m_dashCounter <= 0 && State != STATE_HURT)
 		{
-			State = STATE_JUMPING;
-			AccelerationY(-JumpHeight);
-			m_isJumping = true;
-		}
-		else if ((Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2))
-		         && !m_isTouchingGround && m_doubleJumpCount < TotalDoubleJumps)
-		{
-			State = STATE_JUMPING;
-			AccelerationY(-DoubleJumpHeight);
-			m_isJumping = true;
-			m_doubleJumpCount++;
+			UnlockControls();
+			AccelerationYFlag = true;
+			m_airDashCount = 0;   /* reset by touching ground in the original */
 		}
 	}
 
@@ -148,7 +297,10 @@ void PlayerObj::Update(GameTime *gameTime)
 	X(X() + Heading().X * (CurrentSpeed() * elapsedSeconds));
 
 	UpdatePlayerCollision();
-	UpdateAnimationState();
+	/* UpdateAnimationState only runs when no logic set is active
+	 * (PlayerObj.cs line 1392). */
+	if (!IsLogicSetActive())
+		UpdateAnimationState();
 }
 
 void PlayerObj::UpdatePlayerCollision()
@@ -187,6 +339,7 @@ void PlayerObj::UpdatePlayerCollision()
 			/* Reset any jumping states, i.e. air jump, air dash, etc. */
 			m_isJumping = false;
 			m_doubleJumpCount = 0;
+			m_airDashCount = 0;
 			if (State != STATE_BLOCKING && State != STATE_TANOOKI && State != STATE_DASHING)
 				State = STATE_IDLE;
 
@@ -247,6 +400,46 @@ void PlayerObj::UpdateAnimationState()
 		}
 		if (!IsAnimating())
 			PlayAnimation(true);
+		break;
+	case STATE_HURT:
+		if (SpriteName() != "PlayerHurt_Character")
+			ChangeSprite("PlayerHurt_Character");
+		if (IsAnimating())
+			StopAnimation();
+		break;
+	case STATE_DASHING:
+		/* PlayerObj.cs line 1548: the dash sprite depends on the facing
+		 * versus the dash direction (front dash = toward the camera). */
+		if (HeadingX() < 0 && Flip() == SpriteEffects::None)
+		{
+			if (SpriteName() != "PlayerDash_Character")
+				ChangeSprite("PlayerDash_Character");
+		}
+		else if (HeadingX() < 0 && Flip() == SpriteEffects::FlipHorizontally)
+		{
+			if (SpriteName() != "PlayerFrontDash_Character")
+				ChangeSprite("PlayerFrontDash_Character");
+		}
+		else if (HeadingX() > 0 && Flip() == SpriteEffects::None)
+		{
+			if (SpriteName() != "PlayerFrontDash_Character")
+				ChangeSprite("PlayerFrontDash_Character");
+		}
+		else if (HeadingX() > 0 && Flip() == SpriteEffects::FlipHorizontally)
+		{
+			if (SpriteName() != "PlayerDash_Character")
+				ChangeSprite("PlayerDash_Character");
+		}
+		if (!IsAnimating())
+			PlayAnimation(false);
+		break;
+	case STATE_BLOCKING:
+		/* The default knight cannot block (CanBlock is Knight2 only). */
+		if (SpriteName() != "PlayerBlock_Character")
+		{
+			ChangeSprite("PlayerBlock_Character");
+			PlayAnimation(false);
+		}
 		break;
 	default:
 		break;

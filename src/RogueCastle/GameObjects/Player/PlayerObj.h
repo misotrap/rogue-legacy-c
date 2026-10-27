@@ -44,10 +44,43 @@ public:
 	bool m_collidingLeft = false;
 	bool m_collidingRight = false;
 	int m_doubleJumpCount = 0;
-	int TotalDoubleJumps = 1;
+	/* Rune/equipment gates (PlayerObj.cs line 4030/4035): 0 for the
+	 * default knight until the manor unlocks them. */
+	int TotalDoubleJumps = 0;
+	int TotalAirDashes = 0;
 	float m_dropThroughGroundTimer = 0;
 	float m_dropThroughGroundDuration = 0.1f;   /* PlayerObj.cs line 99 */
 	const std::vector<DS2DEngine::IPhysicsObj *> *m_attachedTerrain = nullptr;
+
+	/* Attack / dash state (the C# LogicSet machinery, PlayerObj.cs
+	 * InitializeLogic line 276, compacted: the original only ever plays
+	 * m_standingAttack3LogicSet and m_airAttackLS). */
+	enum ActiveLS
+	{
+		LS_NONE,
+		LS_STANDING_ATTACK3,
+		LS_AIR_ATTACK
+	};
+	ActiveLS m_activeLS = LS_NONE;
+	int m_lsStep = 0;                 /* step inside the active logic set */
+	int m_attackNumber = 0;
+	float m_attackCounter = 0;
+	float m_dashCounter = 0;
+	float m_dashCooldownCounter = 0;
+	int m_airDashCount = 0;
+	bool ControlsLocked = false;
+	bool IsAirAttacking = false;
+	float AttackAnimationDelay = 1 / 20.0f;
+	float AttackDelay = 0;
+	float ComboDelay = 1.5f;          /* PlayerObj.cs line 229 */
+	bool CanAirDash() const { return TotalAirDashes > 0; }
+	bool CanBlock() const { return false; }   /* Knight2 class only */
+
+	void LockControls() { ControlsLocked = true; }
+	void UnlockControls() { ControlsLocked = false; }
+	bool IsLogicSetActive() const { return m_activeLS != LS_NONE; }
+	void ExecuteLogicSet(ActiveLS ls);  /* m_currentLogicSet.Execute() */
+	void UpdateLogicSet();             /* m_currentLogicSet.Update() */
 
 	/* EVs (InitializeEV, PlayerObj.cs line 210). */
 	float Speed = 0;
