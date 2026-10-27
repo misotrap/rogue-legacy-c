@@ -159,6 +159,12 @@ Rendering rules:
    their template name and tag), teleporters of linker and boss entrance
    rooms, garden floating rocks (HoverObj), the minimap.
 6. **Lineage**: heirs, classes, traits, gold, manor/skill tree, blacksmith,
+   **Logic done** (no screens yet): `src/RogueCastle/Lineage` (heirs),
+   `src/RogueCastle/Skills` (manor, data from `make skills`),
+   `src/RogueCastle/Equipment` (blacksmith and runes, data from
+   `make equipment`; the Equipment*Type constants live there, do not
+   generate them again with convert_ev.py). Checks: `make lineagetest
+   skilltest equiptest`.
    enchantress, saves (own simple format in the app folder).
 7. **Spells**, bosses, HUD and menus, fonts, sound (later, optional).
 

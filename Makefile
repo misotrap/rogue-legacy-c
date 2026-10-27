@@ -38,3 +38,11 @@ skilltest: tools/skilltest.cpp src/RogueCastle/Skills/*.cpp src/RogueCastle/Skil
 # Regenerate src/RogueCastle/Skills/SkillData.h from ref/
 skills:
 	python3 tools/convert_skills.py ref/RogueLegacy1 src
+
+# Blacksmith / enchantress check (no graphics): ./equiptest [seed]
+equiptest: tools/equiptest.cpp src/RogueCastle/Equipment/*.cpp src/RogueCastle/Equipment/*.h
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/equiptest.cpp src/RogueCastle/Equipment/*.cpp
+
+# Regenerate src/RogueCastle/Equipment/EquipmentData.h from ref/
+equipment:
+	python3 tools/convert_equipment.py ref/RogueLegacy1 src
