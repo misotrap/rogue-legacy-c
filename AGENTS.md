@@ -196,7 +196,10 @@ Rendering rules:
    Engine: GameObj::TextureColor (C# TextureColor) and Opacity now tint
    sprites (SpriteObj -> Camera2D -> gfx_blit_tinted; white costs nothing).
    Use it for the equipment colours on the player (BlacksmithScreen sets
-   FirstColour/SecondColour on the armour parts). Save after each room change and at death, in
+   FirstColour/SecondColour on the armour parts).
+   **In-game HUD done**: `src/RogueCastle/HUD/PlayerHUD` (LoadContent,
+   Draw(frame, HUDValues{health, mana, gold, level, heroName}), drawn in the
+   top letterbox band). Check: `make hudtest && ./hudtest out.ppm`. Save after each room change and at death, in
    the app folder (e.g. `save.txt` next to `rlc`).
    enchantress, saves (own simple format in the app folder).
 7. **Spells**, bosses, HUD and menus, fonts, sound (later, optional).

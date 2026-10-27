@@ -74,3 +74,7 @@ manortest: tools/manortest.cpp $(SRC) $(shell find src -name "*.h")
 # Blacksmith / enchantress screens check (no window): ./equipscreentest out
 equipscreentest: tools/equipscreentest.cpp $(SRC) $(shell find src -name "*.h")
 	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ tools/equipscreentest.cpp $(filter-out src/main.cpp,$(SRC)) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm
+
+# HUD check (no window): ./hudtest out.ppm
+hudtest: tools/hudtest.cpp src/RogueCastle/HUD/*.cpp src/Text/Font.cpp src/gfx.cpp
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/hudtest.cpp src/RogueCastle/HUD/*.cpp src/Text/Font.cpp src/gfx.cpp
