@@ -74,6 +74,7 @@ public:
 	bool GivesLichHealth = true;
 	bool NonKillable = false;
 	std::string Name;
+	std::string Tag;        /* the room object's Tag (delay:2.0, speed:600...) */
 	int Type = 0;           /* EnemyType.h value */
 	int Level = 0;          /* room level scaling (TODO with the castle) */
 	int State = STATE_WANDER;
@@ -83,6 +84,10 @@ public:
 	bool IsInvincible() const { return m_invincibleCounter > 0 || m_invincibleCounterProjectile > 0; }
 
 	PlayerObj *Target() const { return m_target; }
+	/* C# InitialLogicDelay: the enemy waits this long before acting. */
+	void InitialLogicDelay(float value) { m_initialDelayCounter = value; }
+	/* EnemyObj.cs line 1140: reads a "key:value" pair out of Tag. */
+	float ParseTagToFloat(const std::string &key);
 	EnemyDifficulty DifficultyType = BASIC;
 
 protected:

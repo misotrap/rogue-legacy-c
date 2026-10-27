@@ -5,6 +5,7 @@
 #include "../EnemyObjs/EnemyObj_Knight.h"
 #include "../EnemyObjs/EnemyObj_Eyeball.h"
 #include "../EnemyObjs/EnemyObj_Blob.h"
+#include "../EnemyObjs/EnemyObj_Turret.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -54,6 +55,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Eyeball(player, diff);
 	case EnemyType::Blob:
 		return new EnemyObj_Blob(player, diff);
+	case EnemyType::Turret:
+		return new EnemyObj_Turret(player, diff);
 	default:
 		return nullptr;
 	}
@@ -157,7 +160,10 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 			continue;
 		enemy->X(obj.x);
 		enemy->Y(obj.y);
+		enemy->Rotation(obj.rotation);   /* the turret's firing angle */
+		enemy->Tag = obj.tag;
 		enemy->Initialize();
+		enemy->InitialLogicDelay(obj.initialDelay);
 		m_enemyList.push_back(enemy);
 		m_drawableList.push_back(enemy);
 	}

@@ -6,6 +6,7 @@
 #include "../BreakableObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
+#include <cstdlib>
 
 namespace RogueCastle
 {
@@ -195,6 +196,22 @@ void EnemyObj::Update(GameTime *gameTime)
 
 	if (CurrentHealth <= 0 && !IsKilled)
 		Kill(true);
+}
+
+float EnemyObj::ParseTagToFloat(const std::string &key)
+{
+	/* EnemyObj.cs line 1140. No exceptions: a missing or malformed value
+	 * returns 0 (the C# catches the float.Parse failure). */
+	if (Tag.empty())
+		return 0;
+	size_t keyPos = Tag.find(key + ":");
+	if (keyPos == std::string::npos)
+		return 0;
+	size_t firstIndex = keyPos + key.length() + 1;
+	size_t comma = Tag.find(',', firstIndex);
+	if (comma == std::string::npos)
+		comma = Tag.length();
+	return (float) atof(Tag.substr(firstIndex, comma - firstIndex).c_str());
 }
 
 void EnemyObj::CheckGroundCollision()
