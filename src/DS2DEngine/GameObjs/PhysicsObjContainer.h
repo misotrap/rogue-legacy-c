@@ -1,18 +1,20 @@
 /* Port of DS2DEngine/src/GameObjs/PhysicsObjContainer.cs: a container whose
  * children are PhysicsObjs; its terrain bounds are the union of theirs and
  * its collision boxes are shared with the children (added by them).
+ * Implements the physics interface like the C# class.
  */
 #ifndef DS2D_PHYSICS_OBJ_CONTAINER_H
 #define DS2D_PHYSICS_OBJ_CONTAINER_H
 
 #include "ObjContainer.h"
+#include "../Physics/IPhysicsObj.h"
 #include "PhysicsObj.h"
 #include <vector>
 
 namespace DS2DEngine
 {
 
-class PhysicsObjContainer : public ObjContainer
+class PhysicsObjContainer : public ObjContainer, public IPhysicsObj
 {
 public:
 	PhysicsObjContainer();
@@ -20,31 +22,46 @@ public:
 
 	PhysicsObjContainer *AsPhysicsObjContainer() override { return this; }
 
-	void UpdateCollisionBoxes();
-	void UpdatePhysics(GameTime *gameTime);
-	void CollisionResponseTerrain(CollisionBox *thisBox, CollisionBox *otherBox);
+	void UpdateCollisionBoxes() override;
+	void UpdatePhysics(GameTime *gameTime) override;
+	void CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType) override;
 
-	Vector2 Acceleration() const { return m_acceleration; }
-	void Acceleration(const Vector2 &value) { m_acceleration = value; }
-	float AccelerationX() const { return m_acceleration.X; }
-	void AccelerationX(float value) { m_acceleration.X = value; }
-	float AccelerationY() const { return m_acceleration.Y; }
-	void AccelerationY(float value) { m_acceleration.Y = value; }
+	/* --- IPhysicsObj --- */
+	bool Visible() const override { return ObjContainer::Visible(); }
+	bool DisableAllWeight() const override { return DisableAllWeightFlag; }
+	bool IsWeighted() const override { return IsWeightedFlag; }
+	bool AccelerationXEnabled() const override { return AccelerationXFlag; }
+	bool AccelerationYEnabled() const override { return AccelerationYFlag; }
+	bool DisableGravity() const override { return DisableGravityFlag; }
+	float AccelerationX() const override { return m_acceleration.X; }
+	void AccelerationX(float value) override { m_acceleration.X = value; }
+	float AccelerationY() const override { return m_acceleration.Y; }
+	void AccelerationY(float value) override { m_acceleration.Y = value; }
+	bool DisableHitboxUpdating() const override { return DisableHitboxUpdatingFlag; }
+	bool IsCollidable() const override { return IsCollidableFlag; }
+	int CollisionTypeTag() const override { return m_collisionTypeTag; }
+	const std::vector<CollisionBox *> &CollisionBoxes() const override { return m_collisionBoxes; }
+	Rectangle TerrainBounds() const override { return m_terrainBounds; }
+	bool CollidesTop() const override { return CollidesTopFlag; }
+	bool CollidesBottom() const override { return CollidesBottomFlag; }
+	bool CollidesLeft() const override { return CollidesLeftFlag; }
+	bool CollidesRight() const override { return CollidesRightFlag; }
 
-	bool IsWeighted = true;
-	bool IsCollidable = true;
-	bool CollidesLeft = true;
-	bool CollidesRight = true;
-	bool CollidesTop = true;
-	bool CollidesBottom = true;
-	bool AccelerationXEnabled = true;
-	bool AccelerationYEnabled = true;
-	bool DisableGravity = false;
-	bool DisableAllWeight = false;
-	bool DisableHitboxUpdating = false;
+	/* C# public fields, kept as Flag-suffixed members because the IPhysicsObj
+	 * getters use the same names. */
+	bool IsWeightedFlag = true;
+	bool IsCollidableFlag = true;
+	bool CollidesTopFlag = true;
+	bool CollidesBottomFlag = true;
+	bool CollidesLeftFlag = true;
+	bool CollidesRightFlag = true;
+	bool AccelerationXFlag = true;
+	bool AccelerationYFlag = true;
+	bool DisableGravityFlag = false;
+	bool DisableAllWeightFlag = false;
+	bool DisableHitboxUpdatingFlag = false;
+	int m_collisionTypeTag = 0;
 
-	Rectangle TerrainBounds() const { return m_terrainBounds; }
-	const std::vector<CollisionBox *> &CollisionBoxes() const { return m_collisionBoxes; }
 	/* Called by the children when they create shared boxes. */
 	void AddSharedCollisionBox(CollisionBox *box) { m_collisionBoxes.push_back(box); }
 

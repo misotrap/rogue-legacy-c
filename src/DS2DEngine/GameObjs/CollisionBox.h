@@ -12,6 +12,7 @@ namespace DS2DEngine
 {
 
 class GameObj;
+class IPhysicsObj;
 
 class CollisionBox
 {
@@ -42,10 +43,14 @@ public:
 	Rectangle NonRotatedAbsRect() const { return Rectangle(X() + m_parentObj->AbsX(), Y() + m_parentObj->AbsY(), Width(), Height()); }
 
 	GameObj *Parent() const { return m_parentObj; }
+	/* The IPhysicsObj the box belongs to (C# AbsParent 'as IPhysicsObj'). */
+	void PhysicsParent(IPhysicsObj *obj) { m_physicsParent = obj; }
+	IPhysicsObj *PhysicsParent() const { return m_physicsParent; }
 
 private:
 	Rectangle _rectangle;
 	GameObj *m_parentObj;
+	IPhysicsObj *m_physicsParent = nullptr;
 	int _collisionType;
 	float m_rotationDegrees = 0;
 };

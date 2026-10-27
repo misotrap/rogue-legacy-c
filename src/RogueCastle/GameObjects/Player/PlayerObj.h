@@ -32,6 +32,11 @@ public:
 
 	void Update(GameTime *gameTime) override;
 	void ChangeSprite(const std::string &spriteName) override;
+	void RoomTransitionReset();     /* PlayerObj.cs line 2504 */
+	/* Simplified port of UpdatePlayerCollision (ground probe + drop
+	 * through); needs the level's terrain list. */
+	void UpdatePlayerCollision();
+	void SetTerrain(const std::vector<DS2DEngine::IPhysicsObj *> *terrain) { m_attachedTerrain = terrain; }
 
 	int State = STATE_IDLE;
 	bool m_isTouchingGround = false;
@@ -40,6 +45,9 @@ public:
 	bool m_collidingRight = false;
 	int m_doubleJumpCount = 0;
 	int TotalDoubleJumps = 1;
+	float m_dropThroughGroundTimer = 0;
+	float m_dropThroughGroundDuration = 0.1f;   /* PlayerObj.cs line 99 */
+	const std::vector<DS2DEngine::IPhysicsObj *> *m_attachedTerrain = nullptr;
 
 	/* EVs (InitializeEV, PlayerObj.cs line 210). */
 	float Speed = 0;

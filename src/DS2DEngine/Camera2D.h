@@ -1,12 +1,14 @@
 /* Port of DS2DEngine/src/Camera2D.cs (only what the port needs).
  * C# Camera2D extends SpriteBatch; here Draw() converts world coordinates
- * to the 640x480 frame through the camera transform and calls gfx_blit:
+ * to the 640x480 frame through the camera transform and calls gfx_blit.
  *
- *   screen = (world - position) * Zoom + LetterboxOffset
+ * The camera POSITION is the CENTER of the visible rectangle (like C#
+ * Camera2D, see UpdateCamera in ProceduralLevelScreen.cs):
+ *
+ *   screen = (world - position) * Zoom + (320, 240)
  *
  * The game world is 1320x720 (GlobalEV) drawn at Zoom 0.5 into the 640x480
- * frame, letterboxed at y = 60 (AGENTS.md rendering rules). Position is
- * the camera's top-left in world units; X()/Y() match the C# properties.
+ * frame, letterboxed at y = 60 (AGENTS.md rendering rules).
  */
 #ifndef DS2D_CAMERA2D_H
 #define DS2D_CAMERA2D_H
@@ -28,7 +30,11 @@ public:
 	void Draw(const Texture *texture, Vector2 position, Rectangle srcRect, Color color,
 	          float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects);
 
-	/* C# Camera2D position (world units). */
+	/* camera.Draw(GenericTexture, position, rect, colour, ...) for plain
+	 * coloured rectangles (walls, doorways). */
+	void DrawRectangle(Vector2 position, int width, int height, uint32_t colour);
+
+	/* C# Camera2D position (world units, CENTER of the view). */
 	float X() const { return m_position.X; }
 	void X(float value) { m_position.X = value; }
 	float Y() const { return m_position.Y; }
@@ -38,7 +44,8 @@ public:
 
 	float Zoom() const { return m_zoom; }
 	void Zoom(float value);
-	Rectangle Bounds() const;             /* world rectangle on screen */
+	/* World rectangle currently visible (C# Camera2D.Bounds). */
+	Rectangle Bounds() const;
 
 	/* The C# animation code reads the elapsed time off the camera. */
 	double ElapsedTotalSeconds() const { return m_elapsedTotalSeconds; }
@@ -51,7 +58,7 @@ private:
 	Vector2 m_position;
 	float m_zoom;
 	double m_elapsedTotalSeconds;
-	struct GameTime m_gameTime;
+	GameTime m_gameTime;
 };
 
 } // namespace DS2DEngine

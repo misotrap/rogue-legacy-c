@@ -1,13 +1,9 @@
-/* Rogue Legacy C++ port - milestone 0: the player character walking and
- * jumping on a flat floor (see AGENTS.md). The game code lives in
- * src/RogueCastle and src/DS2DEngine, ported class by class from the C#
- * source; this file only wires the loop together.
+/* Rogue Legacy C++ port - milestone 1: a generated castle, the starting
+ * room with its walls, the player walking, jumping, colliding, and room
+ * transitions through the door openings (see AGENTS.md).
  */
-#include "DS2DEngine/Camera2D.h"
-#include "DS2DEngine/Physics/PhysicsManager.h"
-#include "RogueCastle/EVs/GlobalEV.h"
 #include "RogueCastle/Game.h"
-#include "RogueCastle/GameObjects/Player/PlayerObj.h"
+#include "RogueCastle/Screens/ProceduralLevelScreen.h"
 #include "gfx.h"
 #include "platform.h"
 
@@ -18,28 +14,21 @@ int main(int argc, char **argv)
 	const char *assets = argc > 1 ? argv[1] : "assets";
 	uint32_t buttons = 0;
 	double last, acc = 0.0, lastDraw;
-	const float floorY = 600.0f;   /* flat floor until rooms exist */
 
 	if (!plat_init())
 	{
 		fprintf(stderr, "platform init failed\n");
 		return 1;
 	}
-	if (!SpriteSystem::SpriteLibrary::LoadSheet(assets, "playerSpritesheetBig"))
+
+	RogueCastle::ProceduralLevelScreen *level =
+		new RogueCastle::ProceduralLevelScreen(assets, 0 /* time-based seed */);
+	if (!level->IsValid())
+	{
+		fprintf(stderr, "level init failed\n");
+		plat_quit();
 		return 1;
-
-	RogueCastle::PlayerObj *player = new RogueCastle::PlayerObj();
-	player->X(660.0f);
-	player->Y(floorY - 40.0f);   /* the terrain box bottom is Y + 40 */
-	player->UpdateCollisionBoxes();
-
-	/* ProceduralLevelScreen.cs line 196 / Game.cs line 216. */
-	DS2DEngine::PhysicsManager physicsManager;
-	physicsManager.SetGravity(0, -GlobalEV::GRAVITY);
-	physicsManager.TerminalVelocity = 2000;
-	physicsManager.AddObject(player);
-
-	DS2DEngine::Camera2D camera;
+	}
 
 	last = plat_time();
 	lastDraw = last;
@@ -56,24 +45,7 @@ int main(int argc, char **argv)
 		{
 			GameTime gameTime(TICK);
 			RogueCastle::Game::GlobalInput.Update(buttons);
-			physicsManager.Update(&gameTime);
-
-			/* Flat floor stand-in for the room collision (milestone 1):
-			 * keep the terrain box bottom on the floor, like the terrain
-			 * collision response does. */
-			int bottom = player->TerrainBounds().Bottom();
-			if (bottom >= (int) floorY)
-			{
-				player->Y(player->Y() - (bottom - (int) floorY));
-				player->AccelerationY(0);
-				player->m_isTouchingGround = true;
-				player->m_doubleJumpCount = 0;
-			}
-			else
-				player->m_isTouchingGround = false;
-
-			player->Update(&gameTime);
-			player->UpdateCollisionBoxes();
+			level->Update(&gameTime);
 			acc -= TICK;
 		}
 
@@ -82,10 +54,8 @@ int main(int argc, char **argv)
 
 		gfx_begin(plat_frame());
 		gfx_clear(0xFF000000u);
-		gfx_fill(0, 60, SCREEN_W, 360, 0xFF241C28u);
-		gfx_fill(0, 60 + (int) (floorY * 0.5f), SCREEN_W, 60, 0xFF68565Cu);
-		camera.ElapsedTotalSeconds(drawElapsed);
-		player->Draw(&camera);
+		level->Camera()->ElapsedTotalSeconds(drawElapsed);
+		level->Draw(level->Camera());
 		plat_present();
 	}
 	plat_quit();

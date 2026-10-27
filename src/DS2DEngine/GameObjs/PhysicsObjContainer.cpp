@@ -1,5 +1,6 @@
 /* Port of DS2DEngine/src/GameObjs/PhysicsObjContainer.cs. */
 #include "PhysicsObjContainer.h"
+#include "../CollisionMath.h"
 #include "../Consts.h"
 #include <climits>
 
@@ -8,21 +9,15 @@ namespace DS2DEngine
 
 PhysicsObjContainer::PhysicsObjContainer()
 {
-	IsWeighted = true;
-	IsCollidable = true;
-	CollidesLeft = true;
-	CollidesRight = true;
-	CollidesTop = true;
-	CollidesBottom = true;
-	AccelerationXEnabled = true;
-	AccelerationYEnabled = true;
+	IsWeightedFlag = true;
+	IsCollidableFlag = true;
 	m_charDataStartIndex = -1;
 }
 
 PhysicsObjContainer::PhysicsObjContainer(const std::string &spriteName)
 {
-	IsWeighted = true;
-	IsCollidable = true;
+	IsWeightedFlag = true;
+	IsCollidableFlag = true;
 	m_charDataStartIndex = -1;
 	_spriteName = spriteName; /* Do not remove this line. */
 	BuildFromCharData(spriteName);
@@ -79,17 +74,62 @@ void PhysicsObjContainer::UpdateCollisionBoxes()
 void PhysicsObjContainer::UpdatePhysics(GameTime *gameTime)
 {
 	float elapsedSeconds = (float) gameTime->ElapsedGameTime;
-	if (AccelerationXEnabled)
+	if (AccelerationXFlag)
 		X(X() + m_acceleration.X * elapsedSeconds);
-	if (AccelerationYEnabled)
+	if (AccelerationYFlag)
 		Y(Y() + m_acceleration.Y * elapsedSeconds);
 }
 
-void PhysicsObjContainer::CollisionResponseTerrain(CollisionBox *thisBox, CollisionBox *otherBox)
+void PhysicsObjContainer::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType)
 {
-	/* Ported in milestone 1 with the room collision code. */
-	(void) thisBox;
-	(void) otherBox;
+	/* PhysicsObjContainer.cs line 179 (CollisionResponse). */
+	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN && IsWeightedFlag)
+	{
+		Vector2 mtdPos = CollisionMath::CalculateMTD(thisBox->AbsRect(), otherBox->AbsRect());
+		IPhysicsObj *otherPhysicsObj = otherBox->PhysicsParent();
+		if (otherPhysicsObj == nullptr)
+			return;
+		int collisionMarginOfError = 10;
+		if (mtdPos.Y < 0)   // There is an object below this object.
+		{
+			/* This used to be AccelerationY > 0; changed for player dashing. */
+			if (AccelerationY() >= 0 && otherPhysicsObj->CollidesTop() && IsWeightedFlag)
+			{
+				/* This code is for dropping through blocks: only stop the
+				 * fall when the object really overlaps the platform, not
+				 * when just brushing its edge. */
+				Rectangle myTB = TerrainBounds();
+				Rectangle otherTB = otherPhysicsObj->TerrainBounds();
+				if (otherBox->AbsRotation() != 0.0f ||
+				    (otherTB.Left() <= myTB.Right() && otherTB.Right() >= myTB.Right() &&
+				     myTB.Right() - otherTB.Left() > collisionMarginOfError) ||
+				    (myTB.Left() <= otherTB.Right() && myTB.Right() >= otherTB.Right() &&
+				     otherTB.Right() - myTB.Left() > collisionMarginOfError))
+				{
+					AccelerationY(0);
+					Y(Y() + mtdPos.Y);
+				}
+			}
+		}
+		else if (mtdPos.Y > 0)   // There is an object above this object.
+		{
+			if (AccelerationY() < 0 && otherPhysicsObj->CollidesBottom() && IsWeightedFlag)
+			{
+				AccelerationY(0);
+				Y(Y() + mtdPos.Y);
+			}
+		}
+
+		if (mtdPos.X != 0)
+		{
+			if ((otherPhysicsObj->CollidesLeft() && mtdPos.X > 0) ||
+			    (otherPhysicsObj->CollidesRight() && mtdPos.X < 0))
+			{
+				AccelerationX(0);
+				X(X() + mtdPos.X);
+			}
+		}
+	}
 }
 
 } // namespace DS2DEngine

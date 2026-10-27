@@ -49,12 +49,15 @@ void PhysicsObj::UpdateCollisionBoxes()
 		if (m_collisionBoxes.size() <= i)
 		{
 			CollisionBox *box = new CollisionBox(this);
-			m_collisionBoxes.push_back(box);
 			/* Passes by reference in C#: the parent container shares the
-			 * same boxes (PhysicsObjContainer keeps its own list). */
+			 * same boxes and runs the collision response for them. */
 			PhysicsObjContainer *container = Parent() != nullptr ? Parent()->AsPhysicsObjContainer() : nullptr;
 			if (container != nullptr)
+			{
 				container->AddSharedCollisionBox(box);
+				box->PhysicsParent(container);
+			}
+			m_collisionBoxes.push_back(box);
 		}
 		CollisionBox *box = m_collisionBoxes[i];
 		box->X((int) (hbList[i].X * parentScaleX * ScaleX()));

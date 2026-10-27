@@ -52,6 +52,8 @@ protected:
 	Vector2 m_acceleration;
 	std::vector<CollisionBox *> m_collisionBoxes;
 	Rectangle m_terrainBounds;
+
+	friend class PhysicsObjContainer;
 };
 
 } // namespace DS2DEngine

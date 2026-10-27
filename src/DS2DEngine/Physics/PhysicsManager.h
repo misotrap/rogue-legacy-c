@@ -1,11 +1,11 @@
-/* Port of DS2DEngine/src/Physics/PhysicsManager.cs (subset): applies
- * gravity and terminal velocity to every weighted object and steps their
- * physics. Object-vs-object collision comes with the rooms (milestone 1).
+/* Port of DS2DEngine/src/Physics/PhysicsManager.cs: gravity, terminal
+ * velocity and the object-pair collision pass (terrain vs terrain,
+ * weapon vs body later with combat).
  */
 #ifndef DS2D_PHYSICS_MANAGER_H
 #define DS2D_PHYSICS_MANAGER_H
 
-#include "../GameObjs/PhysicsObjContainer.h"
+#include "IPhysicsObj.h"
 #include "../Types.h"
 #include <vector>
 
@@ -17,8 +17,8 @@ class PhysicsManager
 public:
 	PhysicsManager();
 
-	void AddObject(PhysicsObjContainer *obj);
-	void RemoveObject(PhysicsObjContainer *obj);
+	void AddObject(IPhysicsObj *obj);
+	void RemoveObject(IPhysicsObj *obj);
 	void Update(GameTime *gameTime);
 
 	void SetGravity(float xGrav, float yGrav);
@@ -26,7 +26,7 @@ public:
 	int TerminalVelocity = 1000;
 
 private:
-	std::vector<PhysicsObjContainer *> m_poList;
+	std::vector<IPhysicsObj *> m_poList;
 	Vector2 m_gravity;
 };
 

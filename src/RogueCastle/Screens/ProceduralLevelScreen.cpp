@@ -1,0 +1,216 @@
+/* Port of RogueCastle/src/Screens/ProceduralLevelScreen.cs (subset). */
+#include "ProceduralLevelScreen.h"
+#include "../EVs/GlobalEV.h"
+#include "../Game.h"
+#include "../../DS2DEngine/CollisionMath.h"
+#include "../../gfx.h"
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+
+namespace RogueCastle
+{
+
+using namespace DS2DEngine;
+
+ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
+{
+	/* LoadContent: the sheets this level needs (AGENTS.md: only the
+	 * sheets the current area needs). */
+	if (!SpriteSystem::SpriteLibrary::LoadSheet(assets, "playerSpritesheetBig"))
+		return;
+
+	std::vector<Levels::RoomTemplate> templates;
+	char path[512];
+	snprintf(path, sizeof(path), "%s/rooms.txt", assets);
+	if (!Levels::LoadRooms(path, templates))
+	{
+		fprintf(stderr, "cannot load %s\n", path);
+		return;
+	}
+
+	/* Game.cs / ProceduralLevelScreen.cs line 196: gravity and terminal
+	 * velocity. */
+	m_physicsManager.SetGravity(0, -GlobalEV::GRAVITY);
+	m_physicsManager.TerminalVelocity = 2000;
+
+	/* Build the castle (LevelBuilder2). */
+	Levels::LevelBuilder2 builder(templates);
+	/* RL_SEED fixes the castle for testing (default: time based). */
+	const char *seedEnv = getenv("RL_SEED");
+	if (seedEnv != nullptr)
+		seed = (uint32_t) strtoul(seedEnv, nullptr, 0);
+	else if (seed == 0)
+		seed = (uint32_t) std::chrono::steady_clock::now().time_since_epoch().count();
+	for (int attempt = 0; attempt < 8; attempt++)
+	{
+		if (builder.CreateLevel(m_castle, Levels::DefaultAreas(), 4, seed + attempt))
+			break;
+		m_castle.rooms.clear();
+	}
+	if (m_castle.rooms.empty())
+	{
+		fprintf(stderr, "castle generation failed\n");
+		return;
+	}
+
+	for (const Levels::PlacedRoom &placed : m_castle.rooms)
+	{
+		RoomObj *room = new RoomObj();
+		room->LoadRoom(placed);
+		m_roomList.push_back(room);
+	}
+
+	/* Every room's terrain lives in one world, so the player can walk
+	 * between rooms through the door openings. */
+	for (RoomObj *room : m_roomList)
+	{
+		for (TerrainObj *terrain : room->TerrainObjList())
+		{
+			m_physicsManager.AddObject(terrain);
+			m_allTerrain.push_back(terrain);
+		}
+	}
+
+	/* The player starts in the castle's starting room (rooms[0]), dropped
+	 * onto its floor. */
+	m_player = new PlayerObj();
+	m_player->SetTerrain(&m_allTerrain);
+	m_physicsManager.AddObject(m_player);
+	m_currentRoom = m_roomList[0];
+	RoomObj *start = m_roomList[0];
+	m_player->X(start->X() + start->Width() * 0.5f);
+	m_player->Y(start->Y() + start->Height() * 0.5f);
+	/* Dev/test spawn override: RL_POS=x,y (world units). */
+	const char *posEnv = getenv("RL_POS");
+	if (posEnv != nullptr)
+	{
+		float px = 0, py = 0;
+		if (sscanf(posEnv, "%f,%f", &px, &py) == 2)
+		{
+			m_player->X(px);
+			m_player->Y(py);
+		}
+	}
+	m_player->UpdateCollisionBoxes();
+
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	{
+		for (const Levels::PlacedRoom &r : m_castle.rooms)
+		{
+			fprintf(stderr, "room %s [%d] x=%.0f y=%.0f %dx%d doors:", r.name.c_str(),
+			        (int) r.levelType, r.x, r.y, r.width, r.height);
+			for (const Levels::Door &d : r.doors)
+				fprintf(stderr, " %s(%.0f,%.0f)%s", Levels::DoorPosName(d.pos), d.x, d.y,
+				        d.attached ? "" : " CLOSED");
+			fprintf(stderr, "\n");
+		}
+	}
+
+	m_valid = true;
+}
+
+void ProceduralLevelScreen::Update(GameTime *gameTime)
+{
+	if (!m_valid)
+		return;
+
+	/* ProceduralLevelScreen.cs line 1536: room, player, then physics. */
+	if (m_currentRoom != nullptr)
+	{
+		/* CurrentRoom.Update(gameTime): enemies etc. later. */
+	}
+	if (m_player != nullptr)
+		m_player->Update(gameTime);
+
+	m_physicsManager.Update(gameTime);
+
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+		fprintf(stderr, "t: room=%s x=%.0f y=%.0f ground=%d cam=%.0f,%.0f\n",
+		        m_currentRoom->Name().c_str(), m_player->X(), m_player->Y(),
+		        (int) m_player->m_isTouchingGround, m_camera.X(), m_camera.Y());
+
+	/* Only check for room transitions if the player steps out of the
+	 * camera zone (ProceduralLevelScreen.cs line 1547). */
+	if (!CollisionMath::Intersects(Rectangle((int) m_player->X(), (int) m_player->Y(), 1, 1),
+	                               m_camera.Bounds()))
+		CheckForRoomTransition();
+
+	UpdateCamera();
+}
+
+void ProceduralLevelScreen::UpdateCamera()
+{
+	/* ProceduralLevelScreen.cs line 1621 (UpdateCamera). */
+	if (m_player != nullptr)
+	{
+		m_camera.X(m_player->Position().X + GlobalEV::Camera_XOffset);
+		m_camera.Y(m_player->Position().Y + GlobalEV::Camera_YOffset);
+	}
+
+	if (m_currentRoom != nullptr)
+	{
+		Rectangle cb = m_camera.Bounds();
+		Rectangle rb = m_currentRoom->Bounds();
+
+		/* Constrain the X axis of the camera to the current room. */
+		if (cb.Width < m_currentRoom->Width())
+		{
+			if (cb.Left() < rb.Left())
+				m_camera.X((float) (rb.Left() + cb.Width * 0.5f));
+			else if (cb.Right() > rb.Right())
+				m_camera.X((float) (rb.Right() - cb.Width * 0.5f));
+		}
+		else
+			m_camera.X(m_currentRoom->X() + m_currentRoom->Width() * 0.5f);
+
+		/* Constrain the Y axis of the camera to the current room. */
+		if (cb.Height < m_currentRoom->Height())
+		{
+			if (cb.Top() < rb.Top())
+				m_camera.Y((float) (rb.Top() + cb.Height * 0.5f));
+			else if (cb.Bottom() > rb.Bottom())
+				m_camera.Y((float) (rb.Bottom() - cb.Height * 0.5f));
+		}
+		else
+			m_camera.Y(m_currentRoom->Y() + m_currentRoom->Height() * 0.5f);
+	}
+}
+
+void ProceduralLevelScreen::CheckForRoomTransition()
+{
+	/* ProceduralLevelScreen.cs line 1189 (CheckForRoomTransition). */
+	if (m_player == nullptr)
+		return;
+	for (RoomObj *roomObj : m_roomList)
+	{
+		if (roomObj != m_currentRoom && roomObj->Contains((int) m_player->X(), (int) m_player->Y()))
+		{
+			m_currentRoom = roomObj;
+			m_player->RoomTransitionReset();
+			if (getenv("RL_DEBUG_TRANSITIONS") != nullptr)
+				fprintf(stderr, "room transition -> %s (%.0f, %.0f)\n",
+				        roomObj->Name().c_str(), m_player->X(), m_player->Y());
+			return;
+		}
+	}
+}
+
+void ProceduralLevelScreen::Draw(Camera2D *camera)
+{
+	if (!m_valid)
+		return;
+
+	/* Background: one colour per area (AGENTS.md). */
+	uint32_t bg = m_currentRoom != nullptr ? m_currentRoom->BackgroundColour() : 0xFF241C28u;
+	gfx_fill(0, 60, SCREEN_W, 360, bg);
+
+	/* Rooms: walls and doorways, culled by the camera bounds. */
+	for (RoomObj *room : m_roomList)
+		room->Draw(camera);
+
+	if (m_player != nullptr)
+		m_player->Draw(camera);
+}
+
+} // namespace RogueCastle

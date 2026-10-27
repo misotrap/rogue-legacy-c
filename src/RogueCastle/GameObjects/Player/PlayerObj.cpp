@@ -19,6 +19,13 @@ PlayerObj::PlayerObj()
 
 	m_playerHead = static_cast<SpriteObj *>(GetChildAt(PlayerPart::Head));
 	m_playerLegs = static_cast<SpriteObj *>(GetChildAt(PlayerPart::Legs));
+	if (NumChildren() == 0)
+	{
+		/* The character data was not found (sheet missing or name typo):
+		 * fail loudly instead of crashing later. */
+		fprintf(stderr, "PlayerObj: character data missing, is the sprite sheet loaded?\n");
+		return;
+	}
 	UpdateEquipmentObjs();
 	PlayAnimation(true);
 }
@@ -58,18 +65,25 @@ void PlayerObj::UpdateEquipmentObjs()
 	/* PlayerObj.cs line 526 (UpdateEquipmentObjs): for the default male
 	 * knight without special items, the glasses, female parts, class extra
 	 * and dragon wings are hidden. Hair IS visible (Baldness only). */
+	if (NumChildren() < PlayerPart::NumHeadPieces + 11)
+		return;   /* container smaller than expected: nothing to toggle */
 	GetChildAt(PlayerPart::Glasses)->Visible(false);
 	GetChildAt(PlayerPart::Boobs)->Visible(false);
 	GetChildAt(PlayerPart::Bowtie)->Visible(false);
 	GetChildAt(PlayerPart::Extra)->Visible(false);
 	GetChildAt(PlayerPart::Wings)->Visible(false);
 	GetChildAt(PlayerPart::Light)->Visible(false);
-	GetChildAt(PlayerPart::Hair)->Visible(true);
+	if (GetChildAt(PlayerPart::Hair) != nullptr)
+		GetChildAt(PlayerPart::Hair)->Visible(true);
 }
 
 void PlayerObj::Update(GameTime *gameTime)
 {
 	float elapsedSeconds = (float) gameTime->ElapsedGameTime;
+
+	/* PlayerObj.cs line 1254 (Update). */
+	if (m_dropThroughGroundTimer > 0)
+		m_dropThroughGroundTimer -= elapsedSeconds;
 
 	/* Code for moving left and right (PlayerObj.cs line 798). */
 	if (State != STATE_BLOCKING && State != STATE_TANOOKI)
@@ -133,7 +147,72 @@ void PlayerObj::Update(GameTime *gameTime)
 		AccelerationX(AccelerationX() + 200.0f * elapsedSeconds);
 	X(X() + Heading().X * (CurrentSpeed() * elapsedSeconds));
 
+	UpdatePlayerCollision();
 	UpdateAnimationState();
+}
+
+void PlayerObj::UpdatePlayerCollision()
+{
+	/* Simplified port of UpdatePlayerCollision (PlayerObj.cs line 1600):
+	 * the original casts a probe rect under the player to find the closest
+	 * floor; here we test the terrain under the feet directly. */
+	if (m_attachedTerrain == nullptr)
+		return;
+
+	Rectangle tb = TerrainBounds();
+	Rectangle probe(tb.X + 1, tb.Bottom() - 1, tb.Width > 2 ? tb.Width - 2 : 1, 11);
+	bool touching = false;
+	bool onOneWay = false;
+	for (const DS2DEngine::IPhysicsObj *terrain : *m_attachedTerrain)
+	{
+		if (!terrain->CollidesTop())
+			continue;
+		Rectangle t = terrain->TerrainBounds();
+		if (!probe.Intersects(t))
+			continue;
+		/* New logic for determining whether you should fall through a
+		 * one-way (PlayerObj.cs line 1739). */
+		if (m_dropThroughGroundTimer > 0 && !terrain->CollidesBottom())
+			continue;
+		touching = true;
+		onOneWay = !terrain->CollidesBottom();
+		break;
+	}
+
+	if (touching && State != STATE_DRAGON)
+	{
+		/* Player just landed (PlayerObj.cs line 1795). */
+		if (!m_isTouchingGround)
+		{
+			/* Reset any jumping states, i.e. air jump, air dash, etc. */
+			m_isJumping = false;
+			m_doubleJumpCount = 0;
+			if (State != STATE_BLOCKING && State != STATE_TANOOKI && State != STATE_DASHING)
+				State = STATE_IDLE;
+
+			/* Code for dropping through ground (PlayerObj.cs line 1812). */
+			bool down = Game::GlobalInput.Pressed(PLAYER_DOWN1) || Game::GlobalInput.Pressed(PLAYER_DOWN2);
+			bool jumpJustPressed = Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2);
+			if (down && jumpJustPressed && onOneWay && State != STATE_TANOOKI)
+			{
+				AccelerationY(0);
+				Y(Y() + 15.0f);   /* must be 1 larger than the ground probe */
+				m_isTouchingGround = false;
+				m_isJumping = true;
+				m_dropThroughGroundTimer = m_dropThroughGroundDuration;
+			}
+		}
+		if (m_isTouchingGround == false && m_dropThroughGroundTimer <= 0)
+			m_isTouchingGround = true;
+	}
+	else
+		m_isTouchingGround = false;
+}
+
+void PlayerObj::RoomTransitionReset()
+{
+	/* PlayerObj.cs line 2504: only spell state is reset here; the port has
+	 * no spells yet. */
 }
 
 void PlayerObj::UpdateAnimationState()
