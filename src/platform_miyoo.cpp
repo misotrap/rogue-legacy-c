@@ -12,6 +12,19 @@
 #include <time.h>
 #include <unistd.h>
 
+/* <linux/input.h> defines BTN_LEFT, BTN_A, BTN_START... as Linux key codes:
+ * they would replace the BTN_* bits of platform.h below and scramble the
+ * buttons (left arrow read as A + L1, Y as left + jump...). */
+#undef BTN_LEFT
+#undef BTN_RIGHT
+#undef BTN_A
+#undef BTN_B
+#undef BTN_X
+#undef BTN_Y
+#undef BTN_START
+#undef BTN_SELECT
+#undef BTN_MODE
+
 static int fbFd = -1, inFd = -1;
 static uint8_t *fbMem;
 static struct fb_var_screeninfo vinfo;
