@@ -24,6 +24,7 @@ Output (in assets/):
                 Every XML attribute is kept, so nothing is lost.
 """
 import os
+import shutil
 import struct
 import sys
 import xml.etree.ElementTree as ET
@@ -183,6 +184,10 @@ def main():
             print('sprites %-32s %d records' % (base, n))
     n = convert_rooms(os.path.join(content, 'Levels'), os.path.join(out, 'rooms.txt'))
     print('rooms: %d templates' % n)
+    # Heir names (Lineage::Generator::LoadNames)
+    for names in ('HeroNames.txt', 'HeroineNames.txt'):
+        shutil.copyfile(os.path.join(content, names), os.path.join(out, names))
+    print('names: HeroNames.txt, HeroineNames.txt')
 
 
 if __name__ == '__main__':

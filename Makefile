@@ -24,3 +24,7 @@ clean:
 # Castle generation check (no graphics): ./castletest [seed] [count] [map.ppm]
 castletest: tools/castletest.cpp src/RogueCastle/Levels/*.cpp src/RogueCastle/Levels/*.h
 	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/castletest.cpp src/RogueCastle/Levels/*.cpp
+
+# Heir generation check (no graphics): ./lineagetest [seed] [generations]
+lineagetest: tools/lineagetest.cpp src/RogueCastle/Lineage/*.cpp src/RogueCastle/Lineage/*.h
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/lineagetest.cpp src/RogueCastle/Lineage/*.cpp

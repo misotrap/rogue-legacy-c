@@ -22,7 +22,7 @@ import sys
 # C# identifiers whose '.' must become '::' (class-as-namespace conversions).
 KNOWN = ['EnemyType', 'BossRoomTypes', 'Consts', 'GlobalEV', 'GameEV',
          'LevelEV', 'PlayerEV', 'EnemyEV', 'SpellEV', 'PlayerPart',
-         'EquipmentCategoryType', 'ClassType', 'TraitType', 'SkillType']
+         'EquipmentCategoryType', 'ClassType', 'TraitType', 'SkillType', 'SpellType']
 
 # Files to convert, relative to the repo root: (source .cs, output .h)
 FILES = [
@@ -37,6 +37,9 @@ FILES = [
     ('RogueCastle/src/Types/EnemyType.cs', 'src/RogueCastle/Types/EnemyType.h'),
     ('RogueCastle/src/Types/BossRoomTypes.cs', 'src/RogueCastle/Types/BossRoomTypes.h'),
     ('RogueCastle/src/Types/PlayerPart.cs', 'src/RogueCastle/Types/PlayerPart.h'),
+    ('RogueCastle/src/Types/ClassType.cs', 'src/RogueCastle/Types/ClassType.h'),
+    ('RogueCastle/src/Types/TraitType.cs', 'src/RogueCastle/Types/TraitType.h'),
+    ('RogueCastle/src/Types/SpellType.cs', 'src/RogueCastle/Types/SpellType.h'),
 ]
 
 CPP_TYPE = {'int': 'int', 'float': 'float', 'double': 'double', 'bool': 'bool',

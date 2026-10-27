@@ -4,3 +4,4 @@ build/
 rlc
 *.o
 castletest
+lineagetest
