@@ -10,6 +10,7 @@
 #include "../Types/TraitType.h"
 
 #include <cstdio>
+#include <cstring>
 #include <string>
 
 using namespace DS2DEngine;
