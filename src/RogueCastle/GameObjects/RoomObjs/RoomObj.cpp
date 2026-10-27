@@ -1,6 +1,7 @@
 /* Port of RogueCastle/src/Game Objects/RoomObjs/RoomObj.cs (subset). */
 #include "RoomObj.h"
 #include "../../../gfx.h"
+#include "../../../DS2DEngine/Consts.h"
 
 namespace RogueCastle
 {
@@ -15,6 +16,8 @@ RoomObj::~RoomObj()
 {
 	for (TerrainObj *terrain : m_terrainList)
 		delete terrain;
+	for (DS2DEngine::PhysicsObjContainer *obj : m_gameObjList)
+		delete obj;
 }
 
 void RoomObj::LoadRoom(const Levels::PlacedRoom &placed)
@@ -54,6 +57,54 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed)
 		info.height = door.height;
 		info.bossDoor = door.bossDoor;
 		m_doorList.push_back(info);
+	}
+
+	/* Breakables (PhysicsObjContainer, Breakable=True) and decoration
+	 * containers (the asset-swap objects of the area). */
+	for (const Levels::ObjData &obj : placed.objs)
+	{
+		if ((obj.type != "ObjContainer" && obj.type != "PhysicsObjContainer") || obj.sprite.empty())
+			continue;
+		bool breakable = obj.breakable || obj.type == "PhysicsObjContainer";
+		DS2DEngine::PhysicsObjContainer *container = nullptr;
+		if (breakable)
+			container = new BreakableObj(obj.sprite);
+		else
+			container = new DS2DEngine::PhysicsObjContainer(obj.sprite);
+		container->X(obj.x);
+		container->Y(obj.y);
+		container->Scale(Vector2(obj.scaleX, obj.scaleY));
+		container->Flip(obj.flip ? SpriteEffects::FlipHorizontally
+		                         : SpriteEffects::None);
+		if (obj.rotation != 0)
+		{
+			/* Rotated containers need blitter rotation support. */
+			delete container;
+			continue;
+		}
+		container->IsCollidableFlag = breakable;
+		container->IsWeightedFlag = breakable;
+		if (breakable)
+		{
+			container->UpdateCollisionBoxes();
+			/* Solidity: a terrain box over the container bounds
+			 * (ProceduralLevelScreen.cs line 951). The container Bounds()
+			 * are relative to its origin, like the box coordinates. */
+			Rectangle b = container->Bounds();
+			container->AddCollisionBox(b.X, b.Y, b.Width, b.Height, Consts::TERRAIN_HITBOX);
+			/* ProceduralLevelScreen.cs line 955: the breakable's own boxes
+			 * are static, otherwise the per-frame UpdateCollisionBoxes
+			 * overwrites the terrain bounds with the children union. */
+			container->DisableHitboxUpdatingFlag = true;
+			container->UpdateTerrainBox();
+		}
+		else
+		{
+			container->StopAnimation();
+			container->PlayAnimation(true);
+		}
+		m_gameObjList.push_back(container);
+		m_drawableList.push_back(container);
 	}
 }
 
@@ -108,6 +159,10 @@ void RoomObj::Draw(Camera2D *camera)
 	/* Door openings: a brighter strip so the passages read visually. */
 	for (const DoorInfo &door : m_doorList)
 		camera->DrawRectangle(Vector2(door.x, door.y), door.width, door.height, DoorColour());
+
+	/* Breakables and decorations. */
+	for (DS2DEngine::GameObj *obj : m_drawableList)
+		obj->Draw(camera);
 }
 
 } // namespace RogueCastle

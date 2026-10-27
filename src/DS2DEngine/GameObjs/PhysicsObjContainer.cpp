@@ -80,6 +80,37 @@ void PhysicsObjContainer::UpdatePhysics(GameTime *gameTime)
 		Y(Y() + m_acceleration.Y * elapsedSeconds);
 }
 
+void PhysicsObjContainer::UpdateTerrainBox()
+{
+	int leftBound = INT_MAX, rightBound = -INT_MAX;
+	int topBound = INT_MAX, bottomBound = -INT_MAX;
+	for (CollisionBox *box : m_collisionBoxes)
+	{
+		if (box->Type() != Consts::TERRAIN_HITBOX)
+			continue;
+		Rectangle r = box->AbsRect();
+		if (r.Left() < leftBound)
+			leftBound = r.Left();
+		if (r.Right() > rightBound)
+			rightBound = r.Right();
+		if (r.Top() < topBound)
+			topBound = r.Top();
+		if (r.Bottom() > bottomBound)
+			bottomBound = r.Bottom();
+	}
+	if (leftBound == INT_MAX)
+		return;
+	m_terrainBounds = Rectangle(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
+}
+
+void PhysicsObjContainer::AddCollisionBox(int xPos, int yPos, int width, int height, int hitboxType)
+{
+	CollisionBox *box = new CollisionBox(xPos, yPos, width, height, hitboxType, this);
+	box->PhysicsParent(this);
+	box->WasAdded = true;
+	m_collisionBoxes.push_back(box);
+}
+
 void PhysicsObjContainer::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType)
 {
 	/* PhysicsObjContainer.cs line 179 (CollisionResponse). */

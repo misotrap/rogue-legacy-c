@@ -42,7 +42,7 @@ void PhysicsManager::Update(GameTime *gameTime)
 	float elapsedTime = (float) gameTime->ElapsedGameTime;
 
 	/* Gravity + physics step (PhysicsManager.cs line 76). */
-	for (IPhysicsObj *weightedObj : m_poList)
+	for (IPhysicsObj *weightedObj : m_active)
 	{
 		if (!weightedObj->Visible())
 			continue;
@@ -67,14 +67,25 @@ void PhysicsManager::Update(GameTime *gameTime)
 	/* Pair collision pass (PhysicsManager.cs line 128): terrain-vs-terrain
 	 * pairs push the weighted object out; weapon-vs-body will come with the
 	 * combat milestone. */
-	for (size_t i = 0; i < m_poList.size(); i++)
+		/* Only the objects near the active bounds are simulated (see the
+	 * header: the whole castle is too much for the pair pass). */
+	m_active.clear();
+	bool hasBounds = m_activeBounds.Width > 0;
+	for (IPhysicsObj *obj : m_poList)
 	{
-		IPhysicsObj *firstObj = m_poList[i];
+		if (hasBounds && !CollisionMath::Intersects(obj->TerrainBounds(), m_activeBounds))
+			continue;
+		m_active.push_back(obj);
+	}
+
+	for (size_t i = 0; i < m_active.size(); i++)
+	{
+		IPhysicsObj *firstObj = m_active[i];
 		if (!firstObj->IsCollidable() || !firstObj->Visible())
 			continue;
-		for (size_t j = i + 1; j < m_poList.size(); j++)
+		for (size_t j = i + 1; j < m_active.size(); j++)
 		{
-			IPhysicsObj *secondObj = m_poList[j];
+			IPhysicsObj *secondObj = m_active[j];
 
 			/* Same-type objects (walls with walls, enemies with enemies)
 			 * do not collide unless they opt in. */
@@ -100,8 +111,32 @@ void PhysicsManager::Update(GameTime *gameTime)
 							secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_TERRAIN);
 						}
 					}
-					/* TODO C++: COLLISIONRESPONSE_FIRSTBOXHIT/SECONDBOXHIT
-					 * (weapon vs body) with the combat milestone. */
+					/* Weapon vs body (PhysicsManager.cs line 167): the
+					 * weapon owner gets FIRSTBOXHIT, the body owner
+					 * SECONDBOXHIT, and vice versa. */
+					else if ((firstBox->Type() == Consts::WEAPON_HITBOX && secondBox->Type() == Consts::BODY_HITBOX)
+					         || (firstBox->Type() == Consts::BODY_HITBOX && secondBox->Type() == Consts::WEAPON_HITBOX))
+					{
+						if (getenv("RL_DEBUG_HITS") != nullptr)
+							fprintf(stderr, "WxB pair: t1=%d t2=%d f=[%d,%d %dx%d] s=[%d,%d %dx%d] int=%d\n",
+							        firstObj->CollisionTypeTag(), secondObj->CollisionTypeTag(),
+							        firstBox->AbsRect().X, firstBox->AbsRect().Y, firstBox->AbsRect().Width, firstBox->AbsRect().Height,
+							        secondBox->AbsRect().X, secondBox->AbsRect().Y, secondBox->AbsRect().Width, secondBox->AbsRect().Height,
+							        (int) CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()));
+						if (CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()))
+						{
+							if (firstBox->Type() == Consts::WEAPON_HITBOX)
+							{
+								firstObj->CollisionResponse(firstBox, secondBox, Consts::COLLISIONRESPONSE_FIRSTBOXHIT);
+								secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_SECONDBOXHIT);
+							}
+							else
+							{
+								firstObj->CollisionResponse(firstBox, secondBox, Consts::COLLISIONRESPONSE_SECONDBOXHIT);
+								secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_FIRSTBOXHIT);
+							}
+						}
+					}
 				}
 			}
 		}

@@ -63,14 +63,17 @@ bool SpriteLibrary::LoadSheet(const char *dir, const char *sheet)
 	while (fgets(line, sizeof(line), f))
 	{
 		char name[128], other[128];
-		int a, b, c, d, e, g, h;
+		int a, b, c, d, e, g;
 		float fx, fy, fr;
-		if (line[0] == 'I' && sscanf(line, "I\t%127s\t%d\t%d\t%d\t%d\t%d\t%d\t%d",
-		                            name, &a, &b, &c, &d, &e, &g, &h) == 8)
+		/* The anchors can be fractional (castleTerrainSpritesheet uses
+		 * floats), so they are parsed as floats. */
+		float anchorX = 0.0f, anchorY = 0.0f;
+		if (line[0] == 'I' && sscanf(line, "I\t%127s\t%d\t%d\t%d\t%d\t%d\t%f\t%f",
+		                            name, &a, &b, &c, &d, &e, &anchorX, &anchorY) == 8)
 		{
 			SpritesheetObj *sheetObj = GetOrAdd(name, sheetName);
 			sheetObj->AddImageData(a, Vector2((float) b, (float) c),
-			                       Vector2((float) g, (float) h), d, e);
+			                       Vector2(anchorX, anchorY), d, e);
 			sheetObj->SortImageData();
 		}
 		else if (line[0] == 'A' && sscanf(line, "A\t%127s\t%d\t%d\t%d", name, &a, &b, &c) == 4)

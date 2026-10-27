@@ -9,6 +9,7 @@
 #include "../../../DS2DEngine/Camera2D.h"
 #include "../../Levels/RoomData.h"
 #include "../TerrainObj.h"
+#include "../BreakableObj.h"
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@ class RoomObj
 {
 public:
 	RoomObj();
+	~RoomObj();
 
 	/* Builds the room from the LevelBuilder2 output (castle coordinates). */
 	void LoadRoom(const Levels::PlacedRoom &placed);
@@ -44,13 +46,15 @@ public:
 	}
 
 	const std::vector<TerrainObj *> &TerrainObjList() const { return m_terrainList; }
+	/* Breakables and decoration containers, drawn and simulated by the room. */
+	const std::vector<DS2DEngine::PhysicsObjContainer *> &GameObjList() const { return m_gameObjList; }
+	const std::vector<DS2DEngine::GameObj *> &DrawableObjList() const { return m_drawableList; }
 
 	/* Colours: one background and wall tone per area (AGENTS.md). */
 	uint32_t BackgroundColour() const;
 	uint32_t WallColour() const;
 	uint32_t DoorColour() const;
 
-	~RoomObj();
 
 private:
 	std::string m_name;
@@ -60,6 +64,8 @@ private:
 	int m_width = 0, m_height = 0;
 	int m_linkedRoom = -1;
 	std::vector<TerrainObj *> m_terrainList;
+	std::vector<DS2DEngine::PhysicsObjContainer *> m_gameObjList;   /* owned */
+	std::vector<DS2DEngine::GameObj *> m_drawableList;               /* = m_gameObjList */
 
 	struct DoorInfo
 	{

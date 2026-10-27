@@ -40,6 +40,9 @@ public:
 	bool DisableHitboxUpdating() const override { return DisableHitboxUpdatingFlag; }
 	bool IsCollidable() const override { return IsCollidableFlag; }
 	int CollisionTypeTag() const override { return m_collisionTypeTag; }
+	void CollisionTypeTag(int value) { m_collisionTypeTag = value; }
+	bool SameTypesCollide() const override { return SameTypesCollideFlag; }
+	bool SameTypesCollideFlag = false;
 	const std::vector<CollisionBox *> &CollisionBoxes() const override { return m_collisionBoxes; }
 	Rectangle TerrainBounds() const override { return m_terrainBounds; }
 	bool CollidesTop() const override { return CollidesTopFlag; }
@@ -64,6 +67,15 @@ public:
 
 	/* Called by the children when they create shared boxes. */
 	void AddSharedCollisionBox(CollisionBox *box) { m_collisionBoxes.push_back(box); }
+
+	/* Manually added collision box (C# AddCollisionBox), relative to the
+	 * origin like the others. */
+	void AddCollisionBox(int xPos, int yPos, int width, int height, int hitboxType);
+
+	/* BreakableObj.cs UpdateTerrainBox: recompute the terrain bounds from
+	 * the container's own collision boxes (needed when they are added
+	 * manually, since UpdateCollisionBoxes only unions the children). */
+	void UpdateTerrainBox();
 
 protected:
 	void BuildFromCharData(const std::string &spriteName) override;

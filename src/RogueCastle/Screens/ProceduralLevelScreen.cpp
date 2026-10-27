@@ -19,7 +19,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 	 * sheets the current area needs). */
 	if (!SpriteSystem::SpriteLibrary::LoadSheet(assets, "playerSpritesheetBig"))
 		return;
-
+	/* The area decorations and breakables (asset-swap objects). */
+	SpriteSystem::SpriteLibrary::LoadSheet(assets, "castleTerrainSpritesheet");
 	std::vector<Levels::RoomTemplate> templates;
 	char path[512];
 	snprintf(path, sizeof(path), "%s/rooms.txt", assets);
@@ -70,6 +71,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 			m_physicsManager.AddObject(terrain);
 			m_allTerrain.push_back(terrain);
 		}
+		for (DS2DEngine::PhysicsObjContainer *obj : room->GameObjList())
+			m_physicsManager.AddObject(obj);
 	}
 
 	/* The player starts in the castle's starting room (rooms[0]), dropped
@@ -104,9 +107,16 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 				fprintf(stderr, " %s(%.0f,%.0f)%s", Levels::DoorPosName(d.pos), d.x, d.y,
 				        d.attached ? "" : " CLOSED");
 			fprintf(stderr, "\n");
+			for (const Levels::ObjData &o : r.objs)
+				if ((o.type == "ObjContainer" || o.type == "PhysicsObjContainer") && !o.sprite.empty())
+					fprintf(stderr, "  obj %s%s (%.0f,%.0f)\n", o.sprite.c_str(),
+					        o.breakable ? " [breakable]" : "", o.x, o.y);
 		}
 	}
 
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+		fprintf(stderr, "physics list: %d objects, player tag=%d\n",
+		        m_physicsManager.NumObjects(), m_player->CollisionTypeTag());
 	m_valid = true;
 }
 
@@ -122,6 +132,15 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	}
 	if (m_player != nullptr)
 		m_player->Update(gameTime);
+
+	/* Only simulate the objects near the current room (performance: the
+	 * pair pass is O(n*n) and a castle has thousands of walls). */
+	if (m_currentRoom != nullptr)
+	{
+		Rectangle b = m_currentRoom->Bounds();
+		m_physicsManager.SetActiveBounds(Rectangle(b.X - 1320, b.Y - 720,
+		                                          b.Width + 2 * 1320, b.Height + 2 * 720));
+	}
 
 	m_physicsManager.Update(gameTime);
 

@@ -13,9 +13,12 @@ PlayerObj::PlayerObj()
 {
 	InitializeEV();
 
-	/* PlayerObj.cs line 397. */
+	/* PlayerObj.cs line 397 / 340. */
 	Scale(Vector2(2, 2));
 	ForceDraw(true);
+	CollisionTypeTag(2);   /* GameTypes.CollisionType_PLAYER */
+	IsWeightedFlag = true;
+	IsCollidableFlag = true;
 
 	m_playerHead = static_cast<SpriteObj *>(GetChildAt(PlayerPart::Head));
 	m_playerLegs = static_cast<SpriteObj *>(GetChildAt(PlayerPart::Legs));
