@@ -41,6 +41,19 @@ void PhysicsManager::Update(GameTime *gameTime)
 {
 	float elapsedTime = (float) gameTime->ElapsedGameTime;
 
+	/* Only the objects near the active bounds are simulated (see the
+	 * header: the whole castle is too much for the pair pass). Rebuilt
+	 * here, at the START of the step: objects deleted between frames
+	 * (killed projectiles) must not survive in the list. */
+	m_active.clear();
+	bool hasBounds = m_activeBounds.Width > 0;
+	for (IPhysicsObj *obj : m_poList)
+	{
+		if (hasBounds && !CollisionMath::Intersects(obj->TerrainBounds(), m_activeBounds))
+			continue;
+		m_active.push_back(obj);
+	}
+
 	/* Gravity + physics step (PhysicsManager.cs line 76). */
 	for (IPhysicsObj *weightedObj : m_active)
 	{
@@ -64,20 +77,7 @@ void PhysicsManager::Update(GameTime *gameTime)
 			weightedObj->UpdateCollisionBoxes();
 	}
 
-	/* Pair collision pass (PhysicsManager.cs line 128): terrain-vs-terrain
-	 * pairs push the weighted object out; weapon-vs-body will come with the
-	 * combat milestone. */
-		/* Only the objects near the active bounds are simulated (see the
-	 * header: the whole castle is too much for the pair pass). */
-	m_active.clear();
-	bool hasBounds = m_activeBounds.Width > 0;
-	for (IPhysicsObj *obj : m_poList)
-	{
-		if (hasBounds && !CollisionMath::Intersects(obj->TerrainBounds(), m_activeBounds))
-			continue;
-		m_active.push_back(obj);
-	}
-
+	/* Pair collision pass (PhysicsManager.cs line 128). */
 	for (size_t i = 0; i < m_active.size(); i++)
 	{
 		IPhysicsObj *firstObj = m_active[i];
@@ -104,18 +104,6 @@ void PhysicsManager::Update(GameTime *gameTime)
 					if (secondBox->Type() == Consts::NULL_HITBOX)
 						continue;
 					if (firstBox->Type() == Consts::TERRAIN_HITBOX && secondBox->Type() == Consts::TERRAIN_HITBOX)
-					{
-						if (CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()))
-						{
-							firstObj->CollisionResponse(firstBox, secondBox, Consts::COLLISIONRESPONSE_TERRAIN);
-							secondObj->CollisionResponse(secondBox, firstBox, Consts::COLLISIONRESPONSE_TERRAIN);
-						}
-					}
-					/* Weapon vs body (PhysicsManager.cs line 167): the
-					 * weapon owner gets FIRSTBOXHIT, the body owner
-					 * SECONDBOXHIT, and vice versa. */
-					else if ((firstBox->Type() == Consts::WEAPON_HITBOX && secondBox->Type() == Consts::BODY_HITBOX)
-					         || (firstBox->Type() == Consts::BODY_HITBOX && secondBox->Type() == Consts::WEAPON_HITBOX))
 					{
 						if (CollisionMath::Intersects(firstBox->AbsRect(), secondBox->AbsRect()))
 						{

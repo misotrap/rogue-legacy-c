@@ -284,6 +284,9 @@ void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 posit
 	proj->Source = source;
 	m_projectiles.push_back(proj);
 	m_physicsManager.AddObject(proj);
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+		fprintf(stderr, "proj: %s (%.0f,%.0f) h=(%.2f,%.2f) speed=%.0f\n",
+		        spriteName, position.X, position.Y, heading.X, heading.Y, speed);
 }
 
 } // namespace RogueCastle
