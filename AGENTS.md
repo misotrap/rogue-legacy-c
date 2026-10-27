@@ -179,6 +179,7 @@ Folder on the SD card: `/mnt/SDCARD/App/RogueLegacyC/` with `rlc` (from
 ```sh
 #!/bin/sh
 cd "$(dirname "$0")"
+unset LD_PRELOAD   # OnionOS preloads libmi_*.so, which the bundled glibc cannot load
 echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null
 echo "Rogue Legacy C, $(date)" > log.txt
 export LIBC_FATAL_STDERR_=1   # glibc fatal errors go to log.txt, not the tty
