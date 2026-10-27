@@ -177,7 +177,12 @@ Rendering rules:
    family tree, offered heirs, bestiary, castle seed and visited rooms,
    manor, equipment; text file written through a .tmp and a rename, the
    previous save kept as .bak, a cut-short file falls back to it).
-   Check: `make savetest`. Save after each room change and at death, in
+   Check: `make savetest`.
+   **Heir choice screen done**: `src/RogueCastle/Screens/LineageScreen`
+   (Open(state, generator), Update(buttons, pressed, dt) returns true when
+   an heir is chosen = state.hero; Draw(frame)). Check: `make
+   lineagescreentest && ./lineagescreentest out` (PPM images). To hook up:
+   on the player's death add the hero to state.familyTree, save, open it. Save after each room change and at death, in
    the app folder (e.g. `save.txt` next to `rlc`).
    enchantress, saves (own simple format in the app folder).
 7. **Spells**, bosses, HUD and menus, fonts, sound (later, optional).

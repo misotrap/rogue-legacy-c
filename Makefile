@@ -62,3 +62,7 @@ loctest: tools/loctest.cpp src/Text/Loc.cpp src/Text/Loc.h src/Text/LocIDs.h
 # Regenerate assets/lang/*.txt and src/Text/LocIDs.h from ref/
 loc:
 	python3 tools/convert_loc.py ref/RogueLegacy1 assets src
+
+# Heir choice screen check (no window): ./lineagescreentest out -> out1.ppm out2.ppm
+lineagescreentest: tools/lineagescreentest.cpp $(SRC) $(shell find src -name "*.h")
+	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ tools/lineagescreentest.cpp $(filter-out src/main.cpp,$(SRC)) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm
