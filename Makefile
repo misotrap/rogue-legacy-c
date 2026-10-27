@@ -50,3 +50,7 @@ equipment:
 # Save system check (no graphics): ./savetest
 savetest: tools/savetest.cpp src/RogueCastle/Save/*.cpp src/RogueCastle/Lineage/*.cpp src/RogueCastle/Skills/*.cpp src/RogueCastle/Equipment/*.cpp
 	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ $^
+
+# Font check (no window): ./texttest text.ppm
+texttest: tools/texttest.cpp src/Text/*.cpp src/Text/*.h src/gfx.cpp
+	$(CXX) -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -o $@ tools/texttest.cpp src/Text/*.cpp src/gfx.cpp

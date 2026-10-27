@@ -95,7 +95,10 @@ Formats (documented at the top of `tools/convert_assets.py`):
 DXT5 sheets (surface format 6) are decoded by the converter:
 `titleScreen3Spritesheet`, `parallaxBGSpritesheet`, `getItemScreenSpritesheet`.
 (decoded like FNA's DxtUtil.cs).
-Fonts (`Content/Fonts`) and sounds are
+Fonts are converted to `assets/fonts/<name>.tex/.fnt` and drawn by
+`src/Text` (Text::Font: Measure/Draw/DrawOutlined, UTF-8, same layout
+as SpriteFont; Junicode has the French accents). Check: `make texttest`.
+Sounds are
 not converted yet either.
 
 ## Architecture (keep it)

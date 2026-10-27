@@ -89,12 +89,44 @@ def decode_dxt5(data, w, h):
     return bytes(out)
 
 
-def convert_texture(src, dst):
-    data = open(src, 'rb').read()
+def decode_dxt3(data, w, h):
+    """DXT3 (BC2) blocks -> RGBA bytes: explicit 4-bit alpha, DXT1 colours."""
+    out = bytearray(w * h * 4)
+    p = 0
+    for by in range((h + 3) // 4):
+        for bx in range((w + 3) // 4):
+            abits = int.from_bytes(data[p:p + 8], 'little')
+            c0, c1, cbits = struct.unpack_from('<HHI', data, p + 8)
+            p += 16
+
+            def rgb(c):
+                r, g, b = (c >> 11) & 31, (c >> 5) & 63, c & 31
+                return (r << 3 | r >> 2, g << 2 | g >> 4, b << 3 | b >> 2)
+            k0, k1 = rgb(c0), rgb(c1)
+            cols = [k0, k1,
+                    tuple((2 * x + y) // 3 for x, y in zip(k0, k1)),
+                    tuple((x + 2 * y) // 3 for x, y in zip(k0, k1))]
+            for j in range(4):
+                y = by * 4 + j
+                if y >= h:
+                    break
+                for i in range(4):
+                    x = bx * 4 + i
+                    if x >= w:
+                        continue
+                    n = j * 4 + i
+                    r, g, b = cols[(cbits >> (2 * n)) & 3]
+                    a = ((abits >> (4 * n)) & 15) * 17
+                    o = (y * w + x) * 4
+                    out[o:o + 4] = bytes((r, g, b, a))
+    return bytes(out)
+
+
+def read_xnb_header(data):
+    """Returns the position of the first object in an uncompressed XNB."""
     if data[:3] != b'XNB':
         raise ValueError('not an XNB file')
-    flags = data[5]
-    if flags & 0xC0:
+    if data[5] & 0xC0:
         raise ValueError('compressed XNB files are not supported')
     pos = 10
     readers, pos = read_7bit(data, pos)
@@ -102,23 +134,94 @@ def convert_texture(src, dst):
         _, pos = read_string(data, pos)
         pos += 4
     _, pos = read_7bit(data, pos)  # shared resources
-    _, pos = read_7bit(data, pos)  # type id of the asset
+    return pos
+
+
+def read_texture_body(data, pos):
+    """Reads a Texture2D (after its type id): returns w, h, RGBA bytes, new pos."""
     fmt, w, h, levels = struct.unpack_from('<iIII', data, pos)
     pos += 16
-    if fmt not in (0, 6):
-        raise ValueError('surface format %d (only Color and Dxt5 are handled)' % fmt)
-    size, = struct.unpack_from('<I', data, pos)
-    pos += 4
-    px = data[pos:pos + size]
-    if fmt == 6:
-        px = decode_dxt5(px, w, h)
+    if fmt not in (0, 5, 6):
+        raise ValueError('surface format %d (only Color, Dxt3 and Dxt5 are handled)' % fmt)
+    first = None
+    for _ in range(levels):
+        size, = struct.unpack_from('<I', data, pos)
+        pos += 4
+        if first is None:
+            first = data[pos:pos + size]
+        pos += size
+    if fmt == 5:
+        first = decode_dxt3(first, w, h)
+    elif fmt == 6:
+        first = decode_dxt5(first, w, h)
+    return w, h, first, pos
+
+
+def write_tex(dst, w, h, px):
     out = bytearray(px[:w * h * 4])
     # RGBA -> BGRA (little-endian 0xAARRGGBB); XNA content is premultiplied
     out[0::4], out[2::4] = px[2:w * h * 4:4], px[0:w * h * 4:4]
     with open(dst, 'wb') as f:
         f.write(b'RLT1' + struct.pack('<II', w, h))
         f.write(out)
+
+
+def convert_texture(src, dst):
+    data = open(src, 'rb').read()
+    pos = read_xnb_header(data)
+    _, pos = read_7bit(data, pos)  # type id of the asset
+    w, h, px, _ = read_texture_body(data, pos)
+    write_tex(dst, w, h, px)
     return w, h
+
+
+def convert_font(src, dst_base):
+    """XNA SpriteFont -> <name>.tex (glyph sheet) + <name>.fnt (text):
+         F lineSpacing spacing defaultChar
+         G codepoint glyphX glyphY glyphW glyphH cropX cropY cropW cropH kernA kernB kernC
+       (SpriteFontReader: texture, glyph rects, croppings, characters,
+       line spacing, spacing, kerning, default character)."""
+    data = open(src, 'rb').read()
+    pos = read_xnb_header(data)
+    _, pos = read_7bit(data, pos)  # SpriteFont
+    _, pos = read_7bit(data, pos)  # Texture2D
+    w, h, px, pos = read_texture_body(data, pos)
+
+    def rect_list(pos):
+        _, pos = read_7bit(data, pos)
+        n, = struct.unpack_from('<i', data, pos)
+        pos += 4
+        rects = [struct.unpack_from('<iiii', data, pos + 16 * i) for i in range(n)]
+        return rects, pos + 16 * n
+
+    glyphs, pos = rect_list(pos)
+    crops, pos = rect_list(pos)
+    _, pos = read_7bit(data, pos)  # List<char>
+    n, = struct.unpack_from('<i', data, pos)
+    pos += 4
+    chars = []
+    for _ in range(n):
+        # CharReader: one UTF-8 encoded character
+        b = data[pos]
+        size = 1 if b < 0x80 else 2 if b < 0xE0 else 3 if b < 0xF0 else 4
+        chars.append(ord(data[pos:pos + size].decode('utf-8')))
+        pos += size
+    line_spacing, spacing = struct.unpack_from('<if', data, pos)
+    pos += 8
+    _, pos = read_7bit(data, pos)  # List<Vector3>
+    n, = struct.unpack_from('<i', data, pos)
+    pos += 4
+    kerning = [struct.unpack_from('<fff', data, pos + 12 * i) for i in range(n)]
+    pos += 12 * n
+    default_char = 0
+    if data[pos]:
+        default_char = ord(data[pos + 1:pos + 5].decode('utf-8', 'ignore')[:1] or '\0')
+    write_tex(dst_base + '.tex', w, h, px)
+    with open(dst_base + '.fnt', 'w') as f:
+        f.write('F %d %g %d\n' % (line_spacing, spacing, default_char))
+        for c, g, cr, k in zip(chars, glyphs, crops, kerning):
+            f.write('G %d %d %d %d %d %d %d %d %d %g %g %g\n' % ((c,) + tuple(g) + tuple(cr) + tuple(k)))
+    return len(chars)
 
 
 def convert_sheet_xml(src, dst):
@@ -189,6 +292,18 @@ def main():
             print('sprites %-32s %d records' % (base, n))
     n = convert_rooms(os.path.join(content, 'Levels'), os.path.join(out, 'rooms.txt'))
     print('rooms: %d templates' % n)
+    # Fonts (src/Text): assets/fonts/<name>.tex + .fnt
+    fonts = os.path.join(content, 'Fonts')
+    os.makedirs(os.path.join(out, 'fonts'), exist_ok=True)
+    for name in sorted(os.listdir(fonts)):
+        base, ext = os.path.splitext(name)
+        if ext != '.xnb':
+            continue
+        try:
+            n = convert_font(os.path.join(fonts, name), os.path.join(out, 'fonts', base))
+            print('font    %-32s %d characters' % (base, n))
+        except (ValueError, struct.error, UnicodeDecodeError) as e:
+            print('skipped font %s: %s' % (name, e))
     # Heir names (Lineage::Generator::LoadNames)
     for names in ('HeroNames.txt', 'HeroineNames.txt'):
         shutil.copyfile(os.path.join(content, names), os.path.join(out, names))
