@@ -279,12 +279,30 @@ void EnemyObj_LastBoss::UpdateAction()
 		case ACTION_SF_CAST_SPEARS:
 			if (m_actionPhase == 0 && !IsAnimating())
 			{
-				/* Spears rise from the ground around the player. */
-				for (int i = -1; i <= 2; i++)
-					m_levelScreen->FireProjectile("LastBossSpearProjectile_Sprite",
-					                              Vector2(m_target->X() + i * 120.0f, m_target->Y() + 200),
-					                              Vector2(0, -1), EnemyEV::LastBoss_Advanced_ProjectileSpeed,
-					                              (int) ProjectileDamage, Vector2(3.5f, 3.5f), false, this);
+				/* CastSpears (line 1075): a row of spears rises from
+				 * the floor around the boss - a wall the player must
+				 * jump - and retracts after the duration. */
+				if (m_levelScreen != nullptr && m_levelScreen->CurrentRoom() != nullptr)
+				{
+					Rectangle rb = m_levelScreen->CurrentRoom()->Bounds();
+					float roomCentreX = rb.X + rb.Width / 2.0f;
+					UpdateCollisionBoxes();
+					float floorY = Y() + (Bounds().Bottom() - (int) Y());
+					float spacing = 60;   /* the spear's scaled width */
+					for (int i = 0; i < 26; i++)
+					{
+						/* Spread right and left of the centre (line
+						 * 1096+). */
+						float x = roomCentreX + 50 + i * spacing;
+						if (i >= 13)
+							x = roomCentreX - 50 - (i - 12) * spacing;
+						m_levelScreen->FireProjectile("LastBossSpearProjectile_Sprite",
+						                              Vector2(x, floorY), Vector2(0, 1),
+						                              0, (int) ProjectileDamage,
+						                              Vector2(2, 2), false, this,
+						                              3.5f);   /* delay + duration + retract */
+					}
+				}
 				m_actionPhase = 1;
 			}
 			else if (m_actionPhase == 1)
