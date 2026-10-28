@@ -1,5 +1,5 @@
 // The game loop between screens (the original RCScreenManager flow):
-//   start: load save.txt; no hero yet -> heir choice
+//   start: load save.txt, title screen; no hero yet -> heir choice
 //   heir chosen -> castle (a new one, or the saved one) with the HUD
 //   death -> the hero joins the family tree, save -> manor -> heir choice
 // The castle player's death (CurrentHealth <= 0) calls OnPlayerDeath()
@@ -12,6 +12,7 @@
 #include "Screens/LineageScreen.h"
 #include "Screens/MapScreen.h"
 #include "Screens/PauseScreen.h"
+#include "Screens/TitleScreen.h"
 #include "Screens/ManorScreen.h"
 #include "Screens/ProceduralLevelScreen.h"
 
@@ -22,7 +23,7 @@ namespace RogueCastle
 	class GameFlow
 	{
 	public:
-		enum class State { Lineage, Castle, Manor };
+		enum class State { Title, Lineage, Castle, Manor };
 
 		// savePath: e.g. "save.txt" next to the game
 		bool Init(const char *assetsDir, const char *savePath);
@@ -44,6 +45,7 @@ namespace RogueCastle
 		MapScreen m_map;
 		bool m_mapOpen = false;   /* Select in the castle */
 		PauseScreen m_pause;
+		TitleScreen m_title;
 		bool m_paused = false;    /* Start in the castle */
 		ProceduralLevelScreen *m_level = nullptr;
 		State m_state = State::Lineage;
@@ -51,6 +53,7 @@ namespace RogueCastle
 		double m_deathTimer = 0;   /* the pause after the hero dies */
 
 		void StartCastle();
+		void LeaveTitle();
 		void Save();
 	};
 }

@@ -20,6 +20,22 @@ namespace RogueCastle
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
 			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
+		if (getenv("RL_DEBUG_LEVEL") == nullptr)
+		{
+			// InitializeStartingText: continue / choose an heir / new legacy
+			const char *text = m_save.hero.name.empty() ? "LOC_ID_TITLE_SCREEN_4"
+				: m_save.IsDead ? "LOC_ID_TITLE_SCREEN_3" : "LOC_ID_TITLE_SCREEN_2";
+			ok = m_title.Open(assetsDir, text) && ok;
+			m_state = State::Title;
+			return ok;
+		}
+		LeaveTitle();
+		return ok;
+	}
+
+	void GameFlow::LeaveTitle()
+	{
+		m_title.Close();
 		// A saved hero still alive goes straight back to the castle
 		if (!m_save.hero.name.empty() && !m_save.IsDead) StartCastle();
 		else if (getenv("RL_DEBUG_LEVEL") != nullptr)
@@ -35,7 +51,6 @@ namespace RogueCastle
 			m_state = State::Lineage;
 			m_lineage.Open(m_save, m_generator);
 		}
-		return ok;
 	}
 
 	void GameFlow::Save()
@@ -103,6 +118,9 @@ namespace RogueCastle
 		case State::Lineage:
 			if (m_lineage.Update(buttons, pressed, dt)) StartCastle();
 			break;
+		case State::Title:
+			if (m_title.Update(pressed, dt)) LeaveTitle();
+			break;
 		case State::Manor:
 			if (m_manor.Update(buttons, pressed, dt))
 			{
@@ -159,6 +177,9 @@ namespace RogueCastle
 	{
 		switch (m_state)
 		{
+		case State::Title:
+			m_title.Draw(frame);
+			break;
 		case State::Lineage:
 			m_lineage.Draw(frame);
 			break;
