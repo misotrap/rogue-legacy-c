@@ -22,3 +22,12 @@
 - [x] Bas + saut sur une plateforme : la collision le remettait dessus (règles one-way de PlayerObj.cs)
 - [x] Sur une table on ne pouvait plus sauter : les meubles comptent comme sol
 - [x] Fond rose derrière les fenêtres : magenta remplacé par le bleu nuit du ciel
+- [x] Écran de choix de l'héritier : refait comme l'original (mur rouge, arbre généalogique, cadres, plaques, panneau, projecteur)
+- [x] Cour : toits des stands visibles/solides seulement une fois débloqués ; on peut aller jusqu'à Charon (l'épée comptait dans sa largeur)
+- [x] Les projectiles traversent le décor (meubles solides seulement pour le héros)
+- [x] Sauter sur une plateforme traversable faisait parfois passer à travers
+- [x] Portraits : tableau dans le cadre, zones de coup gardées, dégâts ; les cadres décoratifs ont un tableau
+- [x] Moteur : les objets sans boîte de terrain étaient exclus des collisions (portraits...)
+- [x] Rampes : remplies de la texture du mur, plus de marches visibles dessous
+- [x] Écran titre : icônes options (SELECT) et crédits (Y) comme l'original
+- [ ] Fantôme qui ne touche pas : non reproduit (il touche en test). Peut-être une hallucination du trait Démence, inoffensive comme dans l'original
