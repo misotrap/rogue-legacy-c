@@ -10,6 +10,7 @@
 #include "Lineage/Lineage.h"
 #include "Save/SaveGame.h"
 #include "Screens/LineageScreen.h"
+#include "Screens/MapScreen.h"
 #include "Screens/ManorScreen.h"
 #include "Screens/ProceduralLevelScreen.h"
 
@@ -39,6 +40,8 @@ namespace RogueCastle
 		LineageScreen m_lineage;
 		ManorScreen m_manor;
 		PlayerHUD m_hud;
+		MapScreen m_map;
+		bool m_mapOpen = false;   /* Select in the castle */
 		ProceduralLevelScreen *m_level = nullptr;
 		State m_state = State::Lineage;
 		uint32_t m_previous = 0;

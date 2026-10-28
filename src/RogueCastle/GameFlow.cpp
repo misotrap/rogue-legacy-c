@@ -16,7 +16,8 @@ namespace RogueCastle
 		m_generator = Lineage::Generator((uint32_t) time(nullptr));
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
-		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir);
+		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
+			&& m_map.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
 		// A saved hero still alive goes straight back to the castle
 		if (!m_save.hero.name.empty() && !m_save.IsDead) StartCastle();
@@ -54,6 +55,8 @@ namespace RogueCastle
 		m_save.IsDead = false;
 		m_level = new ProceduralLevelScreen(m_assets.c_str(), m_save.castleSeed);
 		m_state = State::Castle;
+		m_mapOpen = false;
+		m_map.Reset(m_level->Castle().rooms.size());
 		Save();
 	}
 
@@ -108,6 +111,18 @@ namespace RogueCastle
 			break;
 		case State::Castle:
 		{
+			if (m_mapOpen)
+			{
+				m_mapOpen = m_map.Update(buttons, pressed, dt);
+				break;
+			}
+			PlayerObj *player = m_level->Player();
+			if (player != nullptr && (pressed & BTN_SELECT) && !(buttons & BTN_START))
+			{
+				m_map.Open(player->X(), player->Y());
+				m_mapOpen = true;
+				break;
+			}
 			GameTime gameTime(dt);
 			Game::GlobalInput.Update(buttons);
 			m_level->Update(&gameTime);
@@ -159,6 +174,9 @@ namespace RogueCastle
 			v.heroName = Text::Loc::Format(m_save.hero.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
 				m_save.hero.name, m_save.hero.romanNumeral);
 			m_hud.Draw(frame, v);
+			if (m_level->Player() != nullptr)
+				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
+			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
 			break;
 		}
 		}

@@ -35,6 +35,7 @@ public:
 	                    float lifeSpan = 0);
 
 	PlayerObj *Player() const { return m_player; }
+	const Levels::Castle &Castle() const { return m_castle; }
 	RoomObj *CurrentRoom() const { return m_currentRoom; }
 	const std::vector<RoomObj *> &RoomList() const { return m_roomList; }
 	DS2DEngine::Camera2D *Camera() { return &m_camera; }
