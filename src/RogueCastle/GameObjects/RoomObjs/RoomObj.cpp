@@ -182,7 +182,12 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 		bool breakable = obj.breakable || obj.type == "PhysicsObjContainer";
 		DS2DEngine::PhysicsObjContainer *container = nullptr;
 		if (breakable)
-			container = new BreakableObj(obj.sprite);
+		{
+			BreakableObj *b = new BreakableObj(obj.sprite);
+			b->Name = obj.name;   /* "Health"/"Mana" force a drop */
+			container = b;
+			m_breakableList.push_back(b);
+		}
 		else
 			container = new DS2DEngine::PhysicsObjContainer(obj.sprite);
 		container->X(obj.x);

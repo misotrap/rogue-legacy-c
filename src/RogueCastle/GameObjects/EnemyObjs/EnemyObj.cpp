@@ -4,6 +4,9 @@
 #include "../../../DS2DEngine/Consts.h"
 #include "../Player/PlayerObj.h"
 #include "../BreakableObj.h"
+#include "../ItemDropObj.h"
+#include "../../EVs/GameEV.h"
+#include "../../Types/EnemyType.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include "../../../Audio/Audio.h"
@@ -316,6 +319,59 @@ void EnemyObj::Kill(bool giveXP)
 	StopAnimation();
 	/* EnemyObj.cs line 906. */
 	Audio::PlaySound("Enemy_Death");
+
+	/* EnemyObj.cs lines 908-960: the item and money drops. */
+	if (DropsItem && m_levelScreen != nullptr)
+	{
+		if (Type == (int) EnemyType::Chicken)
+			m_levelScreen->DropItem(Position(), ItemDropType::Health,
+			                        GameEV::ITEM_HEALTHDROP_AMOUNT);
+		else if (rand() % 100 + 1 <= GameEV::ENEMY_ITEMDROP_CHANCE)
+		{
+			if (rand() % 2 == 0)
+				m_levelScreen->DropItem(Position(), ItemDropType::Health,
+				                        GameEV::ITEM_HEALTHDROP_AMOUNT);
+			else
+				m_levelScreen->DropItem(Position(), ItemDropType::Mana,
+				                        GameEV::ITEM_MANADROP_AMOUNT);
+		}
+
+		/* EnemyObj.cs line 922: goldAmount, then broken down into the
+		 * biggest drops first (big diamonds, diamonds, bags, coins). */
+		float roll = (float) rand() / (float) RAND_MAX;
+		if (roll <= MoneyDropChance)
+		{
+			int goldAmount = (rand() % (MaxMoneyDropAmount - MinMoneyDropAmount + 1)
+			                  + MinMoneyDropAmount) * 10
+			                 + (int) ((((float) rand() / (float) RAND_MAX
+			                            * (MaxMoneyGainPerLevel - MinMoneyGainPerLevel)
+			                            + MinMoneyGainPerLevel) * Level) * 10);
+
+			int numBigDiamonds = goldAmount / ItemDropType::BigDiamondAmount;
+			goldAmount -= numBigDiamonds * ItemDropType::BigDiamondAmount;
+
+			int numDiamonds = goldAmount / ItemDropType::DiamondAmount;
+			goldAmount -= numDiamonds * ItemDropType::DiamondAmount;
+
+			int numMoneyBags = goldAmount / ItemDropType::MoneyBagAmount;
+			goldAmount -= numMoneyBags * ItemDropType::MoneyBagAmount;
+
+			int numCoins = goldAmount / ItemDropType::CoinAmount;
+
+			for (int i = 0; i < numBigDiamonds; i++)
+				m_levelScreen->DropItem(Position(), ItemDropType::BigDiamond,
+				                        ItemDropType::BigDiamondAmount);
+			for (int i = 0; i < numDiamonds; i++)
+				m_levelScreen->DropItem(Position(), ItemDropType::Diamond,
+				                        ItemDropType::DiamondAmount);
+			for (int i = 0; i < numMoneyBags; i++)
+				m_levelScreen->DropItem(Position(), ItemDropType::MoneyBag,
+				                        ItemDropType::MoneyBagAmount);
+			for (int i = 0; i < numCoins; i++)
+				m_levelScreen->DropItem(Position(), ItemDropType::Coin,
+				                        ItemDropType::CoinAmount);
+		}
+	}
 }
 
 void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType)

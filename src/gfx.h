@@ -17,6 +17,9 @@ int gfx_load_texture(Texture *t, const char *path);
 void gfx_free_texture(Texture *t);
 
 void gfx_begin(uint32_t *frame);
+/* The frame passed to gfx_begin (for the text draws that run outside the
+ * HUD, e.g. the level screen's floating pickup texts). */
+uint32_t *gfx_frame();
 void gfx_clear(uint32_t color);
 void gfx_fill(int x, int y, int w, int h, uint32_t color);
 /* Draws the source rectangle (sx, sy, sw, sh) of a texture with its

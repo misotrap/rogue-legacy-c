@@ -46,6 +46,11 @@ void gfx_begin(uint32_t *frame)
 	fb = frame;
 }
 
+uint32_t *gfx_frame()
+{
+	return fb;
+}
+
 void gfx_clear(uint32_t color)
 {
 	int i;

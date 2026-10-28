@@ -52,6 +52,7 @@ public:
 	const std::vector<TerrainObj *> &TerrainObjList() const { return m_terrainList; }
 	/* Breakables and decoration containers, drawn and simulated by the room. */
 	const std::vector<DS2DEngine::PhysicsObjContainer *> &GameObjList() const { return m_gameObjList; }
+	const std::vector<class BreakableObj *> &BreakableObjList() const { return m_breakableList; }
 	const std::vector<class EnemyObj *> &EnemyList() const { return m_enemyList; }
 	int ActiveEnemies() const;
 	const std::vector<DS2DEngine::GameObj *> &DrawableObjList() const { return m_drawableList; }
@@ -71,6 +72,7 @@ private:
 	int m_linkedRoom = -1;
 	std::vector<TerrainObj *> m_terrainList;
 	std::vector<DS2DEngine::PhysicsObjContainer *> m_gameObjList;   /* owned */
+	std::vector<class BreakableObj *> m_breakableList;              /* = the breakables of m_gameObjList */
 	std::vector<class EnemyObj *> m_enemyList;                     /* owned */
 	std::vector<DS2DEngine::GameObj *> m_drawableList;               /* = m_gameObjList */
 

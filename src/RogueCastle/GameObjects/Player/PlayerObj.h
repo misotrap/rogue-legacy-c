@@ -50,8 +50,10 @@ public:
 	 * the manor skills, the equipment and the bonus drops. Until
 	 * SetPlayerStats is called the base knight values apply. */
 	void SetPlayerStats(Save::GameState *stats) { m_stats = stats; }
+	Save::GameState *Stats() const { return m_stats; }
 
 	float CurrentHealth = 100;
+	float CurrentMana = 0;
 	int TotalDamage() const;          /* PlayerObj.cs line 3561 (Damage) */
 	int TotalMagicDamage() const;    /* PlayerObj.cs line 3589 */
 	float TotalArmor() const;        /* PlayerObj.cs line 4045 */

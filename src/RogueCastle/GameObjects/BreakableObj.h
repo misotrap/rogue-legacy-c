@@ -24,9 +24,17 @@ public:
 	bool Broken = false;
 	bool DropItem = true;
 	bool HitBySpellsOnly = false;
+	/* The room object's Name attribute ("Health"/"Mana" force a drop,
+	 * BreakableObj.cs line 80). */
+	std::string Name;
+	void SetLevelScreen(class ProceduralLevelScreen *levelScreen)
+	{
+		m_levelScreen = levelScreen;
+	}
 
 private:
 	bool m_wasWeighted = true;
+	class ProceduralLevelScreen *m_levelScreen = nullptr;
 };
 
 } // namespace RogueCastle

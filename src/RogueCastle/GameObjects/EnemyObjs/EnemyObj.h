@@ -64,6 +64,9 @@ public:
 	float JumpHeight = 0;
 	int MinMoneyDropAmount = 1;
 	int MaxMoneyDropAmount = 1;
+	/* EnemyObj.cs line 136: the money raise per enemy level. ADDITIVE */
+	float MinMoneyGainPerLevel = 0.23f;
+	float MaxMoneyGainPerLevel = 0.29f;
 	float MoneyDropChance = 0.50f;
 	Vector2 KnockBack = Vector2(0, 0);
 	Vector2 ProjectileScale = Vector2(1, 1);

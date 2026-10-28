@@ -4,11 +4,15 @@
 #include "../Game.h"
 #include "../GameObjects/EnemyObjs/EnemyObj.h"
 #include "../GameObjects/ProjectileObj.h"
+#include "../GameObjects/ItemDropObj.h"
 #include "../../DS2DEngine/CollisionMath.h"
 #include "../../gfx.h"
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include "../../Audio/Audio.h"
+#include "../../Text/Loc.h"
+#include "../EVs/GameEV.h"
 
 namespace RogueCastle
 {
@@ -28,6 +32,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 	/* The enemies and their projectiles (the ported ones live in these). */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinalSpritesheetBig");
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinal2Spritesheet");
+	m_goldFont.Load(assets, "GoldFont");
 	std::vector<Levels::RoomTemplate> templates;
 	char path[512];
 	snprintf(path, sizeof(path), "%s/rooms.txt", assets);
@@ -85,6 +90,10 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 		}
 		for (DS2DEngine::PhysicsObjContainer *obj : room->GameObjList())
 			m_physicsManager.AddObject(obj);
+		/* BreakableObj.cpp needs the level to drop its loot (no RTTI, so
+		 * RoomObj keeps the breakables in their own list). */
+		for (BreakableObj *breakable : room->BreakableObjList())
+			breakable->SetLevelScreen(this);
 		for (EnemyObj *enemy : room->EnemyList())
 		{
 			enemy->SetPlayerTarget(m_player);
@@ -110,6 +119,22 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 		}
 	}
 	m_player->UpdateCollisionBoxes();
+
+	/* Dev/test: RL_DEBUG_LOOT drops one of every loot type on the hero,
+	 * to test ItemDropObj without hunting an enemy first. */
+	if (getenv("RL_DEBUG_LOOT") != nullptr)
+	{
+		Vector2 pos(m_player->X(), m_player->Y() - 60);
+		DropItem(pos, ItemDropType::Coin, ItemDropType::CoinAmount);
+		DropItem(pos, ItemDropType::MoneyBag, ItemDropType::MoneyBagAmount);
+		DropItem(pos, ItemDropType::Diamond, ItemDropType::DiamondAmount);
+		DropItem(pos, ItemDropType::BigDiamond, ItemDropType::BigDiamondAmount);
+		DropItem(pos, ItemDropType::Health, GameEV::ITEM_HEALTHDROP_AMOUNT);
+		DropItem(pos, ItemDropType::Mana, GameEV::ITEM_MANADROP_AMOUNT);
+		DropItem(pos, ItemDropType::Stat_Strength, 1);
+		DropItem(pos, ItemDropType::Stat_Magic, 1);
+		DropItem(pos, ItemDropType::Stat_Defense, 1);
+	}
 
 	if (getenv("RL_DEBUG_TRACE") != nullptr)
 	{
@@ -179,6 +204,62 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		Rectangle b = m_currentRoom->Bounds();
 		m_physicsManager.SetActiveBounds(Rectangle(b.X - 1320, b.Y - 720,
 		                                          b.Width + 2 * 1320, b.Height + 2 * 720));
+	}
+
+	/* The loot (PlayerObj.cs line 2110: the pickup on contact). */
+	for (size_t i = 0; i < m_itemDrops.size(); )
+	{
+		ItemDropObj *item = m_itemDrops[i];
+		/* Update() runs the physics (the gravity pulls the drop down);
+		 * the pickup check is a simple bounds overlap. */
+		item->Update(gameTime);
+		item->ObjContainer::Update(gameTime);
+		if (item->CollectionCounter > 0)
+			item->CollectionCounter -= (float) gameTime->ElapsedGameTime;
+		bool collected = false;
+		if (m_player != nullptr && item->IsCollectable())
+		{
+			Rectangle dropBounds = item->Bounds();
+			Rectangle playerBounds = m_player->Bounds();
+			if (dropBounds.Intersects(playerBounds))
+			{
+				item->GiveReward(m_player);
+				if (!item->PopupText.empty())
+				{
+					uint32_t argb = ((uint32_t) item->PopupColour.A << 24)
+					              | ((uint32_t) item->PopupColour.R << 16)
+					              | ((uint32_t) item->PopupColour.G << 8)
+					              | item->PopupColour.B;
+					m_popups.push_back({item->PopupText, item->X(), (float) item->Bounds().Top(), 1.2f, argb});
+				}
+				Audio::PlaySound("CoinDrop1", "CoinDrop2", "CoinDrop3");
+				collected = true;
+			}
+		}
+		bool outOfPlay = false;
+		if (m_currentRoom != nullptr)
+		{
+			Rectangle b2 = m_currentRoom->Bounds();
+			outOfPlay = item->Y() > b2.Bottom() + 300;
+		}
+		if (collected || outOfPlay)
+		{
+			m_physicsManager.RemoveObject(item);
+			delete item;
+			m_itemDrops.erase(m_itemDrops.begin() + i);
+		}
+		else
+			i++;
+	}
+	/* The floating pickup texts (TextManager.DisplayNumberStringText). */
+	for (size_t i = 0; i < m_popups.size(); )
+	{
+		m_popups[i].timer -= (float) gameTime->ElapsedGameTime;
+		m_popups[i].y -= (float) gameTime->ElapsedGameTime * 120;
+		if (m_popups[i].timer <= 0)
+			m_popups.erase(m_popups.begin() + i);
+		else
+			i++;
 	}
 
 	m_physicsManager.Update(gameTime);
@@ -296,8 +377,59 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 
 	for (ProjectileObj *proj : m_projectiles)
 		proj->Draw(camera);
+	for (ItemDropObj *item : m_itemDrops)
+		item->Draw(camera);
+	/* The pickup texts, in screen space like every Text::Font draw. */
+	for (const Popup &popup : m_popups)
+	{
+		float x = (popup.x - camera->X()) * 0.5f + 320;
+		float y = (popup.y - camera->Y()) * 0.5f + 240;
+		const char *text = popup.text.c_str();
+		if (text[0] == 'L' && text[1] == 'O')
+			text = Text::Loc::Get(popup.text.c_str());   /* the stat labels */
+		float w = 0, h = 0;
+		m_goldFont.Measure(text, w, h);
+		m_goldFont.Draw(gfx_frame(), text, x - w * 0.5f * 0.7f, y, 0.7f, popup.colour,
+		                Text::Align::Left);
+	}
 	if (m_player != nullptr)
 		m_player->Draw(camera);
+}
+
+void ProceduralLevelScreen::DropItem(Vector2 position, int dropType, float amount)
+{
+	/* ItemDropManager.cs line 37 (DropItem): pop from the pool, convert,
+	 * fling it up. */
+	ItemDropObj *item = new ItemDropObj();
+	item->ConvertDrop(dropType, amount);
+	m_itemDrops.push_back(item);
+	m_physicsManager.AddObject(item);
+	item->Position(position);
+	item->AccelerationY(-(480 + (float) (rand() % 241)));          /* -720..-480 */
+	item->AccelerationX((float) (rand() % 241) - 120);             /* -120..120 */
+	item->AnimationDelay(1 / 20.0f);
+	item->CollectionCounter = 0.2f;
+}
+
+void ProceduralLevelScreen::AddPopup(const std::string &text, float x, float y,
+                                      uint32_t colour)
+{
+	m_popups.push_back({text, x, y, 1.2f, colour});
+}
+
+void ProceduralLevelScreen::DropItemWide(Vector2 position, int dropType, float amount)
+{
+	/* ItemDropManager.cs line 62 (DropItemWide): the player's own drops
+	 * (Charon's toll) spread wider. */
+	ItemDropObj *item = new ItemDropObj();
+	item->ConvertDrop(dropType, amount);
+	m_itemDrops.push_back(item);
+	m_physicsManager.AddObject(item);
+	item->Position(position);
+	item->AccelerationY(-300 - (float) (rand() % 901));            /* -1200..-300 */
+	item->AccelerationX((float) (rand() % 1201) - 600);             /* -600..600 */
+	item->AnimationDelay(1 / 20.0f);
+	item->CollectionCounter = 0.2f;
 }
 
 void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
