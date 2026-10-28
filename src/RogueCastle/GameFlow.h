@@ -18,6 +18,7 @@
 #include "Screens/GameOverScreen.h"
 #include "Screens/EquipmentScreen.h"
 #include "Rooms/StartingRoom.h"
+#include "Screens/DialogueScreen.h"
 #include "Screens/ManorScreen.h"
 #include "Screens/ProceduralLevelScreen.h"
 
@@ -57,6 +58,8 @@ namespace RogueCastle
 		EquipmentScreen m_smith{ EquipmentScreen::Mode::Blacksmith };
 		EquipmentScreen m_enchant{ EquipmentScreen::Mode::Enchantress };
 		EquipmentScreen *m_shop = nullptr;
+		DialogueScreen m_dialogue;   /* over the castle while open */
+		bool m_architectAsking = false;   /* the open dialogue ends on the lock choice */
 		std::vector<uint32_t> m_lastFrame;   /* the castle frame while dying */
 		bool m_paused = false;    /* Start in the castle */
 		ProceduralLevelScreen *m_level = nullptr;

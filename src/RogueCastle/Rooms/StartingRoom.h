@@ -2,9 +2,10 @@
 // "Start" room (rooms[0], at 0,0) with the blacksmith and his board, the
 // enchantress and her tent, the architect and his gear, each shown once
 // its manor skill is bought (Smithy, Enchanter, Architect). Near one of
-// them an up arrow bobs over its head; Up talks to it. Walking out on the
-// left opens the manor (the skill screen), as in the original. The toll
-// collector, the rain and the architect's dialogue are not ported yet.
+// them the up-arrow bubble bobs over its head; Up talks to it (the shops,
+// the architect's dialogue). Walking out on the left opens the manor (the
+// skill screen), as in the original. The toll collector, the rain and the
+// architect's lever animation are not ported yet.
 #pragma once
 
 #include "../../DS2DEngine/Camera2D.h"
@@ -21,7 +22,7 @@ namespace RogueCastle
 	class StartingRoom
 	{
 	public:
-		enum class Action { None, Blacksmith, Enchantress, Manor };
+		enum class Action { None, Blacksmith, Enchantress, Architect, Manor };
 
 		~StartingRoom();
 		bool LoadContent(const char *assetsDir);

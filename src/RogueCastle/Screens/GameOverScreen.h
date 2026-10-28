@@ -4,8 +4,8 @@
 // "<hero> a été tué", a random game hint and "<hero>, dernières paroles".
 // "Appuyez sur A pour continuer" appears at 4 s. The camera zoom on the
 // body, the killer's name and the enemies walking in are left out (the
-// killer is not tracked yet). miscSpritesheet (16 MB) is loaded by Open
-// and freed by Close.
+// killer is not tracked yet). The art is in the small uiExtraSpritesheet
+// (tools/make_subsheet.py), shared with the dialogue box and the courtyard.
 #pragma once
 
 #include "../../DS2DEngine/Camera2D.h"

@@ -71,8 +71,8 @@ namespace RogueCastle
 			ok = SpriteLibrary::LoadSheet(assetsDir, "blacksmithUISpritesheet") && ok;
 		if (!SpriteLibrary::ContainsSprite("StartRoomGypsyTent_Sprite"))
 			ok = SpriteLibrary::LoadSheet(assetsDir, "startingRoomSpritesheet") && ok;
-		if (!SpriteLibrary::ContainsSprite("GamepadUpArrow_Sprite"))
-			ok = SpriteLibrary::LoadSheet(assetsDir, "mapSpritesheetBig") && ok;
+		if (!SpriteLibrary::ContainsSprite("UpArrowBubble_Sprite"))
+			ok = SpriteLibrary::LoadSheet(assetsDir, "uiExtraSpritesheet") && ok;
 
 		m_blacksmith = Npc("Blacksmith_Character", 2.5f, 700, 1);
 		m_board = Prop("StartRoomBlacksmithBoard_Sprite", 2);
@@ -88,8 +88,10 @@ namespace RogueCastle
 		m_gear = Prop("ArchitectGear_Sprite", 2);
 		m_gear->Position(Vector2(m_architect->X() + 30, m_architect->Bounds().Bottom() - 1));
 
-		m_arrow = new SpriteObj("GamepadUpArrow_Sprite");
+		m_arrow = new SpriteObj("UpArrowBubble_Sprite");
 		m_arrow->ForceDraw(true);
+		m_arrow->Scale(Vector2(2, 2));
+		m_arrow->Flip(SpriteEffects::FlipHorizontally);
 		return ok;
 	}
 
@@ -112,8 +114,9 @@ namespace RogueCastle
 
 		if (Has(skills, Skills::SkillType::Smithy) && Near(player, m_blacksmith)) m_near = m_blacksmith;
 		else if (Has(skills, Skills::SkillType::Enchanter) && Near(player, m_enchantress)) m_near = m_enchantress;
+		else if (Has(skills, Skills::SkillType::Architect) && Near(player, m_architect)) m_near = m_architect;
 		if (m_near != nullptr && (pressed & BTN_UP))
-			return m_near == m_blacksmith ? Action::Blacksmith : Action::Enchantress;
+			return m_near == m_blacksmith ? Action::Blacksmith : m_near == m_enchantress ? Action::Enchantress : Action::Architect;
 		return Action::None;
 	}
 
@@ -141,8 +144,8 @@ namespace RogueCastle
 			Rectangle b = m_near->Bounds();
 			float top = (float) b.Top();
 			if (m_near == m_blacksmith && m_board->Bounds().Top() < top) top = (float) m_board->Bounds().Top();
-			m_arrow->Position(Vector2(b.X + b.Width / 2.0f - m_arrow->Width() / 2,
-				top - m_arrow->Height() - 10 + (float) std::sin(m_time * 20) * 2));
+			m_arrow->Position(Vector2(b.X + b.Width / 2.0f,
+				top - 40 + (float) std::sin(m_time * 20) * 2));
 			m_arrow->Draw(camera);
 		}
 	}

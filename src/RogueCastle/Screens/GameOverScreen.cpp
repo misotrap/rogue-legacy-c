@@ -14,7 +14,7 @@ namespace RogueCastle
 {
 	namespace
 	{
-		const char *SHEET = "miscSpritesheet";
+		const char *SHEET = "uiExtraSpritesheet";   // tools/make_subsheet.py
 		const int NUM_HINTS = 44;   // GameEV.GAME_HINTS: LOC_ID_HINT_1..44
 		const uint32_t WHITE = 0xFFFFFFFFu, BLACK = 0xFF000000u;
 		const float GHOST_Y = 280;
@@ -46,7 +46,8 @@ namespace RogueCastle
 	{
 		Close();
 		bool ok = m_font.Loaded() || m_font.Load(assetsDir, "Junicode");
-		ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, SHEET) && ok;
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite("GameOverSpotlight_Sprite"))
+			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, SHEET) && ok;
 		m_lastFrame = lastFrame;
 		m_lastFrame.resize((size_t) SCREEN_W * SCREEN_H, BLACK);
 
@@ -80,7 +81,6 @@ namespace RogueCastle
 		if (!m_open) return;
 		delete m_spotlight; delete m_ghost; delete m_plate;
 		m_spotlight = m_ghost = m_plate = nullptr;
-		SpriteSystem::SpriteLibrary::FreeSheet(SHEET);
 		m_lastFrame.clear();
 		m_lastFrame.shrink_to_fit();
 		m_open = false;

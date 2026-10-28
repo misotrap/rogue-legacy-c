@@ -22,7 +22,7 @@ namespace RogueCastle
 		m_generator.LoadNames(names.c_str(), female.c_str());
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
 			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir)
-			&& m_court.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir);
+			&& m_court.LoadContent(assetsDir) && m_dialogue.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
 		if (getenv("RL_DEBUG_LEVEL") == nullptr)
 		{
@@ -104,7 +104,11 @@ namespace RogueCastle
 		m_save.TimesDead++;
 		m_save.NumEnemiesBeaten = 0;
 		m_save.NewBossBeaten = false;
-		m_save.castleExists = false; // a new castle for the next heir (unless the architect locks it)
+		/* A new castle for the next heir, unless the architect locked this
+		 * one (LoadingScreen: the lock is used up by the next load) */
+		m_save.castleExists = m_save.LockCastle;
+		m_save.LockCastle = false;
+		m_save.HasArchitectFee = false;
 		Save();
 		delete m_level;
 		m_level = nullptr;
@@ -164,6 +168,26 @@ namespace RogueCastle
 			break;
 		case State::Castle:
 		{
+			if (m_dialogue.IsOpen())
+			{
+				DialogueScreen::Result r = m_dialogue.Update(pressed, dt);
+				if (m_architectAsking && r != DialogueScreen::Result::Open)
+				{
+					m_architectAsking = false;
+					if (r == DialogueScreen::Result::Confirmed)
+					{
+						/* ActivateArchitect / StopArchitectActivation: this castle
+						 * stays for the next heir; the gold fee applies until then */
+						m_save.LockCastle = true;
+						m_save.HasArchitectFee = true;
+						m_save.ArchitectUsed = true;
+						Save();
+						Audio::PlaySound("Architect_Lever");
+						m_dialogue.Open("Castle Lock Complete Architect", m_save.hero.isFemale);
+					}
+				}
+				break;
+			}
 			if (m_paused)
 			{
 				m_paused = m_pause.Update(pressed);
@@ -199,6 +223,19 @@ namespace RogueCastle
 					m_shop->Open(m_save, MaxWeight());
 					Audio::PlaySound("ShopMenuOpen");
 					m_state = State::Shop;
+					break;
+				}
+				if (action == StartingRoom::Action::Architect)
+				{
+					// StartingRoomObj: the lock offer, or "already locked"
+					if (m_save.LockCastle)
+						m_dialogue.Open("Castle Already Locked Architect", m_save.hero.isFemale);
+					else
+					{
+						m_dialogue.Open(m_save.SpokeToArchitect ? "Meet Architect 2" : "Meet Architect", m_save.hero.isFemale, "ConfirmTest1");
+						m_save.SpokeToArchitect = true;
+						m_architectAsking = true;
+					}
 					break;
 				}
 				if (action == StartingRoom::Action::Manor)
@@ -278,6 +315,7 @@ namespace RogueCastle
 			if (m_level->Player() != nullptr)
 				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
 			if (m_deathTimer > 0) m_lastFrame.assign(frame, frame + (size_t) SCREEN_W * SCREEN_H);
+			if (m_dialogue.IsOpen()) m_dialogue.Draw(frame);
 			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
 			else if (m_paused)
 				m_pause.Draw(frame, m_level->Camera(), m_level->Player(), m_level->CurrentRoom(), v.heroName,
