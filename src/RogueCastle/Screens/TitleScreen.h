@@ -31,6 +31,7 @@ namespace RogueCastle
 		Text::Font m_font;
 		DS2DEngine::Camera2D m_camera;   // the 1320x720 screen at zoom 0.5
 		DS2DEngine::SpriteObj *m_bg = nullptr, *m_castle = nullptr, *m_logo = nullptr;
+		DS2DEngine::SpriteObj *m_optionsIcon = nullptr, *m_creditsIcon = nullptr;   // bottom right, with their keys
 		DS2DEngine::SpriteObj *m_small[5] = {}, *m_large[4] = {};
 		std::string m_startText;
 		double m_time = 0;

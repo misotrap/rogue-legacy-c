@@ -283,6 +283,15 @@ namespace RogueCastle
 				m_optionsOpen = true;
 				break;
 			}
+			if (pressed & BTN_Y)
+			{
+				// The credits icon (TitleScreen: MENU_CREDITS)
+				m_title.Close();
+				m_credits.Open((int) m_save.familyTree.size(), true);
+				m_creditsFromTitle = true;
+				m_state = State::Credits;
+				break;
+			}
 			if (m_title.Update(pressed, dt))
 			{
 				Audio::PlaySound("Game_Start");
@@ -299,6 +308,12 @@ namespace RogueCastle
 		case State::Credits:
 			if (m_credits.Update(pressed, dt))
 			{
+				if (m_creditsFromTitle)
+				{
+					m_creditsFromTitle = false;
+					OpenTitle();
+					break;
+				}
 				m_state = State::Lineage;
 				m_lineage.Open(m_save, m_generator);
 			}

@@ -15,7 +15,8 @@ namespace RogueCastle
 	{
 	public:
 		bool LoadContent(const char *assetsDir);
-		void Open(int numChildren);
+		// fromTitle: the credits icon of the title screen, left at any time
+		void Open(int numChildren, bool fromTitle = false);
 		// true once the player leaves
 		bool Update(uint32_t pressed, double dt);
 		void Draw(uint32_t *frame);
@@ -25,5 +26,6 @@ namespace RogueCastle
 		double m_time = 0;
 		int m_children = 0;
 		float m_height = 0;   // the whole list, in screen pixels
+		bool m_fromTitle = false;
 	};
 }

@@ -73,6 +73,7 @@ namespace RogueCastle
 		BossRoom m_bossRoom;
 		TraitEffects m_traitEffects;
 		float m_clonusTimer = 0, m_shakeTimer = 0;   // Clonus
+		bool m_creditsFromTitle = false;
 		CreditsScreen m_credits;
 		bool m_getItemOpen = false;   /* a chest reward on screen */
 		PauseScreen m_pause;

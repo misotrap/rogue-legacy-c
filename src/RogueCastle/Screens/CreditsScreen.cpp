@@ -37,8 +37,9 @@ namespace RogueCastle
 		return m_font.Load(assetsDir, "Junicode");
 	}
 
-	void CreditsScreen::Open(int numChildren)
+	void CreditsScreen::Open(int numChildren, bool fromTitle)
 	{
+		m_fromTitle = fromTitle;
 		m_children = numChildren;
 		m_time = 0;
 		m_height = 0;
@@ -51,7 +52,8 @@ namespace RogueCastle
 	{
 		m_time += dt;
 		// The list has to be past before A leaves (m_allowExit)
-		return m_time * SPEED > m_height + SCREEN_H / 2 && (pressed & (BTN_A | BTN_B | BTN_START));
+		bool over = m_fromTitle || m_time * SPEED > m_height + SCREEN_H / 2;
+		return over && (pressed & (BTN_A | BTN_B | BTN_START));
 	}
 
 	void CreditsScreen::Draw(uint32_t *frame)

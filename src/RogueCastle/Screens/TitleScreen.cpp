@@ -57,6 +57,11 @@ namespace RogueCastle
 		m_large[3]->Y(720 - m_large[3]->Height());
 		m_large[3]->Flip(SpriteEffects::FlipHorizontally);
 		m_logo = Make("TitleLogo_Sprite", 1320 / 2, 720 / 2 - 50);
+		// TitleScreen.LoadContent: the options and credits icons, level with
+		// the profile card (720 - its height)
+		m_optionsIcon = Make("TitleOptionsIcon_Sprite", 1320 - 48 * 2 * 2, 720 - 50 * 2);
+		m_creditsIcon = Make("TitleCreditsIcon_Sprite", 1320 - 48 * 2 * 2 + 120, 720 - 50 * 2);
+		for (SpriteObj *s : { m_optionsIcon, m_creditsIcon }) if (s != nullptr) s->Scale(Vector2(2, 2));
 
 		m_startText = Text::Loc::Get(startTextID);
 		m_camera.Position(Vector2(660, 360));
@@ -69,8 +74,8 @@ namespace RogueCastle
 	void TitleScreen::Close()
 	{
 		if (!m_open) return;
-		delete m_bg; delete m_castle; delete m_logo;
-		m_bg = m_castle = m_logo = nullptr;
+		delete m_bg; delete m_castle; delete m_logo; delete m_optionsIcon; delete m_creditsIcon;
+		m_bg = m_castle = m_logo = m_optionsIcon = m_creditsIcon = nullptr;
 		for (SpriteObj *&s : m_small) { delete s; s = nullptr; }
 		for (SpriteObj *&s : m_large) { delete s; s = nullptr; }
 		for (const char *sheet : SHEETS) SpriteSystem::SpriteLibrary::FreeSheet(sheet);
@@ -118,7 +123,16 @@ namespace RogueCastle
 		float pulse = (float) std::fabs(std::sin(m_time));
 		uint32_t c = (uint32_t) (55 + 200 * pulse);
 		uint32_t colour = 0xFF000000u | c << 16 | c << 8 | c;
-		m_font.DrawOutlined(frame, "SELECT : Options", SCREEN_W - 12, 400, 0.26f, 0xFFFFFFFFu, BLACK, 1, Text::Align::Right);
+		// The options and credits icons and their keys above them
+		const char *keys[] = { "SELECT", "Y" };
+		SpriteObj *icons[] = { m_optionsIcon, m_creditsIcon };
+		for (int i = 0; i < 2; i++)
+		{
+			if (icons[i] == nullptr) continue;
+			icons[i]->Draw(&m_camera);
+			float kx = icons[i]->X() * 0.5f - 10, ky = (icons[i]->Bounds().Top() - 10) * 0.5f + 60 - 14;
+			m_font.DrawOutlined(frame, keys[i], kx, ky, 0.3f, 0xFFFFFFFFu, BLACK, 1, Text::Align::Centre);
+		}
 		std::string text = "A  " + m_startText;
 		m_font.DrawOutlined(frame, text.c_str(), SCREEN_W / 2, 240 + 100 - 8, 0.4f, colour, BLACK, 1, Text::Align::Centre);
 	}
