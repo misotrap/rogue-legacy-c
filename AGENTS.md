@@ -310,8 +310,10 @@ the map/minimap and the options; the game code below is yours.
    enemies and breakables, picked up by the player (gold x0.6 while
    `HasArchitectFee`), the gold number text.
 4. **Chests**: ChestObj / FairyChestObj (conditions), blueprints and runes
-   unlocked in `save` (the blacksmith/enchantress screens read them), then
-   a GetItem screen (ask Claude, or port GetItemScreen.cs).
+   unlocked in `save` (the blacksmith/enchantress screens read them). The
+   GetItem screen is done (Claude): call `GetItem::Push(reward)`
+   (Screens/GetItemScreen.h) for a blueprint, rune or stat drop, and
+   GameFlow shows it. Not yet: SpecialItem, Spell, FountainPiece.
 5. **Spells and class powers**: the spell projectiles (SpellType), mana,
    the class specials (barbarian shout, knight block...), the traits'
    gameplay effects (gigantism, dwarfism, vertigo...).

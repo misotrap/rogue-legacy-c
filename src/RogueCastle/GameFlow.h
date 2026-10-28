@@ -13,6 +13,7 @@
 #include "Save/SaveGame.h"
 #include "Screens/LineageScreen.h"
 #include "Screens/MapScreen.h"
+#include "Screens/GetItemScreen.h"
 #include "Screens/PauseScreen.h"
 #include "Screens/TitleScreen.h"
 #include "Screens/GameOverScreen.h"
@@ -62,6 +63,8 @@ namespace RogueCastle
 		PlayerHUD m_hud;
 		MapScreen m_map;
 		bool m_mapOpen = false;   /* Select in the castle */
+		GetItemScreen m_getItem;
+		bool m_getItemOpen = false;   /* a chest reward on screen */
 		PauseScreen m_pause;
 		TitleScreen m_title;
 		GameOverScreen m_gameOver;

@@ -7,7 +7,8 @@ convert_assets.py (stdlib only):
 
 Writes assets/uiExtraSpritesheet.tex/.spr from miscSpritesheet (the
 dialogue box, the choice highlight, the stat plate, the talk bubbles, the
-death screen spotlight and ghost, the minimap frame), getItemScreen and
+death screen spotlight and ghost, the minimap frame, the get item
+screen), getItemScreen and
 language sheets (the options screen). Same sprite and character names as
 the original sheets, so the code just loads the small sheet instead.
 """
@@ -19,10 +20,14 @@ OUT = 'uiExtraSpritesheet'
 SOURCES = {
     'miscSpritesheet': ['DialogBox_Sprite', 'DialogueChoiceHighlight_Sprite', 'GameOverStatPlate_Sprite',
                         'ContinueTextIcon_Sprite', 'UpArrowBubble_Sprite', 'ExclamationSquare_Sprite',
-                        'GameOverSpotlight_Sprite', 'PlayerGhost_Sprite', 'MinimapBG_Sprite'],
+                        'GameOverSpotlight_Sprite', 'PlayerGhost_Sprite', 'MinimapBG_Sprite',
+                        'BlueprintFoundBG_Sprite', 'LevelUpParticleFX_Sprite', 'Heart_Sprite', 'ManaCrystal_Sprite',
+                        'Sword_Sprite', 'MagicBook_Sprite', 'Shield_Sprite', 'Backpack_Sprite'],
     'getItemScreenSpritesheet': ['OptionsScreenVolumeBar_Sprite', 'OptionsScreenVolumeBG_Sprite',
-                                 'OptionsBar_Sprite', 'SkillUnlockPlate_Sprite'],
-    'languageSpritesheet': ['OptionsScreenTitle_Sprite_FR'],
+                                 'OptionsBar_Sprite', 'SkillUnlockPlate_Sprite',
+                                 'BlueprintIcon_Sprite', 'RuneIcon_Sprite'],
+    'languageSpritesheet': ['OptionsScreenTitle_Sprite_FR', 'BlueprintFoundText_Sprite_FR'],
+    'language2Spritesheet': ['RuneFoundText_Sprite_FR', 'StatFoundText_Sprite_FR'],
 }
 CHARACTERS = ['DialogBox_Character', 'GameOverStatPlate_Character', 'SkillUnlockPlate_Character']
 WIDTH = 1024

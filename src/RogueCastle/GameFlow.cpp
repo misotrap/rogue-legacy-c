@@ -26,7 +26,7 @@ namespace RogueCastle
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
-			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir)
+			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir) && m_getItem.LoadContent(assetsDir)
 			&& m_court.LoadContent(assetsDir) && m_dialogue.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
 		if (getenv("RL_DEBUG_LEVEL") == nullptr)
@@ -133,12 +133,14 @@ namespace RogueCastle
 			m_save.CurrentMana > 0 && m_save.CurrentMana <= maxMana
 			? (float) m_save.CurrentMana : maxMana;
 		/* Dev/test: RL_DEBUG_CHEST opens a chest (index, optional p/s). */
+		{ GetItem::Reward r; while (GetItem::Pop(r)) {} }
 		const char *debugChest = getenv("RL_DEBUG_CHEST");
 		if (debugChest != nullptr)
 			m_level->DebugOpenChest(debugChest);
 		m_state = State::Castle;
 		m_mapOpen = false;
 		m_paused = false;
+		m_getItemOpen = false;
 		m_map.Reset(m_level->Castle().rooms.size());
 		Save();
 	}
@@ -285,6 +287,20 @@ namespace RogueCastle
 						m_dialogue.Open("Castle Lock Complete Architect", m_save.hero.isFemale);
 					}
 				}
+				break;
+			}
+			if (m_getItemOpen)
+			{
+				m_getItemOpen = m_getItem.Update(pressed, dt);
+				break;
+			}
+			GetItem::Reward reward;
+			if (GetItem::Pop(reward))
+			{
+				const Vector2 cam = m_level->Camera()->Position();
+				m_getItem.Open(reward, cam.X, cam.Y, m_save.TimesCastleBeaten);
+				m_getItemOpen = true;
+				Save();
 				break;
 			}
 			if (m_paused)
@@ -482,6 +498,7 @@ namespace RogueCastle
 					m_map.DrawMini(frame, m_level->Castle(), px, py, 1 / 60.0);
 			}
 			if (m_dialogue.IsOpen()) m_dialogue.Draw(frame);
+			if (m_getItemOpen) m_getItem.Draw(frame);
 			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
 			else if (m_paused)
 				m_pause.Draw(frame, m_level->Camera(), m_level->Player(), m_level->CurrentRoom(), v.heroName,

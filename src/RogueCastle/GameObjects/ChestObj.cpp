@@ -2,6 +2,7 @@
 #include "ChestObj.h"
 #include "Player/PlayerObj.h"
 #include "ItemDropObj.h"
+#include "../Screens/GetItemScreen.h"
 #include "../EVs/GameEV.h"
 #include "../Types/ChestType.h"
 #include "../Screens/ProceduralLevelScreen.h"
@@ -180,11 +181,11 @@ void ChestObj::GiveStatDrop(ProceduralLevelScreen *level, PlayerObj *player,
                             int numDrops, int statDropType)
 {
 	/* ChestObj.cs line 214 (GiveStatDrop): the bonus is granted at once
-	 * (the C# shows the reward through the GetItem screen, which the
-	 * port replaces with the popup text, see the header). */
+	 * and shown by the GetItem screen. */
 	if (player == nullptr || player->Stats() == nullptr)
 		return;
 	Save::GameState *stats = player->Stats();
+	int found[3] = { 0, 0, 0 };
 	for (int k = 0; k < numDrops; k++)
 	{
 		int dropType = statDropType;
@@ -235,9 +236,18 @@ void ChestObj::GiveStatDrop(ProceduralLevelScreen *level, PlayerObj *player,
 			text = "LOC_ID_ITEM_DROP_OBJ_7";
 			break;
 		}
-		level->AddPopup(text, X(), Y() - Bounds().Height,
-		                0xFFB0C4DEu /* Color.LightSteelBlue */);
+		(void) text;
+		if (k < 3) found[k] = dropType;
 	}
+	(void) level;
+	GetItem::Reward reward;
+	reward.type = numDrops > 1 ? GetItem::TripStatDrop : GetItem::StatDrop;
+	reward.x = found[0];
+	reward.stat2 = found[1];
+	reward.stat3 = found[2];
+	reward.worldX = X();
+	reward.worldY = Y() - Bounds().Height;
+	GetItem::Push(reward);
 }
 
 void ChestObj::GivePrint(ProceduralLevelScreen *level, PlayerObj *player)
@@ -252,8 +262,13 @@ void ChestObj::GivePrint(ProceduralLevelScreen *level, PlayerObj *player)
 	if (stats->equipment.GiveRandomBlueprint(Level, (int) ChestType(), rng, category, index))
 	{
 		/* The blacksmith screen shows it as a new (unseen) blueprint. */
-		level->AddPopup("LOC_ID_ITEM_DROP_OBJ_4", X(), Y() - Bounds().Height,
-		                0xFFB0C4DEu);
+		GetItem::Reward reward;
+		reward.type = GetItem::Blueprint;
+		reward.x = category;
+		reward.y = index;
+		reward.worldX = X();
+		reward.worldY = Y() - Bounds().Height;
+		GetItem::Push(reward);
 		if (getenv("RL_DEBUG_TRACE") != nullptr)
 			fprintf(stderr, "chest: blueprint %d of category %d unlocked\n",
 			        index, category);

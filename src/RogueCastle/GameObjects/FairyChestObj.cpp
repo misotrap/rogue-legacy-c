@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/FairyChestObj.cs. */
 #include "FairyChestObj.h"
+#include "../Screens/GetItemScreen.h"
 #include "Player/PlayerObj.h"
 #include "ItemDropObj.h"
 #include "../ChestConditionChecker.h"
@@ -106,8 +107,13 @@ void FairyChestObj::OpenChest(ProceduralLevelScreen *level, PlayerObj *player)
 	if (stats->equipment.GiveRandomRune(rng, category, ability))
 	{
 		/* The enchantress screen shows it as a new (unseen) rune. */
-		level->AddPopup("LOC_ID_ITEM_DROP_OBJ_6", X(), Y() - Bounds().Height,
-		                0xFFB0C4DEu);
+		GetItem::Reward reward;
+		reward.type = GetItem::Rune;
+		reward.x = category;
+		reward.y = ability;
+		reward.worldX = X();
+		reward.worldY = Y() - Bounds().Height;
+		GetItem::Push(reward);
 		if (getenv("RL_DEBUG_TRACE") != nullptr)
 			fprintf(stderr, "fairy chest: rune %d of category %d unlocked\n",
 			        ability, category);
