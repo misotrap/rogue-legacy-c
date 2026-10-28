@@ -137,7 +137,9 @@ Rendering rules:
   src/RogueCastle/Rendering/RoomRenderer (sky, area BG, decorations,
   textured walls, borders), drawn by ProceduralLevelScreen::Draw behind
   each visible room. Do not draw walls/doors as plain rectangles again
-  (RoomObj::PlainWalls = true only for debugging). Enemies stay with Vibe.
+  (RoomObj::PlainWalls = true only for debugging). Also done by Claude:
+  original HUD art (HUD/PlayerHUD), MapScreen (Select), PauseScreen (Start),
+  TitleScreen (game start), all driven by GameFlow. Enemies stay with Vibe.
 - Load only the sheets the current area needs; free the others.
 - Performance budget per frame on the console (16 ms at 60 fps): a few
   thousand blits at most. Measure with `plat_time()` and print fps.
