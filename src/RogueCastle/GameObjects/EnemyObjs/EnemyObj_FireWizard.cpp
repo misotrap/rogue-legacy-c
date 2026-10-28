@@ -7,6 +7,7 @@
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -192,6 +193,7 @@ void EnemyObj_FireWizard::CastFireball()
 	float rad = angle * PI / 180.0f;
 	const char *sprite = DifficultyType == EXPERT ? "GhostBossProjectile_Sprite"
 	                                              : "WizardFireballProjectile_Sprite";
+	Audio::PlaySound("FireWizard_Attack_01");   /* EnemyObj_FireWizard.cs line 429 */
 	m_levelScreen->FireProjectile(sprite, origin, Vector2(cosf(rad), sinf(rad)),
 	                              ProjectileSpeed, (int) ProjectileDamage,
 	                              ProjectileScale, false, this);

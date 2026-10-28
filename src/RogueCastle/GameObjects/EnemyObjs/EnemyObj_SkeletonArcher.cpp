@@ -6,6 +6,7 @@
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -219,6 +220,7 @@ void EnemyObj_SkeletonArcher::StartAction(Action action)
 		 * the windup, the arrows, the recovery. */
 		CurrentSpeed(0);
 		HeadingX(m_target->X() >= X() ? 1 : -1);
+		Audio::PlaySound("SkeletonArcher_Load");   /* EnemyObj_SkeletonArcher.cs line 171 */
 		ChangeSprite("EnemySkeletonArcherAttack_Character");
 		PlayAnimation("Start", "BeginAttack", false);
 		m_actionTimer = m_fireDelay;
@@ -252,6 +254,7 @@ void EnemyObj_SkeletonArcher::UpdateAction()
 			/* The arrows all leave together (the C# fires them back to
 			 * back with no delay between). */
 			int diff = DifficultyType == BASIC ? 0 : (DifficultyType == ADVANCED ? 1 : 2);
+			Audio::PlaySound("SkeletonArcher_Attack_01", "SkeletonArcher_Attack_02", "SkeletonArcher_Attack_03");   /* EnemyObj_SkeletonArcher.cs line 175 */
 			for (int i = 0; i < m_shotsLeft; i++)
 				FireArrow(ArrowAngle(kind, i, diff));
 			PlayAnimation("Attack", "EndAttack", false);

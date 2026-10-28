@@ -6,6 +6,7 @@
 #include "../../EVs/PlayerEV.h"
 #include "../../Types/ClassType.h"
 #include "../../Types/TraitType.h"
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -107,6 +108,7 @@ void PlayerObj::UpdateLogicSet()
 		switch (m_lsStep)
 		{
 		case 0:   /* ChangeSprite + AnimationDelay + PlayAnimation(2, 4) */
+			Audio::PlaySound("Player_Attack01", "Player_Attack02");   /* the attack LogicSets */
 			ChangeSprite("PlayerAttacking3_Character");
 			UpdateEquipmentObjs();
 			AnimationDelay(AttackAnimationDelay);
@@ -216,6 +218,7 @@ void PlayerObj::Update(GameTime *gameTime)
 				State = STATE_JUMPING;
 				AccelerationY(-JumpHeight);
 				m_isJumping = true;
+				Audio::PlaySound("Player_Jump_04");   /* PlayerObj.cs line 867 */
 			}
 			else if ((Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2))
 			         && !m_isTouchingGround && m_doubleJumpCount < TotalDoubleJumps)
@@ -224,6 +227,7 @@ void PlayerObj::Update(GameTime *gameTime)
 				AccelerationY(-DoubleJumpHeight);
 				m_isJumping = true;
 				m_doubleJumpCount++;
+				Audio::PlaySound("Player_DoubleJump");   /* PlayerObj.cs line 849 */
 			}
 		}
 
@@ -570,6 +574,11 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 	{
 		/* Knockback: away from the attack (HitPlayer continues at line 2335). */
 		State = STATE_HURT;
+		/* PlayerObj.cs line 2295: the injury cues (male or female). */
+		if (m_stats != nullptr && m_stats->hero.isFemale)
+			Audio::PlaySound("Player_Female_Damage_03", "Player_Female_Damage_04", "Player_Female_Damage_05");
+		else
+			Audio::PlaySound("Player_Male_Injury_01", "Player_Male_Injury_02", "Player_Male_Injury_03");
 		m_invincibleCounter = BaseInvincibilityTime;
 		CurrentSpeed(0);
 		if (AccelerationX() > 0 || HeadingX() > 0)
@@ -581,6 +590,10 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 	else
 	{
 		/* TODO C++: death animation and the lineage handoff. */
+		if (m_stats != nullptr && m_stats->hero.isFemale)
+			Audio::PlaySound("Player_Female_Death_01", "Player_Female_Death_02");
+		else
+			Audio::PlaySound("Player_Male_Death_01", "Player_Male_Death_02");
 		IsKilled = true;
 		LockControls();
 		Visible(false);

@@ -6,6 +6,7 @@
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -228,6 +229,7 @@ void EnemyObj_Skeleton::ThrowBones(int count, float angleCentre)
 		float rad = angle * 3.14159265f / 180.0f;
 		Vector2 heading(cosf(rad) * facing, sinf(rad));
 		Vector2 origin = Position() + Vector2(20.0f * facing, -20.0f);
+		Audio::PlaySound("SkeletonAttack1");   /* EnemyObj_Skeleton.cs line 218 */
 		m_levelScreen->FireProjectile("BoneProjectile_Sprite", origin, heading,
 		                              ProjectileSpeed, (int) ProjectileDamage,
 		                              ProjectileScale, true, this);

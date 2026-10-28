@@ -3,6 +3,7 @@
 #include "../../EVs/EnemyEV.h"
 #include "../../Types/EnemyType.h"
 #include "../Player/PlayerObj.h"
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -159,6 +160,7 @@ void EnemyObj_Zombie::RunBasicLogic()
 	case STATE_ENGAGE:
 		if (!Risen && !m_actionActive)
 		{
+			Audio::PlaySound("Zombie_Rise");   /* EnemyObj_Zombie.cs line 161 */
 			m_zombieState = ZOMBIE_RISING;
 			m_actionActive = true;
 			m_actionPhase = 0;
@@ -185,6 +187,7 @@ void EnemyObj_Zombie::RunBasicLogic()
 	case STATE_WANDER:
 		if (!Lowered && !m_actionActive)
 		{
+			Audio::PlaySound("Zombie_Lower");   /* EnemyObj_Zombie.cs line 171 */
 			m_zombieState = ZOMBIE_LOWERING;
 			m_actionActive = true;
 			m_actionPhase = 0;

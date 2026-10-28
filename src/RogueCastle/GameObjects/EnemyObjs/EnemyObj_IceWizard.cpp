@@ -7,6 +7,7 @@
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -193,6 +194,7 @@ void EnemyObj_IceWizard::ShatterIceball()
 		if (DifficultyType == EXPERT)
 			angle = (float) (rand() % 361);
 		float rad = angle * PI / 180.0f;
+		Audio::PlaySound("Ice_Wizard_Attack_Glass");   /* EnemyObj_IceWizard.cs line 425 */
 		m_levelScreen->FireProjectile("WizardIceProjectile_Sprite", origin,
 		                              Vector2(cosf(rad), sinf(rad)), ProjectileSpeed,
 		                              (int) ProjectileDamage, ProjectileScale, false, this);

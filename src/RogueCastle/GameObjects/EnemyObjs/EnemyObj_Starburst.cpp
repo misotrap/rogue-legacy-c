@@ -6,6 +6,7 @@
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -195,6 +196,7 @@ void EnemyObj_Starburst::UpdateAction()
 			}
 			else if (DifficultyType == ADVANCED || DifficultyType == MINIBOSS)
 				angles = rotated;
+			Audio::PlaySound("Eyeball_ProjectileAttack");   /* EnemyObj_Starburst.cs line 162 */
 			for (int i = 0; i < count; i++)
 			{
 				float rad = angles[i] * PI / 180.0f;

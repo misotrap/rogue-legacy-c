@@ -7,6 +7,7 @@
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -294,6 +295,7 @@ void EnemyObj_EarthWizard::UpdateAction()
 			/* CastEarthSpell (line 549): the spike at the player's
 			 * position, alive for SpellDuration (the C# cancels it with
 			 * a delayed RunFunction). */
+				Audio::PlaySound("Earth_Wizard_Attack");   /* EnemyObj_EarthWizard.cs line 556 */
 			CancelEarthSpell();
 			ProjectileObj *spike = new ProjectileObj("WizardEarthSpell_Sprite",
 			                                         m_target->Position(), Vector2(1, 0), 0,

@@ -5,6 +5,7 @@
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -232,6 +233,7 @@ void EnemyObj_SwordKnight::UpdateAction()
 		{
 			if (m_attackFiresWave)
 				FireWave();
+			Audio::PlaySound("SwordKnight_Attack_v02");   /* EnemyObj_SwordKnight.cs line 250 */
 			PlayAnimation("Attack", "End", false);
 			m_actionPhase = 1;
 		}

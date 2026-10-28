@@ -6,6 +6,7 @@
 #include "../BreakableObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
+#include "../../../Audio/Audio.h"
 #include <cstdlib>
 
 namespace RogueCastle
@@ -313,6 +314,8 @@ void EnemyObj::Kill(bool giveXP)
 	Visible(false);
 	IsCollidableFlag = false;
 	StopAnimation();
+	/* EnemyObj.cs line 906. */
+	Audio::PlaySound("Enemy_Death");
 }
 
 void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType)
@@ -324,7 +327,9 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 2 /* player */
 		    && m_invincibleCounter <= 0)
 		{
-			/* Player has hit enemy (with sword or spell projectile). */
+			/* Player has hit enemy (with sword or spell projectile).
+			 * EnemyObj.cs line 815. */
+			Audio::PlaySound("EnemyHit1", "EnemyHit2", "EnemyHit3");
 			int damage = m_target != nullptr ? (int) m_target->TotalDamage() : 0;
 			m_invincibleCounter = InvincibilityTime;
 			Vector2 impact((float) thisBox->AbsRect().X, (float) thisBox->AbsRect().Y);

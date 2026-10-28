@@ -5,6 +5,7 @@
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -232,6 +233,7 @@ void EnemyObj_Blob::UpdateAction()
 				                              ProjectileSpeed, (int) ProjectileDamage,
 				                              ProjectileScale, false, this,
 				                              5.0f);   /* ExpertBlobProjectileDuration (line 30) */
+			Audio::PlaySound("Blob_Jump");   /* EnemyObj_Blob.cs line 287 */
 			AccelerationY(-JumpHeight);
 			ChangeSprite(air);
 			PlayAnimation(true);
@@ -243,6 +245,7 @@ void EnemyObj_Blob::UpdateAction()
 		else if (m_actionPhase == 1 && m_actionTimer <= 0 && m_isTouchingGround)
 		{
 			/* GroundCheckLogicAction: wait until the blob lands. */
+			Audio::PlaySound("Blob_Land");   /* EnemyObj_Blob.cs line 291 */
 			CurrentSpeed(Speed);
 			ChangeSprite(jump);
 			PlayAnimation("Start", "Jump", false);

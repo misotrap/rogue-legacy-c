@@ -5,6 +5,7 @@
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -253,6 +254,7 @@ void EnemyObj_Knight::UpdateAction()
 		{
 			/* MoveDirectionLogicAction: charge in the facing direction. */
 			PlayAnimation("AttackStart", "End", false);
+			Audio::PlaySound("SpearKnightAttack1");   /* EnemyObj_Knight.cs line 236 */
 			CurrentSpeed(AttackThrustSpeed);
 			m_actionPhase = 2;
 			m_actionTimer = AttackThrustDuration;

@@ -5,6 +5,7 @@
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -165,6 +166,7 @@ void EnemyObj_Plant::StartAction(Action action)
 	case ACTION_SPIT:
 		/* spitProjectileLS (line 163): the attack animation, the spit,
 		 * the last frames, back to idle. */
+		Audio::PlaySound("Enemy_Venus_Attack_01");   /* EnemyObj_Plant.cs line 176 */
 		ChangeSprite("EnemyPlantAttack_Character");
 		PlayAnimation(1, TotalFrames() - 1, false);
 		m_runCooldown = true;

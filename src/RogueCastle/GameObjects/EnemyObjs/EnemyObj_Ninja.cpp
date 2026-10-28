@@ -8,6 +8,7 @@
 #include "../../../DS2DEngine/CollisionMath.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -268,6 +269,7 @@ void EnemyObj_Ninja::UpdateAction()
 		if (m_actionPhase == 0 && m_actionTimer <= 0)
 		{
 			/* The fan per difficulty (lines 192, 203, 214). */
+			Audio::PlaySound("Ninja_ThrowStar_01", "Ninja_ThrowStar_02", "Ninja_ThrowStar_03");   /* EnemyObj_Ninja.cs line 196 */
 			ChangeSprite("EnemyNinjaThrow_Character");
 			PlayAnimation(1, 3, false);
 			switch (DifficultyType)
@@ -396,6 +398,7 @@ void EnemyObj_Ninja::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
 				m_closestCeiling = ceiling;
 				/* CreateLog (line 491): gone (the log decoy and the
 				 * smoke are not ported). */
+				Audio::PlaySound("Ninja_Teleport");   /* EnemyObj_Ninja.cs line 503 */
 				Visible(false);
 				IsCollidableFlag = false;
 				IsWeightedFlag = false;

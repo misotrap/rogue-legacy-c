@@ -9,6 +9,7 @@
 #include "../../../DS2DEngine/Consts.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -204,6 +205,7 @@ void EnemyObj_BouncySpike::UpdateEnemy(GameTime *gameTime)
 		if (boundaryMTD.X != 0 || boundaryMTD.Y != 0)
 		{
 			ReflectHeading(boundaryMTD);
+			Audio::PlaySound("GiantSpike_Bounce_01", "GiantSpike_Bounce_02", "GiantSpike_Bounce_03");   /* EnemyObj_BouncySpike.cs line 221 */
 			CountBounce();
 		}
 	}
@@ -239,6 +241,7 @@ void EnemyObj_BouncySpike::CollisionResponse(CollisionBox *thisBox, CollisionBox
 				ReflectHeading(mtd);
 				X(X() + mtd.X);
 				Y(Y() + mtd.Y);
+				Audio::PlaySound("GiantSpike_Bounce_01", "GiantSpike_Bounce_02", "GiantSpike_Bounce_03");   /* EnemyObj_BouncySpike.cs line 261 */
 				CountBounce();
 				return;
 			}

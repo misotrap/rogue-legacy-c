@@ -4,6 +4,7 @@
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -71,6 +72,7 @@ void EnemyObj_Turret::UpdateEnemy(GameTime *gameTime)
 		/* FireProjectileLogicAction: a projectile along the rotation. */
 		float rad = Rotation() * PI / 180.0f;
 		Vector2 heading(cosf(rad), sinf(rad));
+		Audio::PlaySound("Turret_Attack01", "Turret_Attack02", "Turret_Attack03");   /* the C# fireProjectileLS */
 		m_levelScreen->FireProjectile("TurretProjectile_Sprite", Position(),
 		                              heading, m_fireSpeed, (int) Damage,
 		                              ProjectileScale, false, this);

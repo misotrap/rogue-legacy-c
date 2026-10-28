@@ -6,6 +6,7 @@
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -295,6 +296,7 @@ void EnemyObj_Eyeball::UpdateAction()
 	case ACTION_FIRE:
 		if (m_actionPhase == 0 && m_actionTimer <= 0)
 		{
+			Audio::PlaySound("Eyeball_ProjectileAttack");   /* EnemyObj_Eyeball.cs line 227 */
 			/* Fire the volley, wait between shots (line 239/386). */
 			if (DifficultyType == EXPERT)
 				ThrowFan(0);

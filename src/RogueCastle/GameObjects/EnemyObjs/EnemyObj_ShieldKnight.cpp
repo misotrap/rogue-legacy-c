@@ -4,6 +4,7 @@
 #include "../../Types/EnemyType.h"
 #include "../Player/PlayerObj.h"
 #include <cstdlib>
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -179,6 +180,7 @@ void EnemyObj_ShieldKnight::StartAction(Action action)
 	case ACTION_TURN:
 		/* turnLS (line 159): the turn animation, flip, walk on. */
 		CurrentSpeed(0);
+		Audio::PlaySound("ShieldKnight_Turn");   /* EnemyObj_ShieldKnight.cs line 166 */
 		ChangeSprite("EnemyShieldKnightTurnIn_Character");
 		PlayAnimation(1, 2, false);
 		m_endPhase = 3;

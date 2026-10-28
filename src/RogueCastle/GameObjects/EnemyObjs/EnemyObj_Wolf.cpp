@@ -3,6 +3,7 @@
 #include "../../EVs/EnemyEV.h"
 #include "../../Types/EnemyType.h"
 #include "../Player/PlayerObj.h"
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -172,6 +173,7 @@ void EnemyObj_Wolf::StartAction(Action action)
 		/* jumpLS (line 165): the crouch, the leap, the landing. */
 		CurrentSpeed(0);
 		HeadingX(m_target->X() >= X() ? 1 : -1);
+		Audio::PlaySound("Wolf_Attack");   /* EnemyObj_Wolf.cs line 172 */
 		ChangeSprite("EnemyWargPounce_Character");
 		PlayAnimation(true);
 		m_actionTimer = PounceDelay;
