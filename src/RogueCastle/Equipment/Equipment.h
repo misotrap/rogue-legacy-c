@@ -64,5 +64,9 @@ namespace Equipment
 		// Returns false when none is left (the chest gives gold instead).
 		bool GiveRandomBlueprint(int chestLevel, int chestType, std::mt19937 &rng, int &category, int &index);
 		int TotalBlueprintsFound() const;
+		// FairyChestObj.OpenChest: a random rune not found yet (no level
+		// or colour requirement); marks it FoundButNotSeen.
+		bool GiveRandomRune(std::mt19937 &rng, int &category, int &ability);
+		int TotalRunesFound() const;
 	};
 }

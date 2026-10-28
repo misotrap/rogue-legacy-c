@@ -22,8 +22,11 @@ namespace RogueCastle
 class ProceduralLevelScreen
 {
 public:
-	/* Loads assets/rooms.txt and builds the castle. seed 0 = time based. */
-	ProceduralLevelScreen(const char *assets, uint32_t seed);
+	/* Loads assets/rooms.txt and builds the castle. seed 0 = time based.
+	 * chestFlags (optional, owned by the caller, e.g. save.chestsOpened):
+	 * one flag per chest, in room order; opened chests stay open. */
+	ProceduralLevelScreen(const char *assets, uint32_t seed,
+	                      std::vector<uint8_t> *chestFlags = nullptr);
 
 	void Update(GameTime *gameTime);
 	void Draw(DS2DEngine::Camera2D *camera);
@@ -35,6 +38,8 @@ public:
 	void DropItemWide(Vector2 position, int dropType, float amount);
 	/* TextManager.DisplayNumberStringText: the floating pickup texts. */
 	void AddPopup(const std::string &text, float x, float y, uint32_t colour);
+	/* Dev/test (RL_DEBUG_CHEST): "12p" opens chest 12, forcing a print. */
+	void DebugOpenChest(const char *arg);
 	void FireProjectile(const char *spriteName, Vector2 position,
 	                    Vector2 heading, float speed, int damage,
 	                    Vector2 scale, bool weighted, class EnemyObj *source,
@@ -50,6 +55,8 @@ public:
 private:
 	void UpdateCamera();               /* ProceduralLevelScreen.cs line 1621 */
 	void CheckForRoomTransition();     /* ProceduralLevelScreen.cs line 1189 */
+	/* ProceduralLevelScreen.cs line 742: the chest colour roll and level. */
+	void InitializeChests();
 
 	std::vector<class ProjectileObj *> m_projectiles;   /* owned */
 	std::vector<class ItemDropObj *> m_itemDrops;       /* owned */
@@ -60,6 +67,8 @@ private:
 	Levels::Castle m_castle;
 	RoomRenderer m_roomRenderer;   /* the original look behind the room objects */
 	std::vector<RoomObj *> m_roomList;
+	std::vector<class ChestObj *> m_chestList;   /* the rooms own them */
+	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */
 	std::vector<DS2DEngine::IPhysicsObj *> m_allTerrain;
 	RoomObj *m_currentRoom = nullptr;
 	PlayerObj *m_player = nullptr;

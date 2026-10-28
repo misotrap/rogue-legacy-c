@@ -19,6 +19,7 @@ namespace RogueCastle
 namespace ItemDropType
 {
 	static const int None = 0;
+	static const int Coin = 1;
 	static const int Health = 2;
 	static const int Mana = 3;
 	static const int Stat_Strength = 4;
@@ -27,10 +28,17 @@ namespace ItemDropType
 	static const int Stat_MaxHealth = 7;
 	static const int Stat_MaxMana = 8;
 	static const int Stat_Weight = 9;
-	static const int Coin = 10;
-	static const int MoneyBag = 11;
-	static const int Diamond = 12;
-	static const int BigDiamond = 13;
+	static const int MoneyBag = 10;
+	static const int Blueprint = 12;
+	static const int Redprint = 13;
+	static const int TripStatDrop = 14;
+	static const int FountainPiece1 = 15;
+	static const int FountainPiece2 = 16;
+	static const int FountainPiece3 = 17;
+	static const int FountainPiece4 = 18;
+	static const int FountainPiece5 = 19;
+	static const int Diamond = 11;
+	static const int BigDiamond = 20;
 
 	static const int CoinAmount = 10;
 	static const int MoneyBagAmount = 100;

@@ -75,6 +75,11 @@ public:
 	int State = STATE_IDLE;
 	bool m_isTouchingGround = false;
 	bool m_isJumping = false;
+
+	/* ChestConditionChecker reads these (C# properties). */
+	bool IsTouchingGround() const { return m_isTouchingGround; }
+	bool IsJumping() const { return m_isJumping; }
+
 	bool m_collidingLeft = false;
 	bool m_collidingRight = false;
 	int m_doubleJumpCount = 0;

@@ -161,4 +161,30 @@ namespace Equipment
 		blueprint[category][index] = EquipmentState::FoundButNotSeen;
 		return true;
 	}
+
+	int EquipmentSystem::TotalRunesFound() const
+	{
+		int n = 0;
+		for (int c = 0; c < CATEGORIES; c++)
+			for (int a = 0; a < ABILITIES; a++)
+				if (rune[c][a] != EquipmentState::NotFound) n++;
+		return n;
+	}
+
+	bool EquipmentSystem::GiveRandomRune(std::mt19937 &rng, int &category, int &ability)
+	{
+		/* FairyChestObj.OpenChest: any rune not found yet. */
+		if (TotalRunesFound() >= CATEGORIES * ABILITIES) return false;
+		std::vector<std::pair<int, int>> possible;
+		for (int c = 0; c < CATEGORIES; c++)
+			for (int a = 0; a < ABILITIES; a++)
+				if (rune[c][a] == EquipmentState::NotFound)
+					possible.push_back({ c, a });
+		if (possible.empty()) return false;
+		const auto &chosen = possible[std::uniform_int_distribution<int>(0, (int) possible.size() - 1)(rng)];
+		category = chosen.first;
+		ability = chosen.second;
+		rune[category][ability] = EquipmentState::FoundButNotSeen;
+		return true;
+	}
 }

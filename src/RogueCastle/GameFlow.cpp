@@ -84,7 +84,8 @@ namespace RogueCastle
 			m_save.chestsOpened.clear();
 		}
 		m_save.IsDead = false;
-		m_level = new ProceduralLevelScreen(m_assets.c_str(), m_save.castleSeed);
+		m_level = new ProceduralLevelScreen(m_assets.c_str(), m_save.castleSeed,
+		                                     &m_save.chestsOpened);
 		/* The hero's real stats (Game.PlayerStats) drive the player. */
 		m_level->Player()->SetPlayerStats(&m_save);
 		if (getenv("RL_DEBUG_TRACE") != nullptr)
@@ -97,6 +98,10 @@ namespace RogueCastle
 		m_level->Player()->CurrentHealth =
 			m_save.CurrentHealth > 0 && m_save.CurrentHealth <= maxHealth
 			? (float) m_save.CurrentHealth : maxHealth;
+		/* Dev/test: RL_DEBUG_CHEST opens a chest (index, optional p/s). */
+		const char *debugChest = getenv("RL_DEBUG_CHEST");
+		if (debugChest != nullptr)
+			m_level->DebugOpenChest(debugChest);
 		m_state = State::Castle;
 		m_mapOpen = false;
 		m_paused = false;

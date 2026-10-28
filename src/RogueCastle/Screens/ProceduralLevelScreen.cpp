@@ -10,16 +10,24 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "../../Audio/Audio.h"
 #include "../../Text/Loc.h"
 #include "../EVs/GameEV.h"
+#include "../EVs/LevelEV.h"
+#include "../Types/ChestType.h"
+#include "../GameObjects/ChestObj.h"
+#include "../GameObjects/FairyChestObj.h"
+#include "../Types/InputMapType.h"
 
 namespace RogueCastle
 {
 
 using namespace DS2DEngine;
 
-ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
+ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
+                                             std::vector<uint8_t> *chestFlags)
+	: m_chestFlags(chestFlags)
 {
 	/* LoadContent: the sheets this level needs (AGENTS.md: only the
 	 * sheets the current area needs). */
@@ -32,6 +40,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 	/* The enemies and their projectiles (the ported ones live in these). */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinalSpritesheetBig");
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinal2Spritesheet");
+	/* The chests and their icons. */
+	SpriteSystem::SpriteLibrary::LoadSheet(assets, "miscSpritesheet");
 	m_goldFont.Load(assets, "GoldFont");
 	std::vector<Levels::RoomTemplate> templates;
 	char path[512];
@@ -81,6 +91,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 
 	/* Every room's terrain lives in one world, so the player can walk
 	 * between rooms through the door openings. */
+	int roomLevel = 0;   /* ProceduralLevelScreen.cs line 861 */
 	for (RoomObj *room : m_roomList)
 	{
 		for (TerrainObj *terrain : room->TerrainObjList())
@@ -101,7 +112,38 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 			enemy->SetTerrain(&m_allTerrain);
 			m_physicsManager.AddObject(enemy);
 		}
+		for (ChestObj *chest : room->ChestList())
+		{
+			m_chestList.push_back(chest);
+			chest->SetLevelScreen(this);
+		}
+
+		/* RoomObj.Level: the per-room counter with the area boost
+		 * (ProceduralLevelScreen.cs lines 869-889). */
+		int roomLevelMod = 0;
+		switch (room->LevelType())
+		{
+		case Levels::LevelType::GARDEN:
+			roomLevelMod = LevelEV::GARDEN_ROOM_LEVEL_BOOST - 2;
+			break;
+		case Levels::LevelType::TOWER:
+			roomLevelMod = LevelEV::TOWER_ROOM_LEVEL_BOOST - 4;
+			break;
+		case Levels::LevelType::DUNGEON:
+			roomLevelMod = LevelEV::DUNGEON_ROOM_LEVEL_BOOST - 6;
+			break;
+		default:
+			roomLevelMod = LevelEV::CASTLE_ROOM_LEVEL_BOOST;
+			break;
+		}
+		room->Level = roomLevel + roomLevelMod;
+		roomLevel++;
+		/* ChestObj.Level (ProceduralLevelScreen.cs line 759); the
+		 * RoomLevelDown rune grace is TODO with the runes. */
+		for (ChestObj *chest : room->ChestList())
+			chest->Level = room->Level / LevelEV::ROOM_LEVEL_MOD;
 	}
+	InitializeChests();
 
 	m_currentRoom = m_roomList[0];
 	RoomObj *start = m_roomList[0];
@@ -174,6 +216,30 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		m_currentRoom->Update(gameTime);
 	if (m_player != nullptr)
 		m_player->Update(gameTime);
+
+	/* The chests: fairy chest conditions, then the "press Up" arrow and
+	 * the opening (PlayerObj.cs line 2131, ported as a bounds check). */
+	bool upPressed = Game::GlobalInput.JustPressed(PLAYER_UP1)
+	                  || Game::GlobalInput.JustPressed(PLAYER_UP2);
+	Rectangle playerBounds = m_player != nullptr ? m_player->Bounds() : Rectangle();
+	for (ChestObj *chest : m_chestList)
+	{
+		chest->Update(gameTime);
+		if (chest->IsOpen() || chest->IsLocked || m_player == nullptr)
+			continue;
+		if (chest->Bounds().Intersects(playerBounds) && m_player->IsTouchingGround()
+		    && !m_player->ControlsLocked)
+		{
+			chest->ArrowVisible = true;
+			if (upPressed)
+			{
+				chest->OpenChest(this, m_player);
+				if (chest->IsOpen() && m_chestFlags != nullptr
+				    && chest->ChestIndex < (int) m_chestFlags->size())
+					(*m_chestFlags)[chest->ChestIndex] = 1;
+			}
+		}
+	}
 
 	/* m_projectileManager.Update(gameTime): move the projectiles and
 	 * destroy the dead or out-of-play ones. */
@@ -276,6 +342,89 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		CheckForRoomTransition();
 
 	UpdateCamera();
+}
+
+void ProceduralLevelScreen::InitializeChests()
+{
+	/* ProceduralLevelScreen.cs line 742: the chest colour roll and level,
+	 * then the recentring (their anchors moved in the spritesheet). */
+	if (m_chestFlags != nullptr && m_chestFlags->size() < m_chestList.size())
+		m_chestFlags->resize(m_chestList.size(), 0);
+	for (size_t i = 0; i < m_chestList.size(); i++)
+	{
+		ChestObj *chest = m_chestList[i];
+		chest->ChestIndex = (int) i;
+
+		if (chest->IsFairyChest())
+		{
+			((FairyChestObj *) chest)->SetConditionType();
+		}
+		else
+		{
+			/* Turning the chest into a brown, silver or gold chest
+			 * (GameEV.CHEST_TYPE_CHANCE). */
+			int chestRoll = rand() % 100 + 1, chestType = 0;
+			for (int j = 0; j < 3; j++)
+			{
+				chestType += GameEV::CHEST_TYPE_CHANCE[j];
+				if (chestRoll <= chestType)
+				{
+					if (j == 0)
+						chest->SetChestType(ChestType::Brown);
+					else if (j == 1)
+						chest->SetChestType(ChestType::Silver);
+					else
+						chest->SetChestType(ChestType::Gold);
+					break;
+				}
+			}
+		}
+
+		/* The room object coordinates are the chest's top-left corner
+		 * (ProceduralLevelScreen.cs lines 804-806). */
+		chest->X(chest->X() + chest->Width() * 0.5f);
+		chest->Y(chest->Y() + 60);   /* the height of a tile */
+		chest->UpdateCollisionBoxes();
+
+		/* Chests opened in a previous run stay open (save.chestsOpened). */
+		if (m_chestFlags != nullptr && i < m_chestFlags->size()
+		    && (*m_chestFlags)[i] != 0)
+			chest->ForceOpen();
+	}
+
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	{
+		fprintf(stderr, "chests: %d\n", (int) m_chestList.size());
+		for (ChestObj *chest : m_chestList)
+			fprintf(stderr, "  chest %d type=%d level=%d fairy=%d (%.0f,%.0f)%s\n",
+			        chest->ChestIndex, (int) chest->ChestType(), chest->Level,
+			        (int) chest->IsFairyChest(), chest->X(), chest->Y(),
+			        chest->IsOpen() ? " OPEN" : "");
+	}
+}
+
+void ProceduralLevelScreen::DebugOpenChest(const char *arg)
+{
+	/* Dev/test: opens a chest to test the loot without walking to it:
+	 * the chest index (default 0), optionally followed by "p" (force a
+	 * blueprint) or "s" (force a stat drop). Called by GameFlow once the
+	 * player stats are set (GivePrint/GiveStatDrop need them). */
+	if (m_chestList.empty())
+		return;
+	int index = atoi(arg);
+	if (index < 0 || index >= (int) m_chestList.size())
+		index = 0;
+	ChestObj *chest = m_chestList[index];
+	size_t len = strlen(arg);
+	if (len > 0 && arg[len - 1] == 'p')
+		chest->ForcedItemType = ItemDropType::Blueprint;
+	else if (len > 0 && arg[len - 1] == 's')
+		chest->ForcedItemType = ItemDropType::Stat_Strength;
+	chest->OpenChest(this, m_player);
+	/* Count it as opened, like the real opening path does. */
+	if (chest->IsOpen() && m_chestFlags != nullptr
+	    && chest->ChestIndex < (int) m_chestFlags->size())
+		(*m_chestFlags)[chest->ChestIndex] = 1;
 }
 
 void ProceduralLevelScreen::UpdateCamera()

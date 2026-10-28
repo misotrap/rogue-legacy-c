@@ -20,7 +20,7 @@ import re
 import sys
 
 # C# identifiers whose '.' must become '::' (class-as-namespace conversions).
-KNOWN = ['EnemyType', 'BossRoomTypes', 'Consts', 'GlobalEV', 'GameEV',
+KNOWN = ['EnemyType', 'BossRoomTypes', 'BossRoomType', 'Consts', 'GlobalEV', 'GameEV',
          'LevelEV', 'PlayerEV', 'EnemyEV', 'SpellEV', 'PlayerPart',
          'EquipmentCategoryType', 'ClassType', 'TraitType', 'SkillType', 'SpellType']
 

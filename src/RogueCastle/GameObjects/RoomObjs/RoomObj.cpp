@@ -31,6 +31,8 @@
 #include "../EnemyObjs/EnemyObj_Fairy.h"
 #include "../EnemyObjs/EnemyObj_LastBoss.h"
 #include "../Player/PlayerObj.h"
+#include "../ChestObj.h"
+#include "../FairyChestObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
 #include "../../../gfx.h"
@@ -51,6 +53,8 @@ RoomObj::~RoomObj()
 		delete terrain;
 	for (DS2DEngine::PhysicsObjContainer *obj : m_gameObjList)
 		delete obj;
+	for (ChestObj *chest : m_chestList)
+		delete chest;
 	for (EnemyObj *enemy : m_enemyList)
 		delete enemy;
 }
@@ -243,6 +247,23 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 		enemy->InitialLogicDelay(obj.initialDelay);
 		m_enemyList.push_back(enemy);
 		m_drawableList.push_back(enemy);
+	}
+
+	/* Chests (LevelParser.cs line 84: Fairy=true makes a FairyChestObj).
+	 * The chest type roll and the recentring happen in the level's
+	 * InitializeChests. */
+	for (const Levels::ObjData &obj : placed.objs)
+	{
+		if (obj.type != "ChestObj")
+			continue;
+		ChestObj *chest = obj.fairy ? (ChestObj *) new FairyChestObj() : new ChestObj();
+		chest->X(obj.x);
+		chest->Y(obj.y);
+		chest->Flip(obj.flip ? SpriteEffects::FlipHorizontally : SpriteEffects::None);
+		if (obj.fairy)
+			((FairyChestObj *) chest)->Tag = obj.tag;
+		m_chestList.push_back(chest);
+		m_drawableList.push_back(chest);
 	}
 }
 

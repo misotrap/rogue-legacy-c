@@ -53,8 +53,12 @@ public:
 	/* Breakables and decoration containers, drawn and simulated by the room. */
 	const std::vector<DS2DEngine::PhysicsObjContainer *> &GameObjList() const { return m_gameObjList; }
 	const std::vector<class BreakableObj *> &BreakableObjList() const { return m_breakableList; }
+	const std::vector<class ChestObj *> &ChestList() const { return m_chestList; }
 	const std::vector<class EnemyObj *> &EnemyList() const { return m_enemyList; }
 	int ActiveEnemies() const;
+	/* RoomObj.Level: the room counter used by the chest level and the
+	 * enemy difficulty (ProceduralLevelScreen.cs line 886). */
+	int Level = 0;
 	const std::vector<DS2DEngine::GameObj *> &DrawableObjList() const { return m_drawableList; }
 
 	/* Colours: one background and wall tone per area (AGENTS.md). */
@@ -73,6 +77,7 @@ private:
 	std::vector<TerrainObj *> m_terrainList;
 	std::vector<DS2DEngine::PhysicsObjContainer *> m_gameObjList;   /* owned */
 	std::vector<class BreakableObj *> m_breakableList;              /* = the breakables of m_gameObjList */
+	std::vector<class ChestObj *> m_chestList;                      /* owned */
 	std::vector<class EnemyObj *> m_enemyList;                     /* owned */
 	std::vector<DS2DEngine::GameObj *> m_drawableList;               /* = m_gameObjList */
 
