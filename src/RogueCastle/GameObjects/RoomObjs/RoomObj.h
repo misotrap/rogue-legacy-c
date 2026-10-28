@@ -39,6 +39,16 @@ public:
 	int Height() const { return m_height; }
 	int LinkedRoom() const { return m_linkedRoom; }
 
+	/* DoorObj: x/y in castle coordinates. */
+	struct DoorInfo
+	{
+		Levels::DoorPos pos = Levels::DoorPos::None;
+		float x = 0, y = 0;
+		int width = 0, height = 0;
+		bool bossDoor = false;
+	};
+	const std::vector<DoorInfo> &DoorList() const { return m_doorList; }
+
 	Rectangle Bounds() const
 	{
 		return Rectangle((int) m_x, (int) m_y, m_width, m_height);
@@ -81,13 +91,6 @@ private:
 	std::vector<class EnemyObj *> m_enemyList;                     /* owned */
 	std::vector<DS2DEngine::GameObj *> m_drawableList;               /* = m_gameObjList */
 
-	struct DoorInfo
-	{
-		Levels::DoorPos pos = Levels::DoorPos::None;
-		float x = 0, y = 0;
-		int width = 0, height = 0;
-		bool bossDoor = false;
-	};
 	std::vector<DoorInfo> m_doorList;
 };
 

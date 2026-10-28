@@ -26,7 +26,7 @@ namespace RogueCastle
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
-			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir) && m_getItem.LoadContent(assetsDir)
+			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir) && m_getItem.LoadContent(assetsDir) && m_bossRoom.LoadContent(assetsDir)
 			&& m_court.LoadContent(assetsDir) && m_dialogue.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
 		if (getenv("RL_DEBUG_LEVEL") == nullptr)
@@ -141,6 +141,7 @@ namespace RogueCastle
 		m_mapOpen = false;
 		m_paused = false;
 		m_getItemOpen = false;
+		m_bossRoom.Reset();
 		m_map.Reset(m_level->Castle().rooms.size());
 		Save();
 	}
@@ -378,9 +379,10 @@ namespace RogueCastle
 					break;
 				}
 			}
+			bool blocked = m_bossRoom.Update(m_level, m_save, pressed, dt, m_getItemOpen);
 			GameTime gameTime(dt);
-			Game::GlobalInput.Update(buttons);
-			m_level->Update(&gameTime);
+			Game::GlobalInput.Update(blocked ? 0 : buttons);
+			if (!m_bossRoom.Cutscene()) m_level->Update(&gameTime);
 			/* Dev/test: RL_DEBUG_SPELL=<SpellType> casts that spell once
 			 * after the first update (so the current room is known);
 			 * the hero's spell is overridden. */
@@ -498,6 +500,7 @@ namespace RogueCastle
 					m_map.DrawMini(frame, m_level->Castle(), px, py, 1 / 60.0);
 			}
 			if (m_dialogue.IsOpen()) m_dialogue.Draw(frame);
+			m_bossRoom.Draw(frame);
 			if (m_getItemOpen) m_getItem.Draw(frame);
 			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
 			else if (m_paused)
@@ -550,6 +553,12 @@ namespace RogueCastle
 			for (const Levels::PlacedRoom &r : m_level->Castle().rooms)
 			{
 				if (x < r.x || x >= r.Right() || y < r.y || y >= r.Bottom()) continue;
+				if (r.name == "Boss")
+				{
+					const char *song = m_bossRoom.Music();
+					if (*song) Audio::PlayMusic(song); else Audio::StopMusic();
+					break;
+				}
 				switch (r.levelType)
 				{
 				case Levels::LevelType::NONE: Audio::StopMusic(); break;

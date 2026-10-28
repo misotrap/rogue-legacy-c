@@ -19,6 +19,7 @@
 #include "Screens/GameOverScreen.h"
 #include "Screens/EquipmentScreen.h"
 #include "Rooms/StartingRoom.h"
+#include "Rooms/BossRoom.h"
 #include "Types/TraitType.h"
 #include "Screens/DialogueScreen.h"
 #include "Screens/OptionsScreen.h"
@@ -64,6 +65,7 @@ namespace RogueCastle
 		MapScreen m_map;
 		bool m_mapOpen = false;   /* Select in the castle */
 		GetItemScreen m_getItem;
+		BossRoom m_bossRoom;
 		bool m_getItemOpen = false;   /* a chest reward on screen */
 		PauseScreen m_pause;
 		TitleScreen m_title;
