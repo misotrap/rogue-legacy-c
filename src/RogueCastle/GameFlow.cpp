@@ -5,6 +5,7 @@
 #include "../platform.h"
 #include "Game.h"
 
+#include <cstdlib>
 #include <ctime>
 
 namespace RogueCastle
@@ -105,8 +106,11 @@ namespace RogueCastle
 		delete m_level;
 		m_level = nullptr;
 		m_deathTimer = 0;
-		m_state = State::Manor;
-		m_manor.Open(m_save);
+		std::string name = Text::Loc::Format(h.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
+			h.name, h.romanNumeral);
+		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name);
+		m_lastFrame.clear();
+		m_state = State::GameOver;
 	}
 
 	void GameFlow::Update(uint32_t buttons, double dt)
@@ -120,6 +124,14 @@ namespace RogueCastle
 			break;
 		case State::Title:
 			if (m_title.Update(pressed, dt)) LeaveTitle();
+			break;
+		case State::GameOver:
+			if (m_gameOver.Update(pressed, dt))
+			{
+				m_gameOver.Close();
+				m_state = State::Manor;
+				m_manor.Open(m_save);
+			}
 			break;
 		case State::Manor:
 			if (m_manor.Update(buttons, pressed, dt))
@@ -159,7 +171,12 @@ namespace RogueCastle
 			/* The real death: PlayerObj hides the hero when the health
 			 * runs out; give it a short pause before the lineage flow
 			 * (the original waits for the death animation). */
-			if (m_level->Player() != nullptr && m_level->Player()->IsKilled)
+			/* Dev/test: RL_DEBUG_DIE=<seconds> kills the hero after that long */
+			static const char *debugDie = getenv("RL_DEBUG_DIE");
+			static double alive = 0;
+			alive += dt;
+			bool dying = debugDie != nullptr && alive >= atof(debugDie);
+			if (m_level->Player() != nullptr && (m_level->Player()->IsKilled || dying))
 			{
 				m_deathTimer += dt;
 				if (m_deathTimer >= 1.0)
@@ -182,6 +199,9 @@ namespace RogueCastle
 			break;
 		case State::Lineage:
 			m_lineage.Draw(frame);
+			break;
+		case State::GameOver:
+			m_gameOver.Draw(frame);
 			break;
 		case State::Manor:
 			m_manor.Draw(frame);
@@ -209,6 +229,7 @@ namespace RogueCastle
 			m_hud.Draw(frame, v);
 			if (m_level->Player() != nullptr)
 				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
+			if (m_deathTimer > 0) m_lastFrame.assign(frame, frame + (size_t) SCREEN_W * SCREEN_H);
 			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
 			else if (m_paused)
 				m_pause.Draw(frame, m_level->Camera(), m_level->Player(), m_level->CurrentRoom(), v.heroName,
