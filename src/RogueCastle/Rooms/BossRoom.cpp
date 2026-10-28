@@ -5,6 +5,7 @@
 #include "../../platform.h"
 #include "../GameObjects/ChestObj.h"
 #include "../GameObjects/EnemyObjs/EnemyObj.h"
+#include "../GameObjects/EnemyObjs/EnemyObj_LastBoss.h"
 #include "../GameObjects/Player/PlayerObj.h"
 #include "../GameObjects/RoomObjs/RoomObj.h"
 #include "../Screens/EnemyNames.h"
@@ -57,12 +58,24 @@ namespace RogueCastle
 		}
 	}
 
+	// The boss doors: an area's entrance until its boss is beaten; the
+	// castle entrance once the four are (CastleEntranceRoomObj.OnEnter);
+	// the corridor before the last boss (TutorialRoomObj)
+	bool BossRoom::DoorOpen(RoomObj *room, Save::GameState &save)
+	{
+		if (room->Name() == "EntranceBoss") return !*BeatenFlag(save, (int) room->LevelType());
+		if (room->Name() == "CastleEntrance")
+			return save.EyeballBossBeaten && save.FairyBossBeaten && save.BlobBossBeaten && save.FireballBossBeaten;
+		return room->Name() == "Tutorial";
+	}
+
 	const char *BossRoom::Music() const
 	{
 		if (m_room == nullptr || m_phase == Phase::Intro) return "";
-		if (m_phase != Phase::Fight) return "TitleScreenSong";   // the win stinger
+		if (m_phase != Phase::Fight) return m_room->LevelType() == Levels::LevelType::NONE ? "" : "TitleScreenSong";   // the win stinger
 		switch (m_room->LevelType())
 		{
+		case Levels::LevelType::NONE: return "LastBossSong";
 		case Levels::LevelType::GARDEN: return "GardenBossSong";
 		case Levels::LevelType::TOWER: return "TowerBossSong";
 		case Levels::LevelType::DUNGEON: return "DungeonBoss";
@@ -98,14 +111,14 @@ namespace RogueCastle
 		if (player == nullptr || room == nullptr || player->IsKilled) return false;
 
 		/* Dev/test: RL_DEBUG_BOSS=<LevelType 1-4> puts the hero at that
-		 * area's boss door. */
+		 * area's boss door, 5 at the last boss's. */
 		static const char *debugBoss = getenv("RL_DEBUG_BOSS");
 		if (debugBoss != nullptr)
 		{
 			int type = atoi(debugBoss);
 			debugBoss = nullptr;
 			for (RoomObj *r : level->RoomList())
-				if (r->Name() == "EntranceBoss" && (int) r->LevelType() == type)
+				if (type == 5 ? r->Name() == "Tutorial" : r->Name() == "EntranceBoss" && (int) r->LevelType() == type)
 				{
 					Teleport(level, r, true);
 					fprintf(stderr, "boss: at the door of area %d, boss room %d\n", type, r->LinkedRoom());
@@ -114,9 +127,8 @@ namespace RogueCastle
 		}
 
 		// The boss door: Up in front of it, while that boss lives
-		if (room->Name() == "EntranceBoss" && (pressed & BTN_UP) && player->IsTouchingGround()
-			&& room->LinkedRoom() >= 0 && room->LinkedRoom() < (int) level->RoomList().size()
-			&& !*BeatenFlag(save, (int) room->LevelType()))
+		if ((pressed & BTN_UP) && player->IsTouchingGround() && DoorOpen(room, save)
+			&& room->LinkedRoom() >= 0 && room->LinkedRoom() < (int) level->RoomList().size())
 		{
 			Rectangle b = player->Bounds();
 			for (const RoomObj::DoorInfo &d : room->DoorList())
@@ -124,7 +136,6 @@ namespace RogueCastle
 				float dx = d.x, dy = d.y;
 				if (d.bossDoor && b.Right() > dx && b.X < dx + d.width && b.Bottom() > dy && b.Top() < dy + d.height)
 				{
-					Audio::PlaySound("Boss_Door_Open");
 					Teleport(level, level->RoomList()[room->LinkedRoom()], true);
 					return true;
 				}
@@ -142,7 +153,8 @@ namespace RogueCastle
 			// BossRoomObj.OnEnter
 			m_room = room;
 			m_time = 0;
-			m_phase = *BeatenFlag(save, (int) room->LevelType()) ? Phase::Done : Phase::Intro;
+			m_phase = room->LevelType() != Levels::LevelType::NONE && *BeatenFlag(save, (int) room->LevelType())
+				? Phase::Done : Phase::Intro;
 			if (m_phase == Phase::Intro)
 			{
 				Audio::StopMusic();
@@ -152,6 +164,7 @@ namespace RogueCastle
 				case Levels::LevelType::GARDEN: title = "LOC_ID_ENEMY_NAME_120"; break;
 				case Levels::LevelType::TOWER: title = "LOC_ID_ENEMY_NAME_122"; break;
 				case Levels::LevelType::DUNGEON: title = "LOC_ID_ENEMY_NAME_119"; break;
+				case Levels::LevelType::NONE: title = "LOC_ID_ENEMY_NAME_123"; break;   // LastBossRoom
 				default: break;
 				}
 				m_title1 = Text::Loc::Get(title);
@@ -180,6 +193,20 @@ namespace RogueCastle
 			/* Dev/test: RL_DEBUG_BOSS_WIN kills the boss after the intro. */
 			if (alive && getenv("RL_DEBUG_BOSS_WIN") != nullptr)
 				level->DamageAllEnemies(1000000);
+			if (any && !alive && room->LevelType() == Levels::LevelType::NONE)
+			{
+				// LastBossRoom.BossKilled: the second form is dead
+				bool second = false;
+				for (EnemyObj *e : room->EnemyList())
+					if (e != nullptr && e->Type == EnemyType::LastBoss)
+						second = static_cast<EnemyObj_LastBoss *>(e)->IsSecondForm();
+				if (!second) return false;
+				Audio::PlaySound("FinalBoss_St2_WeatherChange_b");
+				save.NewBossBeaten = true;
+				m_phase = Phase::Ending;
+				m_time = 0;
+				return false;
+			}
 			if (any && !alive)
 			{
 				// BossCleanup: the flag is saved, the boss chest falls
@@ -222,6 +249,10 @@ namespace RogueCastle
 				m_phase = Phase::Done;
 			}
 			return true;
+		case Phase::Ending:
+			// The FinalBossDoor opens; the ending follows
+			if (m_time >= 4) m_phase = Phase::Finished;
+			return false;
 		default:
 			return false;
 		}

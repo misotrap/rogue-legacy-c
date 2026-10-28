@@ -14,6 +14,7 @@
 #include "Screens/LineageScreen.h"
 #include "Screens/MapScreen.h"
 #include "Screens/GetItemScreen.h"
+#include "Screens/CreditsScreen.h"
 #include "Screens/PauseScreen.h"
 #include "Screens/TitleScreen.h"
 #include "Screens/GameOverScreen.h"
@@ -34,7 +35,7 @@ namespace RogueCastle
 	class GameFlow
 	{
 	public:
-		enum class State { Title, Lineage, Castle, Shop, GameOver, Manor };
+		enum class State { Title, Lineage, Castle, Shop, GameOver, Manor, Credits };
 
 		// savePath: e.g. "save.txt" next to the game
 		bool Init(const char *assetsDir, const char *savePath);
@@ -43,6 +44,9 @@ namespace RogueCastle
 		void Draw(uint32_t *frame, double drawElapsed);
 
 		void OnPlayerDeath();
+		// The last boss is dead: credits, then New Game+ (EnemyObj_LastBoss.SetPlayerData)
+		void OnCastleBeaten();
+		void AddFamilyNode(bool beatenABoss);
 		State Current() const { return m_state; }
 		bool WantsQuit() const { return m_quit; }   /* "Quitter Rogue Legacy" */
 		/* The Vertigo trait: the world draws upside down (the frame
@@ -66,6 +70,7 @@ namespace RogueCastle
 		bool m_mapOpen = false;   /* Select in the castle */
 		GetItemScreen m_getItem;
 		BossRoom m_bossRoom;
+		CreditsScreen m_credits;
 		bool m_getItemOpen = false;   /* a chest reward on screen */
 		PauseScreen m_pause;
 		TitleScreen m_title;

@@ -321,8 +321,12 @@ the map/minimap and the options; the game code below is yours.
    the EntranceBoss door, the intro and boss title, the *BossBeaten flag,
    the boss chest (GetItem) and the teleport back. Test with
    RL_DEBUG_BOSS=<1 castle, 2 garden, 3 dungeon, 4 tower> and
-   RL_DEBUG_BOSS_WIN=1. Left: each boss's own intro animation, the closed
-   boss door sprite, the last boss room / throne / ending.
+   RL_DEBUG_BOSS_WIN=1. The castle entrance door opens once the four are
+   beaten, the corridor leads to the last boss (RL_DEBUG_BOSS=5), whose
+   second form's death shows the credits (Screens/CreditsScreen) and starts
+   New Game+ (GameFlow::OnCastleBeaten). Left: each boss's own intro
+   animation, the closed boss door sprite, the walk-through EndingRoomObj
+   (boss portraits) before the credits.
 7. **Armour colours**: PlayerObj.UpdateEquipmentColours (TextureColor of the
    equipped parts; keep it out of the damage blink at line ~165).
 8. Quick drop option, special rooms (bonus, challenge, carnival), garden

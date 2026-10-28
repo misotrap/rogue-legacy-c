@@ -19,6 +19,7 @@ namespace RogueCastle
 class EnemyObj_LastBoss : public EnemyObj
 {
 public:
+	bool IsSecondForm() const { return m_inSecondForm; }
 	EnemyObj_LastBoss(PlayerObj *target, EnemyDifficulty difficulty);
 	void Kill(bool giveXP = true) override;
 

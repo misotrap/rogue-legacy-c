@@ -26,7 +26,7 @@ namespace RogueCastle
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
-			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir) && m_getItem.LoadContent(assetsDir) && m_bossRoom.LoadContent(assetsDir)
+			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir) && m_getItem.LoadContent(assetsDir) && m_bossRoom.LoadContent(assetsDir) && m_credits.LoadContent(assetsDir)
 			&& m_court.LoadContent(assetsDir) && m_dialogue.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
 		if (getenv("RL_DEBUG_LEVEL") == nullptr)
@@ -147,7 +147,7 @@ namespace RogueCastle
 	}
 
 	// ProceduralLevelScreen death -> GameOverScreen -> SkillScreen
-	void GameFlow::OnPlayerDeath()
+	void GameFlow::AddFamilyNode(bool beatenABoss)
 	{
 		Save::FamilyTreeNode node;
 		const Lineage::Heir &h = m_save.hero;
@@ -163,8 +163,34 @@ namespace RogueCastle
 		node.trait1 = h.trait1;
 		node.trait2 = h.trait2;
 		node.numEnemiesBeaten = m_save.NumEnemiesBeaten;
-		node.beatenABoss = m_save.NewBossBeaten;
+		node.beatenABoss = beatenABoss;
 		m_save.familyTree.push_back(node);
+	}
+
+	void GameFlow::OnCastleBeaten()
+	{
+		AddFamilyNode(true);
+		m_save.NewBossBeaten = false;
+		m_save.NumEnemiesBeaten = 0;
+		m_save.LastbossBeaten = true;
+		m_save.TimesCastleBeaten++;
+		// TitleScreen (m_startNewGamePlus): the bosses and the castle anew
+		m_save.EyeballBossBeaten = m_save.FairyBossBeaten = false;
+		m_save.BlobBossBeaten = m_save.FireballBossBeaten = false;
+		m_save.castleExists = false;
+		m_save.LockCastle = false;
+		m_save.HasArchitectFee = false;
+		Save();
+		delete m_level;
+		m_level = nullptr;
+		m_credits.Open((int) m_save.familyTree.size());
+		m_state = State::Credits;
+	}
+
+	void GameFlow::OnPlayerDeath()
+	{
+		AddFamilyNode(m_save.NewBossBeaten);
+		const Lineage::Heir &h = m_save.hero;
 		m_save.IsDead = true;
 		m_save.TimesDead++;
 		m_save.NumEnemiesBeaten = 0;
@@ -231,6 +257,13 @@ namespace RogueCastle
 			{
 				Save();
 				m_state = State::Castle;
+			}
+			break;
+		case State::Credits:
+			if (m_credits.Update(pressed, dt))
+			{
+				m_state = State::Lineage;
+				m_lineage.Open(m_save, m_generator);
 			}
 			break;
 		case State::GameOver:
@@ -380,6 +413,11 @@ namespace RogueCastle
 				}
 			}
 			bool blocked = m_bossRoom.Update(m_level, m_save, pressed, dt, m_getItemOpen);
+			if (m_bossRoom.LastBossBeaten())
+			{
+				OnCastleBeaten();
+				break;
+			}
 			GameTime gameTime(dt);
 			Game::GlobalInput.Update(blocked ? 0 : buttons);
 			if (!m_bossRoom.Cutscene()) m_level->Update(&gameTime);
@@ -460,6 +498,9 @@ namespace RogueCastle
 			break;
 		case State::GameOver:
 			m_gameOver.Draw(frame);
+			break;
+		case State::Credits:
+			m_credits.Draw(frame);
 			break;
 		case State::Manor:
 			m_manor.Draw(frame);
@@ -546,6 +587,7 @@ namespace RogueCastle
 		case State::Manor: Audio::PlayMusic("SkillTreeSong"); break;
 		case State::Shop: break;
 		case State::GameOver: break;
+		case State::Credits: break;
 		case State::Castle:
 		{
 			if (m_level == nullptr || m_level->Player() == nullptr) break;
