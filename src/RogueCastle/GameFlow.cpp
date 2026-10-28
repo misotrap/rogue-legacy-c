@@ -408,6 +408,17 @@ namespace RogueCastle
 			}
 			if (player != nullptr && InCourtyard())
 			{
+				/* StartingRoomObj.cs line 346: the roofs of the stands are
+				 * solid only once the stand is there */
+				if (!m_level->RoomList().empty())
+				{
+					RoomObj *start = m_level->RoomList()[0];
+					const std::pair<const char *, Skills::SkillType> blocks[] = { { "BlacksmithBlock", Skills::SkillType::Smithy },
+						{ "EnchantressBlock", Skills::SkillType::Enchanter }, { "ArchitectBlock", Skills::SkillType::Architect } };
+					for (const auto &b : blocks)
+						if (TerrainObj *t = start->TerrainNamed(b.first))
+							static_cast<DS2DEngine::GameObj *>(t)->Visible(m_save.skills.Level(b.second) > 0);
+				}
 				StartingRoom::Action action = m_court.Update(player, m_save.skills, pressed, dt);
 				if (action == StartingRoom::Action::Blacksmith || action == StartingRoom::Action::Enchantress)
 				{

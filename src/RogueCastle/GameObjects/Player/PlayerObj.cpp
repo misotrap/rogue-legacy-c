@@ -527,7 +527,7 @@ void PlayerObj::UpdatePlayerCollision()
 	bool onOneWay = false;
 	for (const DS2DEngine::IPhysicsObj *terrain : *m_attachedTerrain)
 	{
-		if (!terrain->CollidesTop() || !terrain->IsCollidable())
+		if (!terrain->CollidesTop() || !terrain->IsCollidable() || !terrain->Visible())
 			continue;
 		Rectangle t = terrain->TerrainBounds();
 		if (!probe.Intersects(t))
@@ -932,11 +932,10 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 		{
 			if (m_dropThroughGroundTimer > 0)
 				return;
-			Rectangle mine = TerrainBounds(), theirs = other->TerrainBounds();
-			if (m_isTouchingGround && theirs.Top() < mine.Bottom() - 10)
-				return;
-			/* from below: the feet were already under its top last frame */
-			if (!m_isTouchingGround && m_prevBottom > theirs.Top() + 10)
+			/* not from above: the feet were already under its top last frame
+			 * (jumping up through it, or it is at waist height) */
+			Rectangle theirs = other->TerrainBounds();
+			if (m_prevBottom > theirs.Top() + 10)
 				return;
 		}
 		PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);

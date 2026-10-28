@@ -135,7 +135,7 @@ namespace RogueCastle
 		if (m_tollVisible)
 		{
 			float left = (float) m_toll->Bounds().Left();
-			float overlap = player->Bounds().Right() - left;
+			float overlap = player->TerrainBounds().Right() - left;   /* the body, not the sword */
 			if (overlap > 0 && player->X() < m_toll->X())
 			{
 				player->X(player->X() - overlap);

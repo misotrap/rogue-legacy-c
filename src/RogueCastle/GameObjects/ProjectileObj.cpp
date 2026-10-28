@@ -117,6 +117,10 @@ void ProjectileObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *other
 
 	/* Terrain hits (ProjectileObj.cs line 294): only the spells with
 	 * CollidesWithTerrain get a terrain box, so only they arrive here. */
+	/* The furniture (breakables, CollisionType_WALL_FOR_PLAYER) is solid
+	 * only for the hero: the shots fly through it */
+	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN && other != nullptr && other->CollisionTypeTag() == 5)
+		return;
 	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN)
 	{
 		Rectangle a = thisBox->AbsRect(), b = otherBox->AbsRect();

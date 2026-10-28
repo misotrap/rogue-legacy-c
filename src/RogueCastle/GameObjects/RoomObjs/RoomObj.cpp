@@ -169,6 +169,8 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 			terrain->Populate((int) obj.x, (int) obj.y, (int) obj.width, (int) obj.height,
 			                  obj.collidesTop, obj.collidesBottom, obj.collidesLeft, obj.collidesRight);
 			m_terrainList.push_back(terrain);
+			if (obj.name.compare(0, 9, "Coll_Hull") != 0)
+				m_namedTerrain.emplace_back(obj.name, terrain);
 		}
 		/* Collidable PhysicsObj (bookcases...): WALL_FOR_PLAYER, solid on
 		 * top only (LevelParser.cs line 161), so the hero can stand on them */
@@ -403,6 +405,13 @@ void RoomObj::ClearTempEnemies(DS2DEngine::PhysicsManager &physics)
 		delete enemy;
 	}
 	m_tempEnemies.clear();
+}
+
+TerrainObj *RoomObj::TerrainNamed(const std::string &name) const
+{
+	for (const auto &t : m_namedTerrain)
+		if (t.first == name) return t.second;
+	return nullptr;
 }
 
 } // namespace RogueCastle

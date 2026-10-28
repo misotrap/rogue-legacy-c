@@ -240,7 +240,8 @@ namespace RogueCastle
 			for (GameObj *o : *bgObjs) o->Draw(camera);
 		// 3. walls: the foreground tile inside every solid block taller than 40
 		for (const Levels::ObjData &o : room.objs)
-			if (o.type == "CollHullObj" && o.rotation == 0 && o.height > 40)
+			if (o.type == "CollHullObj" && o.rotation == 0 && o.height > 40
+			    && o.name != "bridge" && o.name.find("Block") == std::string::npos)   // ShowTerrain / the stands' roofs
 				Tile(camera, art.foreground, o.x, o.y, o.width, o.height, 2);
 		// 4. borders
 		for (const Levels::ObjData &o : room.objs)
