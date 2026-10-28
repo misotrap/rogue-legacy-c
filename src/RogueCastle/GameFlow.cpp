@@ -68,7 +68,10 @@ namespace RogueCastle
 	{
 		/* The hero's vitals persist between runs (PlayerStats). */
 		if (m_level != nullptr && m_level->Player() != nullptr && m_state == State::Castle)
+		{
 			m_save.CurrentHealth = (int) m_level->Player()->CurrentHealth;
+			m_save.CurrentMana = (int) m_level->Player()->CurrentMana;
+		}
 		Save::Write(m_save, m_savePath.c_str());
 	}
 
@@ -98,6 +101,11 @@ namespace RogueCastle
 		m_level->Player()->CurrentHealth =
 			m_save.CurrentHealth > 0 && m_save.CurrentHealth <= maxHealth
 			? (float) m_save.CurrentHealth : maxHealth;
+		/* The mana persists like the health (PlayerStats.CurrentMana). */
+		float maxMana = m_level->Player()->MaxMana();
+		m_level->Player()->CurrentMana =
+			m_save.CurrentMana > 0 && m_save.CurrentMana <= maxMana
+			? (float) m_save.CurrentMana : maxMana;
 		/* Dev/test: RL_DEBUG_CHEST opens a chest (index, optional p/s). */
 		const char *debugChest = getenv("RL_DEBUG_CHEST");
 		if (debugChest != nullptr)
@@ -331,6 +339,17 @@ namespace RogueCastle
 			GameTime gameTime(dt);
 			Game::GlobalInput.Update(buttons);
 			m_level->Update(&gameTime);
+			/* Dev/test: RL_DEBUG_SPELL=<SpellType> casts that spell once
+			 * after the first update (so the current room is known);
+			 * the hero's spell is overridden. */
+			static const char *debugSpell = getenv("RL_DEBUG_SPELL");
+			static bool spellCast = false;
+			if (debugSpell != nullptr && !spellCast && m_level->Player() != nullptr)
+			{
+				spellCast = true;
+				m_save.hero.spell = (uint8_t) atoi(debugSpell);
+				m_level->Player()->CastSpell(false);
+			}
 			/* The real death: PlayerObj hides the hero when the health
 			 * runs out; give it a short pause before the lineage flow
 			 * (the original waits for the death animation). */
@@ -386,15 +405,14 @@ namespace RogueCastle
 			m_level->Draw(m_level->Camera());
 			if (InCourtyard()) m_court.Draw(m_level->Camera(), m_save.skills);
 			HUDValues v;
-			/* The hero's real vitals (PlayerObj health, the save mana:
-			 * spells are not cast yet, so mana only comes from stats). */
+			/* The hero's real vitals (PlayerObj health and mana). */
 			if (m_level->Player() != nullptr)
 			{
 				v.maxHealth = (int) m_level->Player()->MaxHealth();
 				v.health = (int) m_level->Player()->CurrentHealth;
+				v.maxMana = (int) m_level->Player()->MaxMana();
+				v.mana = (int) m_level->Player()->CurrentMana;
 			}
-			v.maxMana = 100;
-			v.mana = m_save.CurrentMana;
 			v.gold = m_save.Gold;
 			v.level = m_save.skills.PlayerLevel();
 			v.heroName = Text::Loc::Format(m_save.hero.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",

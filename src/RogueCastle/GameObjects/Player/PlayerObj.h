@@ -38,6 +38,19 @@ public:
 	 * through); needs the level's terrain list. */
 	void UpdatePlayerCollision();
 	void SetTerrain(const std::vector<DS2DEngine::IPhysicsObj *> *terrain) { m_attachedTerrain = terrain; }
+	void SetLevelScreen(class ProceduralLevelScreen *levelScreen) { m_levelScreen = levelScreen; }
+	class ProceduralLevelScreen *LevelScreen() const { return m_levelScreen; }
+
+	/* PlayerObj.cs line 2621 (CastSpell): the spells. activateSecondary
+	 * is the trait/dragon variant; the SpellSword megaSpell comes with
+	 * the class powers. */
+	void CastSpell(bool activateSecondary, bool megaSpell = false);
+	/* PlayerObj.cs line 3331 (CastDaggers): one rapid dagger throw. */
+	void CastDaggers(bool randomize);
+	/* PlayerObj.cs line 2978 (Translocate): the teleport of the quantum
+	 * translocater and the displacer. */
+	void Translocate(Vector2 position);
+	bool CastingDamageShield() const { return m_damageShieldCast; }
 
 	/* PlayerObj.cs HitPlayer (line 2245): damage, knockback, invincibility
 	 * and the hurt state; death TODO with the death animation. */
@@ -55,6 +68,9 @@ public:
 	float CurrentHealth = 100;
 	float CurrentMana = 0;
 	int TotalDamage() const;          /* PlayerObj.cs line 3561 (Damage) */
+	/* IDealsDamageObj: what the enemy takes when the sword (or a spell
+	 * projectile owned by the player) hits it. */
+	int DealsDamage() const override { return TotalDamage(); }
 	int TotalMagicDamage() const;    /* PlayerObj.cs line 3589 */
 	float TotalArmor() const;        /* PlayerObj.cs line 4045 */
 	float MaxHealth() const;         /* PlayerObj.cs line 3670 */
@@ -73,6 +89,18 @@ public:
 
 	Save::GameState *m_stats = nullptr;   /* Game.PlayerStats */
 	int State = STATE_IDLE;
+	ProceduralLevelScreen *m_levelScreen = nullptr;   /* AttachedLevel */
+	/* The spell state (PlayerObj.cs fields). */
+	float m_spellCastDelay = 0;
+	bool m_damageShieldCast = false;
+	bool m_megaDamageShieldCast = false;
+	bool m_timeStopCast = false;
+	/* The quantum translocater: the placed marker. */
+	bool m_translocatorActive = false;
+	Vector2 m_translocatorPos = Vector2(0, 0);
+	/* The rapid daggers: the queued throws (Tween.RunFunction calls). */
+	int m_rapidDaggerQueue = 0;
+	float m_rapidDaggerTimer = 0;
 	bool m_isTouchingGround = false;
 	bool m_isJumping = false;
 

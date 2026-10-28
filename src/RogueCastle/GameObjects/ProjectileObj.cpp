@@ -1,16 +1,24 @@
-/* Port of RogueCastle/src/Game Objects/ProjectileObj.cs (subset). */
+/* Port of RogueCastle/src/Game Objects/ProjectileObj.cs. */
 #include "ProjectileObj.h"
 #include "../../DS2DEngine/Consts.h"
+#include "../../DS2DEngine/CollisionMath.h"
+#include "../EVs/GameEV.h"
+#include "../Screens/ProceduralLevelScreen.h"
+#include "EnemyObjs/EnemyObj.h"
+#include "../../Audio/Audio.h"
+#include <cmath>
 
 namespace RogueCastle
 {
+
+namespace ST = SpellType;
 
 using namespace DS2DEngine;
 
 ProjectileObj::ProjectileObj(const std::string &spriteName, Vector2 position,
                               Vector2 angle, float speed, int damage,
                               Vector2 scale, bool weighted)
-	: PhysicsObjContainer("")   /* the bone is a single sprite, not a character */
+	: PhysicsObjContainer("")   /* single sprite, not a character */
 {
 	/* The C# ProjectileObj is a PhysicsObj with the sprite set manually;
 	 * the port adds one SpriteObj child to the container so the physics
@@ -37,12 +45,66 @@ ProjectileObj::ProjectileObj(const std::string &spriteName, Vector2 position,
 	UpdateTerrainBox();
 }
 
+void ProjectileObj::TurnToFace(Vector2 facePosition, float turnSpeed, float elapsed)
+{
+	/* ProjectileObj.cs line 262 (TurnToFace). */
+	float x = facePosition.X - X(), y = facePosition.Y - Y();
+	float desired = atan2f(y, x);
+	float difference = desired - Orientation;
+	while (difference > M_PI) difference -= 2 * (float) M_PI;
+	while (difference < -M_PI) difference += 2 * (float) M_PI;
+	float maxTurn = turnSpeed * 60 * elapsed;
+	if (difference > maxTurn) difference = maxTurn;
+	if (difference < -maxTurn) difference = -maxTurn;
+	Orientation += difference;
+}
+
+void ProjectileObj::MoveByHeading(float elapsed)
+{
+	Position(Position() + Heading() * (m_speed * elapsed));
+}
+
+void ProjectileObj::ActivateEffect()
+{
+	/* ProjectileObj.cs line 562 (ActivateEffect). */
+	switch (Spell)
+	{
+	case ST::TimeBomb:
+		/* The explosion becomes a damage wall for half a second. */
+		IsWeightedFlag = false;
+		IsDying = true;
+		CollisionTypeTag(4);   /* CollisionType_GLOBAL_DAMAGE_WALL */
+		LifeSpan = 0.5f;
+		m_elapsedLifeSpan = 0;
+		Audio::PlaySound("Boss_Explo_01", "Boss_Explo_02", "Boss_Explo_03");
+		break;
+	case ST::Nuke:
+		if (SourcePlayer != nullptr && SourcePlayer->LevelScreen() != nullptr)
+			SourcePlayer->LevelScreen()->DamageAllEnemies(Damage);
+		KillProjectile();
+		break;
+	case ST::Displacer:
+		if (SourcePlayer != nullptr)
+			SourcePlayer->Translocate(Position());
+		KillProjectile();
+		break;
+	case ST::Boomerang:
+	case ST::Bounce:
+	case ST::Laser:
+		/* They can damage enemies from now on (they start as player
+		 * projectiles; the tag is what the enemies check). */
+		CollisionTypeTag(2);
+		break;
+	}
+}
+
 void ProjectileObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
                                       int collisionResponseType)
 {
-	/* The bone dies when it touches the player (RunDestroyAnimation in the
-	 * C#); terrain hits are not enabled for bones. */
-	DS2DEngine::IPhysicsObj *other = otherBox->PhysicsParent();
+	IPhysicsObj *other = otherBox->PhysicsParent();
+
+	/* Enemy projectiles (and the spells that became damage walls) die
+	 * when they touch the player (RunDestroyAnimation in the C#). */
 	if ((collisionResponseType == Consts::COLLISIONRESPONSE_FIRSTBOXHIT
 	     || collisionResponseType == Consts::COLLISIONRESPONSE_SECONDBOXHIT)
 	    && other != nullptr && other->CollisionTypeTag() == 2)
@@ -50,22 +112,150 @@ void ProjectileObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *other
 		IsKilled = true;
 		Visible(false);
 		IsCollidableFlag = false;
+		return;
+	}
+
+	/* Terrain hits (ProjectileObj.cs line 294): only the spells with
+	 * CollidesWithTerrain get a terrain box, so only they arrive here. */
+	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN)
+	{
+		Rectangle a = thisBox->AbsRect(), b = otherBox->AbsRect();
+		Vector2 mtd = CollisionMath::CalculateMTD(a, b);
+		switch (Spell)
+		{
+		case ST::Bounce:
+		{
+			/* Reflect the heading off the side it hit (the normal is
+			 * the MTD axis), ProjectileObj.cs line 306. */
+			Audio::PlaySound("Spike_Bounce_01", "Spike_Bounce_02", "Spike_Bounce_03");
+			Vector2 normal(mtd.X != 0 ? (mtd.X > 0 ? 1.0f : -1.0f) : 0.0f,
+			               mtd.Y != 0 ? (mtd.Y > 0 ? 1.0f : -1.0f) : 0.0f);
+			Vector2 v(cosf(Orientation), sinf(Orientation));
+			float dot = v.X * normal.X + v.Y * normal.Y;
+			Vector2 reflected(v.X - 2 * dot * normal.X, v.Y - 2 * dot * normal.Y);
+			Orientation = atan2f(reflected.Y, reflected.X);
+			X(X() + mtd.X);
+			Y(Y() + mtd.Y);
+			break;
+		}
+		case ST::TimeBomb:
+			/* The weighted bomb lands and stops (ProjectileObj.cs
+			 * line 324). */
+			PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);
+			if (mtd.Y <= 0 && mtd.X == 0)
+			{
+				AccelerationY(0);
+				AccelerationX(0);
+				IsWeightedFlag = false;
+			}
+			break;
+		default:
+			/* Everything else sticks to (or dies at) the wall. */
+			if (DestroysWithTerrain)
+				KillProjectile();
+			else
+			{
+				PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);
+				AccelerationY(0);
+				AccelerationX(0);
+				IsWeightedFlag = false;
+			}
+			break;
+		}
 	}
 	(void) thisBox;
 }
 
 void ProjectileObj::Update(GameTime *gameTime)
 {
-	/* ProjectileObj.cs line 158: Position += Heading * (CurrentSpeed *
-	 * elapsed); gravity comes from the physics manager like the original. */
+	/* ProjectileObj.cs line 108 (Update): the spell behaviours. */
 	float elapsed = (float) gameTime->ElapsedGameTime;
-	Position(Position() + Heading() * (m_speed * elapsed));
+
+	switch (Spell)
+	{
+	case ST::TimeBomb:
+		/* Blinks faster and faster, then explodes. */
+		if (BlinkTime >= AltX && AltX != 0)
+			BlinkTime = AltX / 1.5f;
+		if (AltX > 0)
+		{
+			AltX -= elapsed;
+			if (AltX <= 0)
+				ActivateEffect();
+		}
+		break;
+	case ST::Nuke:
+		/* Each crow flies straight briefly, then homes on its target. */
+		if (AltX <= 0)
+		{
+			if (Target != nullptr)
+				TurnToFace(Target->Position(), TurnSpeed, elapsed);
+		}
+		else
+			AltX -= elapsed;
+		Heading(Vector2(cosf(Orientation), sinf(Orientation)));
+		MoveByHeading(elapsed);
+		/* The crow dies with its enemy. */
+		if (Target == nullptr || Target->IsKilled)
+			KillProjectile();
+		break;
+	case ST::DamageShield:
+		/* The leaves orbit the player while the spell is active. */
+		if (SourcePlayer != nullptr && SourcePlayer->CastingDamageShield())
+		{
+			AltX += m_speed * 60 * elapsed;
+			float angle = AltX * (float) M_PI / 180.0f;
+			Position(Vector2(SourcePlayer->X() + cosf(angle) * AltY,
+			                 SourcePlayer->Y() + sinf(angle) * AltY));
+		}
+		else
+			KillProjectile();
+		break;
+	case ST::Bounce:
+		Heading(Vector2(cosf(Orientation), sinf(Orientation)));
+		MoveByHeading(elapsed);
+		if (AltY > 0)
+		{
+			AltY -= elapsed;
+			if (AltY <= 0)
+				ActivateEffect();
+		}
+		break;
+	case ST::Boomerang:
+		/* Slows down, then comes back (AltX = 18 deceleration). */
+		m_speed -= AltX * 60 * elapsed;
+		if (AltY > 0)
+		{
+			AltY -= elapsed;
+			if (AltY <= 0)
+				ActivateEffect();
+		}
+		break;
+	case ST::Laser:
+		/* The beam flashes in, then becomes a damage wall. */
+		if (AltX > 0)
+		{
+			AltX -= elapsed;
+			if (AltX <= 0)
+				ActivateEffect();
+		}
+		break;
+	default:
+		break;
+	}
+
+	/* Weighted spells (axe, time bomb) fly through the physics manager
+	 * (their acceleration, plus gravity); the rest move by heading. */
+	if (Spell != ST::Nuke && Spell != ST::Bounce && Spell != ST::DamageShield
+	    && !IsWeightedFlag)
+		MoveByHeading(elapsed);
+
 	if (LifeSpan > 0)
 	{
 		m_elapsedLifeSpan += elapsed;
 		if (m_elapsedLifeSpan >= LifeSpan)
 		{
-			/* RunDestroyAnimation in the C#; the port just hides it, the
+			/* RunDestroyAnimation in the C#; the port hides it, the
 			 * level screen frees it. */
 			IsKilled = true;
 			Visible(false);

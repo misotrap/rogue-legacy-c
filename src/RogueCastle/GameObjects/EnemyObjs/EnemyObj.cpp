@@ -380,16 +380,28 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 	if (collisionResponseType == Consts::COLLISIONRESPONSE_FIRSTBOXHIT)
 	{
 		IPhysicsObj *otherParent = otherBox->PhysicsParent();
-		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 2 /* player */
-		    && m_invincibleCounter <= 0)
+		/* The player (sword) and the player's spell projectiles both
+		 * carry tag 2; the spell explosions tag 4 (GLOBAL_DAMAGE_WALL).
+		 * EnemyObj.cs line 655. */
+		if (otherParent != nullptr
+		    && (otherParent->CollisionTypeTag() == 2 || otherParent->CollisionTypeTag() == 4))
 		{
-			/* Player has hit enemy (with sword or spell projectile).
-			 * EnemyObj.cs line 815. */
-			Audio::PlaySound("EnemyHit1", "EnemyHit2", "EnemyHit3");
-			int damage = m_target != nullptr ? (int) m_target->TotalDamage() : 0;
-			m_invincibleCounter = InvincibilityTime;
-			Vector2 impact((float) thisBox->AbsRect().X, (float) thisBox->AbsRect().Y);
-			HitEnemy(damage, impact, true);
+			bool isProjectile = otherParent->IsSpellProjectile();
+			float invincible = isProjectile ? m_invincibleCounterProjectile
+			                                : m_invincibleCounter;
+			if (invincible <= 0)
+			{
+				/* EnemyObj.cs line 815. */
+				Audio::PlaySound("EnemyHit1", "EnemyHit2", "EnemyHit3");
+				int damage = otherParent->DealsDamage();
+				if (isProjectile)
+					m_invincibleCounterProjectile = InvincibilityTime;
+				else
+					m_invincibleCounter = InvincibilityTime;
+				Vector2 impact((float) thisBox->AbsRect().X, (float) thisBox->AbsRect().Y);
+				HitEnemy(damage, impact, true);
+				otherParent->OnEnemyHit();
+			}
 		}
 		/* Enemy weapons do nothing to other enemies. */
 		return;

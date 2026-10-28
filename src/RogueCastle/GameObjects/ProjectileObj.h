@@ -1,12 +1,14 @@
-/* Port of RogueCastle/src/Game Objects/ProjectileObj.cs (subset): a
- * weighted sprite with a weapon box that damages the player on contact
- * (the bone the skeleton throws). The full class handles spells, bouncing,
- * pooling; the port grows with the spells milestone.
+/* Port of RogueCastle/src/Game Objects/ProjectileObj.cs: a weighted sprite
+ * with a weapon box. Enemy projectiles damage the player; the player's
+ * spells (CollisionTypeTag = 2) damage the enemies. The per-spell behaviour
+ * (boomerang, bounce, homing crows, damage shield, laser...) is Update /
+ * CollisionResponse / ActivateEffect below, from ProjectileObj.cs.
  */
 #ifndef ROGUE_CASTLE_PROJECTILE_OBJ_H
 #define ROGUE_CASTLE_PROJECTILE_OBJ_H
 
 #include "../../DS2DEngine/GameObjs/PhysicsObjContainer.h"
+#include "../Types/SpellType.h"
 
 namespace RogueCastle
 {
@@ -23,6 +25,13 @@ public:
 	                       int collisionResponseType) override;
 
 	int DealsDamage() const override { return Damage; }
+	bool IsSpellProjectile() const override { return true; }
+	/* ProjectileObj.cs line 697: DestroysWithEnemy. */
+	void OnEnemyHit() override
+	{
+		if (DestroysWithEnemy && !IsDying)
+			KillProjectile();
+	}
 	/* The bone has no terrain box; its weapon box bounds stand in for the
 	 * active-bounds filter and the out-of-play check. */
 	Rectangle TerrainBounds() const override { return Bounds(); }
@@ -42,12 +51,34 @@ public:
 	 * they hit something or leave play. */
 	float LifeSpan = 0;
 
+	/* The spell behaviours (ProjectileObj.cs fields). */
+	uint8_t Spell = 0;
+	float AltX = 0, AltY = 0;      /* per-spell scratch values */
+	float Orientation = 0;          /* radians, for homing/bounce */
+	float TurnSpeed = 0;
+	bool ChaseTarget = false;
+	class EnemyObj *Target = nullptr;
+	bool IgnoreBoundsCheck = false;
+	bool CollidesWithTerrainFlag = false;
+	bool CollidesWith1Ways = false;
+	bool DestroysWithEnemy = false;
+	bool LockPosition = false;
+	bool IsDying = false;
+	float BlinkTime = 0;
+	/* ProjectileObj.cs line 562 (ActivateEffect). */
+	void ActivateEffect();
+	void KillProjectile() { IsKilled = true; Visible(false); IsCollidableFlag = false; }
+
 	/* The source (for the damage return and the debug); not owned. */
 	class EnemyObj *Source = nullptr;
+	/* The player who cast the spell; not owned. */
+	class PlayerObj *SourcePlayer = nullptr;
 
 private:
 	float m_speed = 0;
 	float m_elapsedLifeSpan = 0;
+	void TurnToFace(Vector2 facePosition, float turnSpeed, float elapsed);
+	void MoveByHeading(float elapsed);
 };
 
 } // namespace RogueCastle

@@ -4,9 +4,19 @@
 #include "../../../DS2DEngine/Consts.h"
 #include "../../EVs/GameEV.h"
 #include "../../EVs/PlayerEV.h"
+#include "../../EVs/SpellEVFuncs.h"
 #include "../../Types/ClassType.h"
 #include "../../Types/TraitType.h"
+#include "../../Types/SpellType.h"
+#include "../ProjectileObj.h"
+#include "../EnemyObjs/EnemyObj.h"
+#include "../../Screens/ProceduralLevelScreen.h"
+#include "../../Lineage/Lineage.h"
+#include "../../Skills/SkillTree.h"
 #include "../../../Audio/Audio.h"
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 namespace RogueCastle
 {
@@ -160,6 +170,34 @@ void PlayerObj::Update(GameTime *gameTime)
 {
 	float elapsedSeconds = (float) gameTime->ElapsedGameTime;
 
+	/* The spell counters (PlayerObj.cs lines 995-1020, 1458). */
+	if (m_spellCastDelay > 0)
+		m_spellCastDelay -= elapsedSeconds;
+	if (m_damageShieldCast)
+	{
+		/* The leaf shield drains mana while it spins. */
+		CurrentMana -= GameEV::DAMAGESHIELD_ACTIVE_MANA_DRAIN
+		               * GameEV::SPELLSWORD_MANACOST_MOD * elapsedSeconds;
+		if (CurrentMana <= 0)
+		{
+			CurrentMana = 0;
+			m_damageShieldCast = false;
+			m_megaDamageShieldCast = false;
+		}
+	}
+	/* The rapid daggers: one throw every 0.05s (ThrowDaggerProjectiles,
+	 * the Tween.RunFunction calls of PlayerObj.cs line 3321). */
+	if (m_rapidDaggerQueue > 0)
+	{
+		m_rapidDaggerTimer -= elapsedSeconds;
+		if (m_rapidDaggerTimer <= 0)
+		{
+			m_rapidDaggerQueue--;
+			m_rapidDaggerTimer = 0.05f;
+			CastDaggers(m_rapidDaggerQueue < 4);
+		}
+	}
+
 	/* PlayerObj.cs line 1254 (Update). */
 	if (m_dropThroughGroundTimer > 0)
 		m_dropThroughGroundTimer -= elapsedSeconds;
@@ -258,6 +296,10 @@ void PlayerObj::Update(GameTime *gameTime)
 				m_attackCounter = 0;
 			}
 		}
+
+		/* Code for casting spells (PlayerObj.cs line 1004). */
+		if (Game::GlobalInput.JustPressed(PLAYER_SPELL) && m_spellCastDelay <= 0)
+			CastSpell(false);
 
 		/* Code for dashing (PlayerObj.cs line 1109). */
 		if (m_dashCooldownCounter <= 0
@@ -699,6 +741,341 @@ void PlayerObj::UpdateAnimationState()
 	default:
 		break;
 	}
+}
+
+void PlayerObj::CastSpell(bool activateSecondary, bool megaSpell)
+{
+	/* PlayerObj.cs line 2621 (CastSpell). The spell book UI, the spell
+	 * icons and the impact effects are not ported yet. */
+	if (m_stats == nullptr || m_levelScreen == nullptr)
+		return;
+	uint8_t spellType = m_stats->hero.spell;
+
+	ProjectileData projData = SpellEV::GetProjData(spellType, this);
+	projData.damage = (int) (TotalMagicDamage() * SpellEV::GetDamageMultiplier(spellType));
+
+	int manaCost = (int) (SpellEV::GetManaCost(spellType)
+	                       * (1 - m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Cost_Down)));
+	if (CurrentMana >= manaCost)
+	{
+		m_spellCastDelay = 0.5f;
+		/* The Savant trait rerolls the spell every cast
+		 * (PlayerObj.cs line 2644). */
+		if (m_stats->hero.HasTrait(TraitType::Savant))
+		{
+			std::vector<uint8_t> spellList = Lineage::Generator::GetSpellList(m_stats->hero.classType);
+			bool rerolled = false;
+			while (!spellList.empty() && !rerolled)
+			{
+				uint8_t s = spellList[rand() % spellList.size()];
+				if (s != SpellType::Translocator && s != SpellType::TimeStop
+				    && s != SpellType::DamageShield && s != spellType)
+				{
+					m_stats->hero.spell = s;
+					spellType = s;
+					projData = SpellEV::GetProjData(spellType, this);
+					projData.damage = (int) (TotalMagicDamage()
+					                         * SpellEV::GetDamageMultiplier(spellType));
+					rerolled = true;
+				}
+			}
+		}
+	}
+
+	float altX = SpellEV::GetXValue(spellType);
+	float altY = SpellEV::GetYValue(spellType);
+
+	if (megaSpell)
+	{
+		/* The SpellSword's mega spells (PlayerObj.cs line 2655). */
+		manaCost = (int) (manaCost * GameEV::SPELLSWORD_MANACOST_MOD);
+		projData.scale = Vector2(projData.scale.X * GameEV::SPELLSWORD_SPELL_SCALE,
+		                         projData.scale.Y * GameEV::SPELLSWORD_SPELL_SCALE);
+		projData.damage = (int) (projData.damage * GameEV::SPELLSWORD_SPELLDAMAGE_MOD);
+	}
+
+	if (CurrentMana < manaCost)
+		Audio::PlaySound("Error_Spell");
+	else if (spellType != SpellType::Translocator && spellType != SpellType::Nuke
+	         && !m_damageShieldCast && manaCost > 0)
+	{
+		char buf[32];
+		snprintf(buf, sizeof(buf), "-%d mp", manaCost);
+		m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top(), 0xFF87CEEBu);
+	}
+
+	/* The Ambilevous trait mirrors the spell (PlayerObj.cs line 2669). */
+	bool ambilevous = m_stats->hero.HasTrait(TraitType::Ambilevous);
+	if (spellType != SpellType::Bounce && spellType != SpellType::DamageShield
+	    && ambilevous)
+		projData.sourceAnchor = Vector2(-projData.sourceAnchor.X, projData.sourceAnchor.Y);
+
+	switch (spellType)
+	{
+	case SpellType::Dagger:
+	case SpellType::Axe:
+	case SpellType::TimeBomb:
+	case SpellType::Close:
+	case SpellType::DualBlades:
+	case SpellType::DragonFire:
+	case SpellType::DragonFireNeo:
+		if (CurrentMana >= manaCost && !activateSecondary)
+		{
+			if (spellType == SpellType::DragonFireNeo)
+				projData.lifespan = SpellEV::DRAGONFIRENEO_XVal;
+			if (spellType == SpellType::Dagger)
+				Audio::PlaySound("Cast_Dagger");
+			else if (spellType == SpellType::Axe)
+				Audio::PlaySound("Cast_Axe");
+			else if (spellType == SpellType::DualBlades)
+				Audio::PlaySound("Cast_Chakram");
+			else if (spellType == SpellType::Close)
+				Audio::PlaySound("Cast_GiantSword");
+			else if (spellType == SpellType::DragonFire || spellType == SpellType::DragonFireNeo)
+				Audio::PlaySound("Enemy_WallTurret_Fire_01", "Enemy_WallTurret_Fire_02");
+
+			ProjectileObj *proj = m_levelScreen->FireSpellProjectile(projData, spellType);
+			proj->AltX = altX;
+			proj->AltY = altY;
+			if (spellType == SpellType::Close)
+			{
+				/* The katana hangs in front of the player for
+				 * CLOSE_XVal seconds. */
+				proj->LifeSpan = altX;
+				proj->Y(proj->Y() - 20);
+			}
+			if (spellType == SpellType::DualBlades)
+			{
+				/* A second blade on the mirrored diagonal. */
+				projData.angle = Vector2(-10, -10);
+				projData.sourceAnchor = ambilevous ? Vector2(-50, -30) : Vector2(50, -30);
+				projData.rotationSpeed = -20;
+				m_levelScreen->FireSpellProjectile(projData, spellType);
+			}
+			if (spellType == SpellType::TimeBomb)
+			{
+				proj->BlinkTime = altX / 1.5f;
+				proj->LifeSpan = 20;
+			}
+			CurrentMana -= manaCost;
+		}
+		break;
+	case SpellType::Boomerang:
+		if (CurrentMana >= manaCost && !activateSecondary)
+		{
+			Audio::PlaySound("Cast_Boomerang");
+			ProjectileObj *proj = m_levelScreen->FireSpellProjectile(projData, spellType);
+			proj->IgnoreBoundsCheck = true;
+			proj->AltX = altX;
+			/* The cross turns around (PlayerObj.cs line 2749: the flip
+			 * and Ambilevous decide the direction). */
+			if ((Flip() == SpriteEffects::FlipHorizontally && !ambilevous)
+			    || (Flip() == SpriteEffects::None && ambilevous))
+				proj->AltX = -altX;
+			proj->AltY = 0.5f;
+			CurrentMana -= manaCost;
+		}
+		break;
+	case SpellType::Bounce:
+		if (CurrentMana >= manaCost && !activateSecondary)
+		{
+			Audio::PlaySound("Cast_Dagger");
+			/* Four balls, each 90 degrees apart. */
+			for (int i = 0; i < 4; i++)
+			{
+				ProjectileObj *proj = m_levelScreen->FireSpellProjectile(projData, spellType);
+				proj->AltX = altX;
+				proj->AltY = 0.5f;
+				switch (i)
+				{
+				case 0: projData.sourceAnchor = Vector2(10, -10); break;
+				case 1: projData.sourceAnchor = Vector2(10, 10); break;
+				case 2: projData.sourceAnchor = Vector2(-10, 10); break;
+				}
+				projData.angle = Vector2(projData.angle.X + 90, projData.angle.Y + 90);
+			}
+			CurrentMana -= manaCost;
+		}
+		break;
+	case SpellType::Nuke:
+	{
+		/* One crow per enemy of the room, up to 9
+		 * (PlayerObj.cs line 2783). */
+		if (m_levelScreen->CurrentRoom() == nullptr)
+			break;
+		int numEnemies = m_levelScreen->CurrentRoom()->ActiveEnemies();
+		if (numEnemies > 9)
+			numEnemies = 9;
+		if (CurrentMana >= manaCost && !activateSecondary && numEnemies > 0)
+		{
+			Audio::PlaySound("Cast_Crowstorm");
+			float angleStep = 360.0f / numEnemies;
+			float startingAngle = 0;
+			for (EnemyObj *enemy : m_levelScreen->CurrentRoom()->EnemyList())
+			{
+				if (enemy->NonKillable || enemy->IsKilled)
+					continue;
+				projData.target = enemy;
+				ProjectileObj *proj = m_levelScreen->FireSpellProjectile(projData, spellType);
+				proj->LifeSpan = 10;
+				proj->AltX = 0.25f;   /* the wind-up before the chase */
+				proj->AltY = 0.05f;
+				proj->Orientation = startingAngle * (float) M_PI / 180.0f;
+				proj->TurnSpeed = 0.075f;
+				proj->IgnoreBoundsCheck = true;
+				float rad = startingAngle * (float) M_PI / 180.0f;
+				proj->Position(Vector2(X() + cosf(rad) * 200, Y() + sinf(rad) * 200));
+				startingAngle += angleStep;
+				if (startingAngle >= 360)
+					break;
+			}
+			CurrentMana -= manaCost;
+		}
+		break;
+	}
+	case SpellType::DamageShield:
+		if (m_damageShieldCast)
+		{
+			m_damageShieldCast = false;
+			m_megaDamageShieldCast = false;
+		}
+		else if (CurrentMana >= manaCost && !activateSecondary)
+		{
+			m_damageShieldCast = true;
+			if (megaSpell)
+				m_megaDamageShieldCast = true;
+			Audio::PlaySound("Cast_FireShield");
+			/* The leaves spin around the player (altY of them, at
+			 * distance 200) until the mana runs out. */
+			float angleStep = 360.0f / altY;
+			for (int i = 0; i < (int) altY; i++)
+			{
+				float angle = angleStep * i;
+				projData.sourceAnchor = Vector2(0, 0);
+				ProjectileObj *proj = m_levelScreen->FireSpellProjectile(projData, spellType);
+				proj->LifeSpan = altX;
+				proj->AltX = angle;
+				proj->AltY = 200;
+				proj->IgnoreBoundsCheck = true;
+			}
+			CurrentMana -= manaCost;
+		}
+		break;
+	case SpellType::Laser:
+		if (CurrentMana >= manaCost && !activateSecondary
+		    && m_levelScreen->CurrentRoom() != nullptr)
+		{
+			ProjectileObj *proj = m_levelScreen->FireSpellProjectile(projData, spellType);
+			proj->AltX = 1;             /* the flash-in */
+			proj->AltY = 0.5f;           /* the damage window */
+			proj->Y(Y());
+			float w = proj->Width() > 0 ? proj->Width() : 1;
+			proj->X(m_levelScreen->CurrentRoom()->X() + w * 0.5f);
+			proj->ScaleX(m_levelScreen->CurrentRoom()->Width() / w);
+			proj->IgnoreBoundsCheck = true;
+			CurrentMana -= manaCost;
+		}
+		break;
+	case SpellType::TimeStop:
+		if (m_timeStopCast)
+		{
+			m_levelScreen->StopTimeStop();
+			m_timeStopCast = false;
+		}
+		else if (CurrentMana >= manaCost && !activateSecondary)
+		{
+			CurrentMana -= manaCost;
+			m_levelScreen->CastTimeStop();
+			m_timeStopCast = true;
+		}
+		break;
+	case SpellType::Translocator:
+		if (!m_translocatorActive && CurrentMana >= manaCost)
+		{
+			/* Drop the marker at the current position
+			 * (PlayerObj.cs line 2917; the marker is the player's
+			 * black silhouette in the C#, a plain spot here). */
+			CurrentMana -= manaCost;
+			m_translocatorActive = true;
+			m_translocatorPos = Position();
+			Audio::PlaySound("mfqt_teleport_out");
+		}
+		else if (m_translocatorActive)
+		{
+			Audio::PlaySound("mfqt_teleport_in");
+			Vector2 target = m_translocatorPos;
+			m_translocatorActive = false;
+			Translocate(target);
+		}
+		break;
+	case SpellType::Displacer:
+		if (CurrentMana >= manaCost)
+		{
+			/* The displacer teleports the player to the first wall
+			 * in the facing direction (RunDisplacerEffect,
+			 * ProjectileObj.cs line 365; the port uses a straight
+			 * ray, the rotated-terrain cases are not ported). */
+			CurrentMana -= manaCost;
+			float dir = Flip() == SpriteEffects::FlipHorizontally ? -1.0f : 1.0f;
+			float closest = 6600;
+			Rectangle pb = Bounds();
+			if (m_levelScreen->CurrentRoom() != nullptr)
+			{
+				for (const TerrainObj *terrain : m_levelScreen->CurrentRoom()->TerrainObjList())
+				{
+					Rectangle tb = terrain->TerrainBounds();
+					if (tb.Top() < pb.Bottom() && tb.Bottom() > pb.Top())
+					{
+						float distance = dir > 0 ? tb.Left() - pb.Right()
+						                 : pb.Left() - tb.Right();
+						if (distance >= 0 && distance < closest)
+							closest = distance;
+					}
+				}
+			}
+			Translocate(Vector2(X() + dir * (closest - 20), Y()));
+		}
+		break;
+	case SpellType::RapidDagger:
+		if (CurrentMana >= manaCost)
+		{
+			CurrentMana -= manaCost;
+			/* Five daggers in 0.2 seconds (ThrowDaggerProjectiles). */
+			m_rapidDaggerQueue = 5;
+			m_rapidDaggerTimer = 0;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+void PlayerObj::CastDaggers(bool randomize)
+{
+	/* PlayerObj.cs line 3331 (CastDaggers): one rapid dagger. */
+	ProjectileData projData = SpellEV::GetProjData(SpellType::RapidDagger, this);
+	projData.spriteName = "SpellDagger_Sprite";
+	projData.angle = Vector2(0, 0);
+	projData.sourceAnchor = Vector2(50, 0);
+	projData.speed = 1750;
+	projData.collidesWithTerrain = true;
+	projData.destroysWithTerrain = true;
+	projData.isCollidable = true;
+	projData.scale = Vector2(2.5f, 2.5f);
+	projData.damage = (int) (TotalMagicDamage()
+	                         * SpellEV::RAPIDDAGGER_Damage);
+	if (randomize)
+		projData.angleOffset = (float) (rand() % 17 - 8);
+	m_levelScreen->FireSpellProjectile(projData, SpellType::RapidDagger);
+	Audio::PlaySound("Cast_Dagger");
+}
+
+void PlayerObj::Translocate(Vector2 position)
+{
+	/* PlayerObj.cs line 2978 (Translocate); the scale tween of the C#
+	 * becomes an instant move (the camera snaps with UpdateCamera). */
+	Position(position);
+	Acceleration(Vector2(0, 0));
 }
 
 } // namespace RogueCastle

@@ -15,10 +15,12 @@
 #include "../../Text/Loc.h"
 #include "../EVs/GameEV.h"
 #include "../EVs/LevelEV.h"
+#include "../EVs/SpellEVFuncs.h"
 #include "../Types/ChestType.h"
 #include "../GameObjects/ChestObj.h"
 #include "../GameObjects/FairyChestObj.h"
 #include "../Types/InputMapType.h"
+#include "../../DS2DEngine/Consts.h"
 
 namespace RogueCastle
 {
@@ -42,6 +44,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinal2Spritesheet");
 	/* The chests and their icons. */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "miscSpritesheet");
+	/* The spell projectiles (SpellDagger_Sprite & co). */
+	SpriteSystem::SpriteLibrary::LoadSheet(assets, "startingRoomSpritesheet");
 	m_goldFont.Load(assets, "GoldFont");
 	std::vector<Levels::RoomTemplate> templates;
 	char path[512];
@@ -80,6 +84,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	/* The player exists before the rooms: he is the enemies' target. */
 	m_player = new PlayerObj();
 	m_player->SetTerrain(&m_allTerrain);
+	m_player->SetLevelScreen(this);
 	m_physicsManager.AddObject(m_player);
 
 	for (const Levels::PlacedRoom &placed : m_castle.rooms)
@@ -211,8 +216,16 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	if (!m_valid)
 		return;
 
-	/* ProceduralLevelScreen.cs line 1536: room, player, then physics. */
-	if (m_currentRoom != nullptr)
+	/* ProceduralLevelScreen.cs line 1536: room, player, then physics.
+	 * The time stop spell freezes the enemies (their logic, not the
+	 * physics of the projectiles). */
+	if (m_timeStopTimer > 0)
+	{
+		m_timeStopTimer -= (float) gameTime->ElapsedGameTime;
+		if (m_timeStopTimer < 0)
+			m_timeStopTimer = 0;
+	}
+	if (m_currentRoom != nullptr && m_timeStopTimer <= 0)
 		m_currentRoom->Update(gameTime);
 	if (m_player != nullptr)
 		m_player->Update(gameTime);
@@ -247,12 +260,16 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	{
 		ProjectileObj *proj = m_projectiles[i];
 		proj->Update(gameTime);
+		if (getenv("RL_DEBUG_HITS") != nullptr)
+			fprintf(stderr, "projupd: %s spell=%d x=%.0f y=%.0f killed=%d alive=%d\n",
+			        proj->SpriteName().c_str(), (int) proj->Spell, proj->X(), proj->Y(),
+			        (int) proj->IsKilled, (int) proj->IsAlive);
 		Rectangle level = m_currentRoom != nullptr
 		    ? m_currentRoom->Bounds()
 		    : Rectangle(-100000, -100000, 200000, 200000);
 		bool outOfPlay = proj->X() < level.X - 600 || proj->X() > level.Right() + 600
 		              || proj->Y() > level.Bottom() + 600 || proj->Y() < level.Y - 1200;
-		if (proj->IsKilled || (!proj->Held && outOfPlay))
+		if (proj->IsKilled || (!proj->Held && !proj->IgnoreBoundsCheck && outOfPlay))
 		{
 			m_physicsManager.RemoveObject(proj);
 			proj->IsAlive = false;
@@ -604,6 +621,91 @@ void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 posit
 	if (getenv("RL_DEBUG_TRACE") != nullptr)
 		fprintf(stderr, "proj: %s (%.0f,%.0f) h=(%.2f,%.2f) speed=%.0f\n",
 		        spriteName, position.X, position.Y, heading.X, heading.Y, speed);
+}
+
+ProjectileObj *ProceduralLevelScreen::FireSpellProjectile(const ProjectileData &data,
+                                                           uint8_t spell)
+{
+	/* ProjectileManager.cs line 258 (FireProjectile), player source. */
+	PlayerObj *source = data.source;
+	float angle = data.angle.X + data.angleOffset;
+	if (data.angle.X != data.angle.Y)
+		angle = ((float) rand() / (float) RAND_MAX) * (data.angle.Y - data.angle.X)
+		        + data.angle.X + data.angleOffset;
+	bool flipped = source->Flip() == SpriteEffects::FlipHorizontally;
+	if (flipped && source->Rotation() == 0)
+		angle = 180 - angle;
+	else if (flipped && source->Rotation() != 0)
+		angle -= 180;
+	float rad = angle * (float) M_PI / 180.0f;
+	Vector2 heading(cosf(rad), sinf(rad));
+
+	float x = flipped ? source->X() - data.sourceAnchor.X
+	                  : source->X() + data.sourceAnchor.X;
+	float y = source->Y() + data.sourceAnchor.Y;
+
+	ProjectileObj *proj = new ProjectileObj(data.spriteName, Vector2(x, y),
+	                                        heading, data.speed, data.damage,
+	                                        data.scale, data.isWeighted);
+	proj->SourcePlayer = source;
+	proj->Spell = spell;
+	proj->CollisionTypeTag(2);   /* CollisionType_PLAYER */
+	proj->LifeSpan = data.lifespan != 0 ? data.lifespan : 10;   /* ProjectileLifeSpan */
+	proj->Orientation = data.startingRotation * (float) M_PI / 180.0f;
+	proj->CollidesWithTerrainFlag = data.collidesWithTerrain;
+	proj->CollidesWith1Ways = data.collidesWith1Ways;
+	proj->DestroysWithTerrain = data.destroysWithTerrain;
+	proj->DestroysWithEnemy = data.destroysWithEnemy;
+	proj->ChaseTarget = data.chaseTarget;
+	proj->LockPosition = data.lockPosition;
+	proj->Target = data.target;
+	if (data.isWeighted)
+		proj->Acceleration(heading * data.speed);
+	if (!data.isCollidable)
+		proj->IsCollidableFlag = false;
+
+	/* The spells that touch walls get a terrain box over their bounds
+	 * (only terrain-terrain box pairs are checked by the physics
+	 * manager). */
+	if (data.collidesWithTerrain || data.collidesWith1Ways)
+	{
+		proj->UpdateCollisionBoxes();
+		Rectangle b = proj->RelativeBounds();
+		proj->AddCollisionBox(b.X, b.Y, b.Width, b.Height, ::Consts::TERRAIN_HITBOX);
+		proj->UpdateTerrainBox();
+	}
+
+	m_projectiles.push_back(proj);
+	m_physicsManager.AddObject(proj);
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+		fprintf(stderr, "spell: %s (%d) (%.0f,%.0f) angle=%.0f speed=%.0f dmg=%d\n",
+		        data.spriteName.c_str(), (int) spell, x, y, angle, data.speed,
+		        data.damage);
+	return proj;
+}
+
+void ProceduralLevelScreen::DamageAllEnemies(int damage)
+{
+	/* ProjectileObj.cs line 581: the nuke hits every enemy of the room. */
+	if (m_currentRoom == nullptr)
+		return;
+	for (EnemyObj *enemy : m_currentRoom->EnemyList())
+	{
+		if (!enemy->IsKilled && !enemy->NonKillable)
+			enemy->HitEnemy(damage, Vector2(enemy->X(), enemy->Y()), true);
+	}
+}
+
+void ProceduralLevelScreen::CastTimeStop()
+{
+	/* The stop watch: the enemies freeze for TIMESTOP_XVal seconds. */
+	m_timeStopTimer = SpellEV::TIMESTOP_XVal;
+	Audio::PlaySound("Cast_TimeStop");
+}
+
+void ProceduralLevelScreen::StopTimeStop()
+{
+	m_timeStopTimer = 0;
 }
 
 } // namespace RogueCastle

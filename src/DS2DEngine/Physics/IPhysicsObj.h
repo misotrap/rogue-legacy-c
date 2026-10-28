@@ -48,6 +48,13 @@ public:
 
 	/* C# IDealsDamageObj: the damage this object's weapon boxes deal. */
 	virtual int DealsDamage() const { return 0; }
+	/* No RTTI (AGENTS.md): the enemies use this to tell the player's
+	 * spell projectiles (which use the projectile invincibility counter
+	 * and their own damage) from the sword. */
+	virtual bool IsSpellProjectile() const { return false; }
+	/* The enemy was damaged by this object: the projectiles that die
+	 * with their enemy destroy themselves here. */
+	virtual void OnEnemyHit() {}
 };
 
 } // namespace DS2DEngine
