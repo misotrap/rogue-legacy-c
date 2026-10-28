@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 
 	last = plat_time();
 	lastDraw = last;
-	while (plat_poll(&buttons))
+	while (plat_poll(&buttons) && !flow.WantsQuit())
 	{
 		double now = plat_time();
 		acc += now - last;

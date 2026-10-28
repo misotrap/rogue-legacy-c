@@ -19,6 +19,7 @@
 #include "Screens/EquipmentScreen.h"
 #include "Rooms/StartingRoom.h"
 #include "Screens/DialogueScreen.h"
+#include "Screens/OptionsScreen.h"
 #include "Screens/ManorScreen.h"
 #include "Screens/ProceduralLevelScreen.h"
 
@@ -40,6 +41,7 @@ namespace RogueCastle
 
 		void OnPlayerDeath();
 		State Current() const { return m_state; }
+		bool WantsQuit() const { return m_quit; }   /* "Quitter Rogue Legacy" */
 		Save::GameState &Game() { return m_save; }
 
 	private:
@@ -61,6 +63,8 @@ namespace RogueCastle
 		DialogueScreen m_dialogue;   /* over the castle while open */
 		bool m_architectAsking = false;   /* the open dialogue ends on the lock choice */
 		bool m_tollAsking = false;        /* the open dialogue ends on the toll choice */
+		OptionsScreen m_options;          /* SELECT in the pause and on the title */
+		bool m_optionsOpen = false, m_quit = false;
 		std::vector<uint32_t> m_lastFrame;   /* the castle frame while dying */
 		bool m_paused = false;    /* Start in the castle */
 		ProceduralLevelScreen *m_level = nullptr;
@@ -69,6 +73,8 @@ namespace RogueCastle
 		double m_deathTimer = 0;   /* the pause after the hero dies */
 
 		void StartCastle();
+		void OpenTitle();
+		void DrawState(uint32_t *frame, double drawElapsed);
 		void LeaveTitle();
 		bool InCourtyard() const;
 		void UpdateMusic();

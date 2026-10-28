@@ -5,21 +5,26 @@ convert_assets.py (stdlib only):
 
     python3 tools/make_subsheet.py assets
 
-Writes assets/uiExtraSpritesheet.tex/.spr from miscSpritesheet: the
+Writes assets/uiExtraSpritesheet.tex/.spr from miscSpritesheet (the
 dialogue box, the choice highlight, the stat plate, the talk bubbles, the
-death screen spotlight and ghost, the minimap frame. Same sprite and character names as the
-original sheet, so the code just loads the small sheet instead.
+death screen spotlight and ghost, the minimap frame), getItemScreen and
+language sheets (the options screen). Same sprite and character names as
+the original sheets, so the code just loads the small sheet instead.
 """
 import os
 import struct
 import sys
 
-SOURCE = 'miscSpritesheet'
 OUT = 'uiExtraSpritesheet'
-SPRITES = ['DialogBox_Sprite', 'DialogueChoiceHighlight_Sprite', 'GameOverStatPlate_Sprite',
-           'ContinueTextIcon_Sprite', 'UpArrowBubble_Sprite', 'ExclamationSquare_Sprite',
-           'GameOverSpotlight_Sprite', 'PlayerGhost_Sprite', 'MinimapBG_Sprite']
-CHARACTERS = ['DialogBox_Character', 'GameOverStatPlate_Character']
+SOURCES = {
+    'miscSpritesheet': ['DialogBox_Sprite', 'DialogueChoiceHighlight_Sprite', 'GameOverStatPlate_Sprite',
+                        'ContinueTextIcon_Sprite', 'UpArrowBubble_Sprite', 'ExclamationSquare_Sprite',
+                        'GameOverSpotlight_Sprite', 'PlayerGhost_Sprite', 'MinimapBG_Sprite'],
+    'getItemScreenSpritesheet': ['OptionsScreenVolumeBar_Sprite', 'OptionsScreenVolumeBG_Sprite',
+                                 'OptionsBar_Sprite', 'SkillUnlockPlate_Sprite'],
+    'languageSpritesheet': ['OptionsScreenTitle_Sprite_FR'],
+}
+CHARACTERS = ['DialogBox_Character', 'GameOverStatPlate_Character', 'SkillUnlockPlate_Character']
 WIDTH = 1024
 
 
@@ -32,29 +37,29 @@ def read_tex(path):
 
 def main():
     assets = sys.argv[1] if len(sys.argv) > 1 else 'assets'
-    sw, sh, px = read_tex(os.path.join(assets, SOURCE + '.tex'))
-    lines = open(os.path.join(assets, SOURCE + '.spr'), encoding='utf-8').read().splitlines()
-    frames = []   # (fields of the I line)
+    frames = []   # (source pixels, source width, fields of the I line)
     keep = []     # A/R lines of the kept sprites, C lines of the kept characters
-    last = None
-    for line in lines:
-        f = line.split('\t')
-        if f[0] == 'I' and f[1] in SPRITES:
-            frames.append(f)
-        elif f[0] == 'A':
-            last = f[1]
-            if last in SPRITES:
+    for source, sprites in SOURCES.items():
+        sw, sh, px = read_tex(os.path.join(assets, source + '.tex'))
+        last = None
+        for line in open(os.path.join(assets, source + '.spr'), encoding='utf-8').read().splitlines():
+            f = line.split('\t')
+            if f[0] == 'I' and f[1] in sprites:
+                frames.append((px, sw, f))
+            elif f[0] == 'A':
+                last = f[1]
+                if last in sprites:
+                    keep.append(line)
+            elif f[0] == 'R' and last in sprites:
                 keep.append(line)
-        elif f[0] == 'R' and last in SPRITES:
-            keep.append(line)
-        elif f[0] == 'C' and f[1] in CHARACTERS:
-            keep.append(line)
+            elif f[0] == 'C' and f[1] in CHARACTERS:
+                keep.append(line)
     # shelf packing, tallest first, 1 px apart
-    order = sorted(range(len(frames)), key=lambda i: -int(frames[i][6]))
+    order = sorted(range(len(frames)), key=lambda i: -int(frames[i][2][6]))
     x = y = shelf = 0
     place = {}
     for i in order:
-        w, h = int(frames[i][5]), int(frames[i][6])
+        w, h = int(frames[i][2][5]), int(frames[i][2][6])
         if x + w > WIDTH:
             x, y, shelf = 0, y + shelf + 1, 0
         place[i] = (x, y)
@@ -63,7 +68,7 @@ def main():
     height = y + shelf
     out = bytearray(WIDTH * height * 4)
     spr = []
-    for i, f in enumerate(frames):
+    for i, (px, sw, f) in enumerate(frames):
         fx, fy, w, h = int(f[3]), int(f[4]), int(f[5]), int(f[6])
         ox, oy = place[i]
         for row in range(h):

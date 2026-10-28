@@ -118,6 +118,7 @@ namespace RogueCastle
 		float pulse = (float) std::fabs(std::sin(m_time));
 		uint32_t c = (uint32_t) (55 + 200 * pulse);
 		uint32_t colour = 0xFF000000u | c << 16 | c << 8 | c;
+		m_font.DrawOutlined(frame, "SELECT : Options", SCREEN_W - 12, 400, 0.26f, 0xFFFFFFFFu, BLACK, 1, Text::Align::Right);
 		std::string text = "A  " + m_startText;
 		m_font.DrawOutlined(frame, text.c_str(), SCREEN_W / 2, 240 + 100 - 8, 0.4f, colour, BLACK, 1, Text::Align::Centre);
 	}

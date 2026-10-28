@@ -18,6 +18,7 @@ namespace RogueCastle
 		m_savePath = savePath;
 		Text::Loc::Load(assetsDir, "fr");
 		Audio::Init(assetsDir);
+		m_options.LoadContent(assetsDir, "config.txt");
 		m_generator = Lineage::Generator((uint32_t) time(nullptr));
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
@@ -27,15 +28,20 @@ namespace RogueCastle
 		Save::Read(m_save, savePath);
 		if (getenv("RL_DEBUG_LEVEL") == nullptr)
 		{
-			// InitializeStartingText: continue / choose an heir / new legacy
-			const char *text = m_save.hero.name.empty() ? "LOC_ID_TITLE_SCREEN_4"
-				: m_save.IsDead ? "LOC_ID_TITLE_SCREEN_3" : "LOC_ID_TITLE_SCREEN_2";
-			ok = m_title.Open(assetsDir, text) && ok;
-			m_state = State::Title;
+			OpenTitle();
 			return ok;
 		}
 		LeaveTitle();
 		return ok;
+	}
+
+	void GameFlow::OpenTitle()
+	{
+		// InitializeStartingText: continue / choose an heir / new legacy
+		const char *text = m_save.hero.name.empty() ? "LOC_ID_TITLE_SCREEN_4"
+			: m_save.IsDead ? "LOC_ID_TITLE_SCREEN_3" : "LOC_ID_TITLE_SCREEN_2";
+		m_title.Open(m_assets.c_str(), text);
+		m_state = State::Title;
 	}
 
 	void GameFlow::LeaveTitle()
@@ -127,6 +133,23 @@ namespace RogueCastle
 		uint32_t pressed = buttons & ~m_previous;
 		m_previous = buttons;
 		UpdateMusic();
+		if (m_optionsOpen)
+		{
+			switch (m_options.Update(pressed, dt))
+			{
+			case OptionsScreen::Result::Open: return;
+			case OptionsScreen::Result::Closed: m_optionsOpen = false; return;
+			case OptionsScreen::Result::Quit: Save(); m_quit = true; return;
+			case OptionsScreen::Result::BackToTitle:
+				m_optionsOpen = false;
+				m_paused = m_mapOpen = false;
+				Save();
+				delete m_level;
+				m_level = nullptr;
+				OpenTitle();
+				return;
+			}
+		}
 		switch (m_state)
 		{
 		case State::Lineage:
@@ -134,6 +157,12 @@ namespace RogueCastle
 			if (m_lineage.Update(buttons, pressed, dt)) StartCastle();
 			break;
 		case State::Title:
+			if (pressed & BTN_SELECT)
+			{
+				m_options.Open(false);
+				m_optionsOpen = true;
+				break;
+			}
 			if (m_title.Update(pressed, dt))
 			{
 				Audio::PlaySound("Game_Start");
@@ -206,6 +235,12 @@ namespace RogueCastle
 			}
 			if (m_paused)
 			{
+				if (pressed & BTN_SELECT)
+				{
+					m_options.Open(true);
+					m_optionsOpen = true;
+					break;
+				}
 				m_paused = m_pause.Update(pressed);
 				if (!m_paused) Audio::PlaySound("Resume_Toggle");
 				break;
@@ -299,6 +334,12 @@ namespace RogueCastle
 	}
 
 	void GameFlow::Draw(uint32_t *frame, double drawElapsed)
+	{
+		DrawState(frame, drawElapsed);
+		if (m_optionsOpen) m_options.Draw(frame);
+	}
+
+	void GameFlow::DrawState(uint32_t *frame, double drawElapsed)
 	{
 		switch (m_state)
 		{

@@ -134,6 +134,9 @@ namespace RogueCastle
 			});
 		}
 
+		// The options key (PauseScreen: m_optionsKey under the options icon)
+		m_font.DrawOutlined(frame, "SELECT : Options", SCREEN_W - 12, 400, TEXT, WHITE, BLACK, 1, Text::Align::Right);
+
 		// Title art, centred at the top of the play area (anchor = centre)
 		m_title->Position(Vector2(SCREEN_W / 2, 60 + 40));
 		m_title->Scale(Vector2(0.75f, 0.75f));
