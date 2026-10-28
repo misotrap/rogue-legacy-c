@@ -244,6 +244,10 @@ void ProjectileObj::Update(GameTime *gameTime)
 		break;
 	}
 
+	/* ProjectileObj.cs line 252: spinning */
+	if (RotationSpeed != 0)
+		Rotation(Rotation() + RotationSpeed * 60 * elapsed);
+
 	/* Weighted spells (axe, time bomb) fly through the physics manager
 	 * (their acceleration, plus gravity); the rest move by heading. */
 	if (Spell != ST::Nuke && Spell != ST::Bounce && Spell != ST::DamageShield

@@ -42,7 +42,25 @@ namespace RogueCastle
 		}
 	}
 
-	bool GameOverScreen::Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName, bool isFemale)
+	// The hero's parts as in the castle (UpdateEquipmentObjs/Colours)
+	void GameOverScreen::DressHero(const char *sprite)
+	{
+		m_hero->ChangeSprite(sprite);
+		for (int i = 0; i < m_hero->NumChildren(); i++)
+		{
+			if (i < (int) m_look.visible.size()) m_hero->GetChildAt(i)->Visible(m_look.visible[i]);
+			if (i < (int) m_look.colours.size()) m_hero->GetChildAt(i)->TextureColor(m_look.colours[i]);
+		}
+		const int EXTRA = 15;   // PlayerPart.Extra
+		if (!m_look.extraSuffix.empty() && m_hero->NumChildren() > EXTRA)
+		{
+			std::string base = sprite;
+			base.replace(base.find("_Character"), 10, m_look.extraSuffix);
+			if (SpriteSystem::SpriteLibrary::ContainsSprite(base)) m_hero->GetChildAt(EXTRA)->ChangeSprite(base);
+		}
+	}
+
+	bool GameOverScreen::Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName, bool isFemale, const HeroLook &look)
 	{
 		Close();
 		bool ok = m_font.Loaded() || m_font.Load(assetsDir, "Junicode");
@@ -60,6 +78,14 @@ namespace RogueCastle
 		m_ghost->AnimationDelay(1 / 10.0f);
 		m_ghost->PlayAnimation(true);
 		m_plate = Make("DialogBox_Sprite", 1320 / 2, 610);
+		m_look = look;
+		m_female = isFemale;
+		m_hero = new DS2DEngine::ObjContainer("PlayerHurt_Character");
+		m_hero->Scale(Vector2(look.scale, look.scale));
+		m_hero->Flip(look.flip ? SpriteEffects::FlipHorizontally : SpriteEffects::None);
+		m_hero->Position(Vector2(look.x, look.y));
+		m_hero->ForceDraw(true);
+		DressHero("PlayerHurt_Character");
 
 		std::string name = heroName;   // "Sieur Lee " when there is no numeral
 		while (!name.empty() && name.back() == ' ') name.pop_back();
@@ -79,7 +105,8 @@ namespace RogueCastle
 	void GameOverScreen::Close()
 	{
 		if (!m_open) return;
-		delete m_spotlight; delete m_ghost; delete m_plate;
+		delete m_spotlight; delete m_ghost; delete m_plate; delete m_hero;
+		m_hero = nullptr;
 		m_spotlight = m_ghost = m_plate = nullptr;
 		m_lastFrame.clear();
 		m_lastFrame.shrink_to_fit();
@@ -92,7 +119,24 @@ namespace RogueCastle
 		// GameOverScreen.OnEnter: the music stops, the stinger plays at 1.2 s
 		if (m_time == 0) { Audio::StopMusic(); Audio::PlaySound("Player_Death_FadeToBlack"); }
 		if (m_time < 1.2 && m_time + dt >= 1.2) Audio::PlayMusic("GameOverStinger", false);
+		double before = m_time;
 		m_time += dt;
+		m_camera.ElapsedTotalSeconds(dt);
+		// The camera centres on the body (Tween Camera 1 s, QuadInOut): the
+		// hero slides to the middle, feet 10 px under the centre
+		float e = (float) Clamp01(m_time);
+		e = e < 0.5f ? 2 * e * e : 1 - 2 * (1 - e) * (1 - e);
+		m_hero->X(m_look.x + (660 - m_look.x) * e);
+		m_hero->Y(m_look.y + (370 - m_look.feet - m_look.y) * e);
+		if (before < 1.1 && m_time >= 1.1) Audio::PlaySound("Player_Death_Spotlight");
+		if (before < 2 && m_time >= 2)
+		{
+			// RunDeathAnimation1
+			if (m_female) Audio::PlaySound("Player_Female_Death_01", "Player_Female_Death_02");
+			else Audio::PlaySound("Player_Male_Death_01", "Player_Male_Death_02", "Player_Male_Death_03");
+			DressHero("PlayerDeath_Character");
+			m_hero->PlayAnimation(false);
+		}
 		// The ghost: 0.4 opacity at 3 s, rises 150 over 2 s, gone at 4.5 s
 		double g = m_time - 3;
 		m_ghost->Opacity(g < 0 ? 0 : g < 0.5 ? 0.8f * (float) g : g < 1 ? 0.4f : g < 1.5 ? 0.4f * (float) (1.5 - g) / 0.5f : 0);
@@ -106,6 +150,7 @@ namespace RogueCastle
 		if (!m_open) { gfx_clear(BLACK); return; }
 		Darken(frame, m_lastFrame, Clamp01(m_time / 0.5));
 		if (m_time >= 1) m_spotlight->Draw(&m_camera);
+		m_hero->Draw(&m_camera);
 		if (m_time >= 3) m_ghost->Draw(&m_camera);
 
 		// The dialogue plate fades in with the spotlight

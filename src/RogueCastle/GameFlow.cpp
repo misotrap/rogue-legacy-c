@@ -205,12 +205,38 @@ namespace RogueCastle
 		m_save.LockCastle = false;
 		m_save.HasArchitectFee = false;
 		Save(false);
+
+		// GameOverScreen draws the hero itself, lit under the spotlight:
+		// its look and place, and the last frame without it
+		HeroLook look;
+		if (PlayerObj *p = m_level->Player())
+		{
+			for (int i = 0; i < p->NumChildren(); i++)
+			{
+				look.colours.push_back(p->GetChildAt(i)->TextureColor());
+				look.visible.push_back(p->GetChildAt(i)->Visible());
+			}
+			const int EXTRA = 15;
+			std::string base = p->SpriteName(), extra = p->NumChildren() > EXTRA ? p->GetChildAt(EXTRA)->SpriteName() : "";
+			base = base.substr(0, base.find("_Character"));
+			if (p->NumChildren() > EXTRA && p->GetChildAt(EXTRA)->Visible() && extra.compare(0, base.size(), base) == 0)
+				look.extraSuffix = extra.substr(base.size());
+			look.flip = p->Flip() == SpriteEffects::FlipHorizontally;
+			look.scale = p->ScaleX();
+			look.x = p->X() - m_level->Camera()->X() + 660;
+			look.y = p->Y() - m_level->Camera()->Y() + 360;
+			look.feet = p->Bounds().Bottom() - p->Y();
+			p->Visible(false);
+			p->Opacity(1);
+			m_lastFrame.assign((size_t) SCREEN_W * SCREEN_H, 0xFF000000u);
+			DrawState(m_lastFrame.data(), 0);
+		}
 		delete m_level;
 		m_level = nullptr;
 		m_deathTimer = 0;
 		std::string name = Text::Loc::Format(h.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
 			h.name, h.romanNumeral);
-		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name, h.isFemale);
+		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name, h.isFemale, look);
 		m_lastFrame.clear();
 		m_state = State::GameOver;
 	}
@@ -536,7 +562,6 @@ namespace RogueCastle
 			m_hud.Draw(frame, v);
 			if (m_level->Player() != nullptr)
 				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
-			if (m_deathTimer > 0) m_lastFrame.assign(frame, frame + (size_t) SCREEN_W * SCREEN_H);
 			if (InCourtyard()) m_court.DrawRain(frame, m_level->Camera());
 			/* The minimap (not in the courtyard nor the boss rooms) */
 			if (m_level->Player() != nullptr && !InCourtyard() && !m_mapOpen)

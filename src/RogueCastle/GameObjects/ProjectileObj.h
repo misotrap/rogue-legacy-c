@@ -37,7 +37,7 @@ public:
 	 * active-bounds filter and the out-of-play check. */
 	Rectangle TerrainBounds() const override { return Bounds(); }
 	int Damage = 5;
-	float RotationSpeed = 0;   /* TODO C++: spinning blits */
+	float RotationSpeed = 0;   /* degrees per 1/60 s */
 	bool DestroysWithTerrain = false;
 	bool IsKilled = false;
 	/* Set to false right before the level screen frees the projectile;

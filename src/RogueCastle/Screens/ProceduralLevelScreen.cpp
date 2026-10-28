@@ -616,6 +616,14 @@ void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 posit
 	                                        damage, scale, weighted);
 	proj->Source = source;
 	proj->LifeSpan = lifeSpan;
+	/* ProjectileManager.cs line 139: the launch speed goes into the
+	 * acceleration, so the weighted ones (bones) fly in an arc */
+	if (weighted)
+	{
+		proj->AccelerationX(heading.X * speed);
+		proj->AccelerationY(heading.Y * speed);
+		proj->RotationSpeed = 10;   /* the bone's ProjectileData */
+	}
 	m_projectiles.push_back(proj);
 	m_physicsManager.AddObject(proj);
 	if (getenv("RL_DEBUG_TRACE") != nullptr)

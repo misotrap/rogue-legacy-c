@@ -15,5 +15,5 @@
 - [x] Après un coup, le héros glisse lentement sur le côté (même cause)
 - [x] Le héros dérivait : pas de freinage de l'élan vers la droite
 - [x] Mana de départ : chaque héritier commence avec vie et mana au maximum
-- [ ] Animation de mort : caméra centrée, lumière qui s'éteint, mort sous le projecteur, puis le fantôme
-- [ ] Lancer d'os du squelette pas bon
+- [x] Animation de mort : noir, le héros glisse au centre sous le projecteur, animation de mort, fantôme
+- [x] Lancer d'os : les projectiles lestés (os, flèches, crachats) n'avaient pas de vitesse de départ ; ils tournent aussi
