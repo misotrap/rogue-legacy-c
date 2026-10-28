@@ -1,6 +1,7 @@
 #include "GameFlow.h"
 
 #include "../Text/Loc.h"
+#include "../Text/LocIDs.h"
 #include "../platform.h"
 #include "Game.h"
 
@@ -17,7 +18,7 @@ namespace RogueCastle
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
-			&& m_map.LoadContent(assetsDir);
+			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
 		// A saved hero still alive goes straight back to the castle
 		if (!m_save.hero.name.empty() && !m_save.IsDead) StartCastle();
@@ -56,6 +57,7 @@ namespace RogueCastle
 		m_level = new ProceduralLevelScreen(m_assets.c_str(), m_save.castleSeed);
 		m_state = State::Castle;
 		m_mapOpen = false;
+		m_paused = false;
 		m_map.Reset(m_level->Castle().rooms.size());
 		Save();
 	}
@@ -111,12 +113,22 @@ namespace RogueCastle
 			break;
 		case State::Castle:
 		{
+			if (m_paused)
+			{
+				m_paused = m_pause.Update(pressed);
+				break;
+			}
 			if (m_mapOpen)
 			{
 				m_mapOpen = m_map.Update(buttons, pressed, dt);
 				break;
 			}
 			PlayerObj *player = m_level->Player();
+			if (player != nullptr && !player->IsKilled && (pressed & BTN_START) && !(buttons & BTN_SELECT))
+			{
+				m_paused = true;
+				break;
+			}
 			if (player != nullptr && (pressed & BTN_SELECT) && !(buttons & BTN_START))
 			{
 				m_map.Open(player->X(), player->Y());
@@ -177,6 +189,9 @@ namespace RogueCastle
 			if (m_level->Player() != nullptr)
 				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
 			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
+			else if (m_paused)
+				m_pause.Draw(frame, m_level->Camera(), m_level->Player(), m_level->CurrentRoom(), v.heroName,
+					Text::Loc::Get(LocIDs::ClassType_ToStringID(m_save.hero.classType, m_save.hero.isFemale)));
 			break;
 		}
 		}
