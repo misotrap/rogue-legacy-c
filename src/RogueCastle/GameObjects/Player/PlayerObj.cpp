@@ -231,6 +231,7 @@ void PlayerObj::UpdateLogicSet()
 void PlayerObj::Update(GameTime *gameTime)
 {
 	float elapsedSeconds = (float) gameTime->ElapsedGameTime;
+	m_prevBottom = (float) TerrainBounds().Bottom();
 
 	/* The spell counters (PlayerObj.cs lines 995-1020, 1405-1480): the
 	 * abilities drain mana per MANA_OVER_TIME_TIC_RATE tick. */
@@ -526,7 +527,7 @@ void PlayerObj::UpdatePlayerCollision()
 	bool onOneWay = false;
 	for (const DS2DEngine::IPhysicsObj *terrain : *m_attachedTerrain)
 	{
-		if (!terrain->CollidesTop())
+		if (!terrain->CollidesTop() || !terrain->IsCollidable())
 			continue;
 		Rectangle t = terrain->TerrainBounds();
 		if (!probe.Intersects(t))
@@ -922,7 +923,24 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 	}
 
 	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN)
+	{
+		/* PlayerObj.cs line 1985: the platforms open underneath (one-ways)
+		 * let the hero drop through them, jump up through them, and do
+		 * not catch him from below */
+		IPhysicsObj *other = otherBox->PhysicsParent();
+		if (other != nullptr && other->CollidesTop() && !other->CollidesBottom())
+		{
+			if (m_dropThroughGroundTimer > 0)
+				return;
+			Rectangle mine = TerrainBounds(), theirs = other->TerrainBounds();
+			if (m_isTouchingGround && theirs.Top() < mine.Bottom() - 10)
+				return;
+			/* from below: the feet were already under its top last frame */
+			if (!m_isTouchingGround && m_prevBottom > theirs.Top() + 10)
+				return;
+		}
 		PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);
+	}
 }
 
 void PlayerObj::UpdateAnimationState()

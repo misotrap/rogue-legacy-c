@@ -399,6 +399,8 @@ namespace RogueCastle
 			int want = atoi(breakable ? arg + 1 : arg), seen = 0;
 			const char *comma = strchr(arg, ',');
 			float dx = comma != nullptr ? (float) atof(comma + 1) : -150;
+			const char *comma2 = comma != nullptr ? strchr(comma + 1, ',') : nullptr;
+			float dy = comma2 != nullptr ? (float) atof(comma2 + 1) : -60;   // [,dy]
 			for (RoomObj *r : level->RoomList())
 			{
 				if (r->Name() == "Boss") continue;
@@ -413,7 +415,7 @@ namespace RogueCastle
 						if (e != nullptr && e->Type == want) { target = e; break; }
 				if (target == nullptr) continue;
 				player->X(target->X() + dx);
-				player->Y(target->Y() - 60);
+				player->Y(target->Y() + dy);
 				fprintf(stderr, "near: %s at %.0f,%.0f in %s\n", target->SpriteName().c_str(), target->X(), target->Y(), r->Name().c_str());
 				return false;
 			}

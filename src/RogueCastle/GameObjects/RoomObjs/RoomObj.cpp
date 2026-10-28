@@ -267,6 +267,7 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 		enemy->X(obj.x);
 		enemy->Y(obj.y);
 		enemy->Rotation(obj.rotation);   /* the turret's firing angle */
+		enemy->Flip(obj.flip ? SpriteEffects::FlipHorizontally : SpriteEffects::None);   /* LevelParser.cs line 115 */
 		enemy->Tag = obj.tag;
 		enemy->Initialize();
 		enemy->InitialLogicDelay(obj.initialDelay);

@@ -107,7 +107,8 @@ public:
 	Color m_blinkColour = Color(255, 0, 0);
 	DS2DEngine::SpriteObj *m_swearBubble = nullptr;   /* Tourettes */
 	float m_swearBubbleCounter = 0;
-	bool m_onOneWay = false;   /* standing on a platform open underneath */
+	bool m_onOneWay = false;
+	float m_prevBottom = 0;   /* the feet before this frame's move */   /* standing on a platform open underneath */
 	void DrawSwearBubble(DS2DEngine::Camera2D *camera);   /* Tourettes */
 	Color m_partColour[PlayerPart::Light + 1];   /* the armour tints (UpdateEquipmentColours) */
 

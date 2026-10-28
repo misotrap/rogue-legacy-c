@@ -134,7 +134,8 @@ void EnemyObj::Update(GameTime *gameTime)
 			m_runCooldown = false;
 
 		/* Facing (EnemyObj.cs line 312). */
-		if (AlwaysFaceTarget)
+		if (LockFlip) {}
+		else if (AlwaysFaceTarget)
 		{
 			if (X() > m_target->X())
 				Flip(SpriteEffects::FlipHorizontally);

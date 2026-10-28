@@ -30,6 +30,11 @@ int gfx_load_texture(Texture *t, const char *path)
 		return 0;
 	}
 	fclose(f);
+	/* The windows' magenta: the original shows its sky render target
+	 * there (the BG shader); here a plain night blue, the sky's colour */
+	for (size_t i = 0; i < n; i++)
+		if (t->px[i] == 0xFFFF00FFu)
+			t->px[i] = 0xFF041D56u;
 	t->w = (int) wh[0];
 	t->h = (int) wh[1];
 	return 1;

@@ -22,6 +22,7 @@ EnemyObj_Turret::EnemyObj_Turret(PlayerObj *target, EnemyDifficulty difficulty)
 	Type = EnemyType::Turret;
 	StopAnimation();
 	NonKillable = true;
+	LockFlip = true;   /* EnemyObj_Turret.cs line 36: it keeps its placed side */
 }
 
 void EnemyObj_Turret::InitializeEV()
@@ -69,13 +70,18 @@ void EnemyObj_Turret::UpdateEnemy(GameTime *gameTime)
 	(void) gameTime;
 	if (m_actionActive && m_actionTimer <= 0)
 	{
-		/* FireProjectileLogicAction: a projectile along the rotation. */
-		float rad = Rotation() * PI / 180.0f;
+		/* FireProjectileLogicAction: a projectile along the rotation,
+		 * mirrored for a flipped turret (ProjectileManager.cs line 101) */
+		float angle = Rotation();
+		if (Flip() == SpriteEffects::FlipHorizontally)
+			angle = angle != 0 ? angle - 180 : 180 - angle;
+		float rad = angle * PI / 180.0f;
 		Vector2 heading(cosf(rad), sinf(rad));
+		PlayAnimation(false);   /* the firing animation */
 		Audio::PlaySound("Turret_Attack01", "Turret_Attack02", "Turret_Attack03");   /* the C# fireProjectileLS */
 		m_levelScreen->FireProjectile("TurretProjectile_Sprite", Position(),
 		                              heading, m_fireSpeed, (int) Damage,
-		                              ProjectileScale, false, this);
+		                              ProjectileScale, false, this, 0, true);   /* CollidesWithTerrain */
 		m_actionTimer = m_fireDelay;   /* DelayLogicAction(delay) */
 	}
 }

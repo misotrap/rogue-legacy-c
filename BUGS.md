@@ -17,3 +17,8 @@
 - [x] Mana de départ : chaque héritier commence avec vie et mana au maximum
 - [x] Animation de mort : noir, le héros glisse au centre sous le projecteur, animation de mort, fantôme
 - [x] Lancer d'os : les projectiles lestés (os, flèches, crachats) n'avaient pas de vitesse de départ ; ils tournent aussi
+- [x] Canon mural : gardait mal son côté (Flip des données ignoré, LockFlip), tir non inversé, traversait les murs
+- [x] Canon (boulet) : orienté dans le sens du tir, arrêté par les murs
+- [x] Bas + saut sur une plateforme : la collision le remettait dessus (règles one-way de PlayerObj.cs)
+- [x] Sur une table on ne pouvait plus sauter : les meubles comptent comme sol
+- [x] Fond rose derrière les fenêtres : magenta remplacé par le bleu nuit du ciel

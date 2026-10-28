@@ -76,6 +76,7 @@ public:
 	bool DropsItem = true;
 	bool GivesLichHealth = true;
 	bool NonKillable = false;
+	bool LockFlip = false;   /* keeps the placed Flip (EnemyObj.cs line 301) */
 	bool Demented = false;   /* IsDemented: a Dementia hallucination */
 	bool IsHallucination() const override { return Demented; }
 	std::string Name;

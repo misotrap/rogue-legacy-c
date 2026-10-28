@@ -114,7 +114,10 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		/* BreakableObj.cpp needs the level to drop its loot (no RTTI, so
 		 * RoomObj keeps the breakables in their own list). */
 		for (BreakableObj *breakable : room->BreakableObjList())
+		{
 			breakable->SetLevelScreen(this);
+			m_allTerrain.push_back(breakable);   /* tables and chairs are floors too */
+		}
 		for (EnemyObj *enemy : room->EnemyList())
 		{
 			enemy->SetPlayerTarget(m_player);
