@@ -66,6 +66,9 @@ namespace RogueCastle
 
 	void GameFlow::Save()
 	{
+		/* The hero's vitals persist between runs (PlayerStats). */
+		if (m_level != nullptr && m_level->Player() != nullptr && m_state == State::Castle)
+			m_save.CurrentHealth = (int) m_level->Player()->CurrentHealth;
 		Save::Write(m_save, m_savePath.c_str());
 	}
 
@@ -82,6 +85,18 @@ namespace RogueCastle
 		}
 		m_save.IsDead = false;
 		m_level = new ProceduralLevelScreen(m_assets.c_str(), m_save.castleSeed);
+		/* The hero's real stats (Game.PlayerStats) drive the player. */
+		m_level->Player()->SetPlayerStats(&m_save);
+		if (getenv("RL_DEBUG_TRACE") != nullptr)
+			fprintf(stderr, "hero-stats: hp=%.0f/%.0f mp=%.0f dmg=%d magic=%d armor=%.0f weight=%d\n",
+			        m_level->Player()->MaxHealth(), m_level->Player()->MaxHealth(),
+			        m_level->Player()->MaxMana(), m_level->Player()->TotalDamage(),
+			        m_level->Player()->TotalMagicDamage(), m_level->Player()->TotalArmor(),
+			        m_level->Player()->MaxWeight());
+		float maxHealth = m_level->Player()->MaxHealth();
+		m_level->Player()->CurrentHealth =
+			m_save.CurrentHealth > 0 && m_save.CurrentHealth <= maxHealth
+			? (float) m_save.CurrentHealth : maxHealth;
 		m_state = State::Castle;
 		m_mapOpen = false;
 		m_paused = false;
@@ -370,7 +385,7 @@ namespace RogueCastle
 			 * spells are not cast yet, so mana only comes from stats). */
 			if (m_level->Player() != nullptr)
 			{
-				v.maxHealth = (int) m_level->Player()->MaxHealth;
+				v.maxHealth = (int) m_level->Player()->MaxHealth();
 				v.health = (int) m_level->Player()->CurrentHealth;
 			}
 			v.maxMana = 100;

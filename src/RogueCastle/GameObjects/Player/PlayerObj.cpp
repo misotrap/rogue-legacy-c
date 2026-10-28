@@ -2,6 +2,10 @@
 #include "PlayerObj.h"
 #include "../../Game.h"
 #include "../../../DS2DEngine/Consts.h"
+#include "../../EVs/GameEV.h"
+#include "../../EVs/PlayerEV.h"
+#include "../../Types/ClassType.h"
+#include "../../Types/TraitType.h"
 
 namespace RogueCastle
 {
@@ -381,6 +385,173 @@ void PlayerObj::Blink(Color colour, float blinkTime)
 {
 	m_blinkColour = colour;
 	m_blinkCounter = blinkTime;
+}
+
+/* ---------------------------------------------------------------------------
+ * The real stats (PlayerObj.cs): the class multipliers (lines 4116+),
+ * the base values of InitializeEV (lines 219-263: BaseHealth 100,
+ * BaseMana 100, MinDamage/MaxDamage 25, BaseMagicDamage 25, gains per
+ * level 0) and the sums over the skills, the equipment and the bonus
+ * drops. Game.PlayerStats is m_stats here.
+ * ------------------------------------------------------------------------ */
+
+static float ClassDamageGivenMultiplier(uint8_t klass)
+{
+	using namespace ClassType;
+	switch (klass)
+	{
+	case Barbarian: case Barbarian2: return PlayerEV::BARBARIAN_DAMAGE_MOD;
+	case Wizard: case Wizard2: return PlayerEV::MAGE_DAMAGE_MOD;
+	case SpellSword: case SpellSword2: return PlayerEV::SPELLSWORD_DAMAGE_MOD;
+	case Banker: case Banker2: return PlayerEV::BANKER_DAMAGE_MOD;
+	case Ninja: case Ninja2: return PlayerEV::NINJA_DAMAGE_MOD;
+	case Assassin: case Assassin2: return PlayerEV::ASSASSIN_DAMAGE_MOD;
+	case Lich: case Lich2: return PlayerEV::LICH_DAMAGE_MOD;
+	default: return PlayerEV::KNIGHT_DAMAGE_MOD;
+	}
+}
+
+static float ClassMagicDamageGivenMultiplier(uint8_t klass)
+{
+	using namespace ClassType;
+	switch (klass)
+	{
+	case Wizard: case Wizard2: return PlayerEV::MAGE_MAGICDAMAGE_MOD;
+	case Lich: case Lich2: return PlayerEV::LICH_MAGICDAMAGE_MOD;
+	default: return 1.0f;
+	}
+}
+
+static float ClassTotalHPMultiplier(uint8_t klass)
+{
+	using namespace ClassType;
+	switch (klass)
+	{
+	case Wizard: case Wizard2: return PlayerEV::MAGE_HEALTH_MOD;
+	case Banker: case Banker2: return PlayerEV::BANKER_HEALTH_MOD;
+	case Barbarian: case Barbarian2: return PlayerEV::BARBARIAN_HEALTH_MOD;
+	case Ninja: case Ninja2: return PlayerEV::NINJA_HEALTH_MOD;
+	case Assassin: case Assassin2: return PlayerEV::ASSASSIN_HEALTH_MOD;
+	case SpellSword: case SpellSword2: return PlayerEV::SPELLSWORD_HEALTH_MOD;
+	case Lich: case Lich2: return PlayerEV::LICH_HEALTH_MOD;
+	default: return 1.0f;
+	}
+}
+
+static float ClassTotalMPMultiplier(uint8_t klass)
+{
+	using namespace ClassType;
+	switch (klass)
+	{
+	case Wizard: case Wizard2: return PlayerEV::MAGE_MANA_MOD;
+	case Banker: case Banker2: return PlayerEV::BANKER_MANA_MOD;
+	case Barbarian: case Barbarian2: return PlayerEV::BARBARIAN_MANA_MOD;
+	case Ninja: case Ninja2: return PlayerEV::NINJA_MANA_MOD;
+	case Assassin: case Assassin2: return PlayerEV::ASSASSIN_MANA_MOD;
+	case SpellSword: case SpellSword2: return PlayerEV::SPELLSWORD_MANA_MOD;
+	case Lich: case Lich2: return PlayerEV::LICH_MANA_MOD;
+	default: return 1.0f;
+	}
+}
+
+int PlayerObj::TotalDamage() const
+{
+	/* PlayerObj.cs line 3561: (RandomDamage + the attack skills) times
+	 * the class multiplier; RandomDamage (line 3621) is the base 25
+	 * (MinDamage == MaxDamage) plus the equipment, the strength drops
+	 * and the per-level gain (0). */
+	if (m_stats == nullptr)
+		return 25;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	int damageDealt = (int) ((25 + equip.damage
+	                         + m_stats->BonusStrength * GameEV::ITEM_STAT_STRENGTH_AMOUNT
+	                         + m_stats->skills.ModifierAmount(Skills::SkillType::Attack_Up)
+	                         + m_stats->skills.ModifierAmount(Skills::SkillType::Damage_Up_Final))
+	                         * ClassDamageGivenMultiplier(m_stats->hero.classType));
+	if (damageDealt < 1)
+		damageDealt = 1;
+	return damageDealt;
+}
+
+int PlayerObj::TotalMagicDamage() const
+{
+	/* PlayerObj.cs line 3589. */
+	if (m_stats == nullptr)
+		return 25;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	int intelligence = (int) ((25
+	                           + m_stats->skills.ModifierAmount(Skills::SkillType::Magic_Damage_Up)
+	                           + equip.magic
+	                           + m_stats->BonusMagic * GameEV::ITEM_STAT_MAGIC_AMOUNT)
+	                           * ClassMagicDamageGivenMultiplier(m_stats->hero.classType));
+	if (intelligence < 1)
+		intelligence = 1;
+	return intelligence;
+}
+
+float PlayerObj::TotalArmor() const
+{
+	/* PlayerObj.cs line 4045. */
+	if (m_stats == nullptr)
+		return 0;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	return m_stats->skills.ModifierAmount(Skills::SkillType::Armor_Up)
+	     + m_stats->BonusDefense * GameEV::ITEM_STAT_ARMOR_AMOUNT
+	     + equip.armor;
+}
+
+float PlayerObj::MaxHealth() const
+{
+	/* PlayerObj.cs line 3670: (100 + equipment health + the health
+	 * skills) times the class multiplier, plus the Lich health. The
+	 * Dextrocardia trait swaps it with MaxMana (line 3673). */
+	if (m_stats == nullptr)
+		return 100;
+	if (m_stats->hero.HasTrait(TraitType::Dextrocardia))
+		return MaxMana();
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	int maxHealth = (int) ((100 + equip.health
+	                       + m_stats->BonusHealth * GameEV::ITEM_STAT_MAXHP_AMOUNT
+	                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up)
+	                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up_Final))
+	                       * ClassTotalHPMultiplier(m_stats->hero.classType))
+	                  + m_stats->LichHealth;
+	if (maxHealth < 1)
+		maxHealth = 1;
+	return maxHealth;
+}
+
+float PlayerObj::MaxMana() const
+{
+	/* PlayerObj.cs line 3631 (Dextrocardia swaps it with MaxHealth). */
+	if (m_stats == nullptr)
+		return 100;
+	if (m_stats->hero.HasTrait(TraitType::Dextrocardia))
+		return MaxHealth();
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	int maxMana = (int) ((100 + equip.mana
+	                     + m_stats->BonusMana * GameEV::ITEM_STAT_MAXMP_AMOUNT
+	                     + m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Up)
+	                     + m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Up_Final))
+	                     * ClassTotalMPMultiplier(m_stats->hero.classType))
+	                    + m_stats->LichMana;
+	if (maxMana < 1)
+		maxMana = 1;
+	return maxMana;
+}
+
+int PlayerObj::MaxWeight() const
+{
+	/* PlayerObj.cs line 3838: the base weight plus the Equip_Up skills
+	 * plus the weight drops (EquipmentSystem::MaxWeight). */
+	if (m_stats == nullptr)
+		return Equipment::EquipmentSystem::MaxWeight(
+			60, 0, 0, 0, GameEV::ITEM_STAT_WEIGHT_AMOUNT);
+	return Equipment::EquipmentSystem::MaxWeight(
+		60,
+		m_stats->skills.ModifierAmount(Skills::SkillType::Equip_Up),
+		m_stats->skills.ModifierAmount(Skills::SkillType::Equip_Up_Final),
+		m_stats->BonusWeight, GameEV::ITEM_STAT_WEIGHT_AMOUNT);
 }
 
 void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)

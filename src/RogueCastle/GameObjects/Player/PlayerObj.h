@@ -6,6 +6,7 @@
 #define ROGUE_CASTLE_PLAYER_OBJ_H
 
 #include "../../../DS2DEngine/GameObjs/PhysicsObjContainer.h"
+#include "../../Save/SaveGame.h"
 #include "../../../DS2DEngine/Physics/PhysicsManager.h"
 #include "../../Types/InputMapType.h"
 #include "../../Types/PlayerPart.h"
@@ -44,10 +45,19 @@ public:
 	void CollisionResponse(DS2DEngine::CollisionBox *thisBox, DS2DEngine::CollisionBox *otherBox,
 	                       int collisionResponseType) override;
 
-	/* Health / damage (InitializeEV, PlayerObj.cs line 216). */
-	float MaxHealth = 100;
+	/* Health / damage (InitializeEV, PlayerObj.cs line 216). The real
+	 * stats come from the save (Game.PlayerStats in the C#): the class,
+	 * the manor skills, the equipment and the bonus drops. Until
+	 * SetPlayerStats is called the base knight values apply. */
+	void SetPlayerStats(Save::GameState *stats) { m_stats = stats; }
+
 	float CurrentHealth = 100;
-	float TotalDamage() const { return 25; }      /* BaseDamage * mods */
+	int TotalDamage() const;          /* PlayerObj.cs line 3561 (Damage) */
+	int TotalMagicDamage() const;    /* PlayerObj.cs line 3589 */
+	float TotalArmor() const;        /* PlayerObj.cs line 4045 */
+	float MaxHealth() const;         /* PlayerObj.cs line 3670 */
+	float MaxMana() const;           /* PlayerObj.cs line 3631 */
+	int MaxWeight() const;           /* PlayerObj.cs line 3838 */
 	float TotalCritChance() const { return 0; }
 	float BaseInvincibilityTime = 1.0f;
 	float AirAttackKnockBack = 1425;              /* PlayerEV */
@@ -59,6 +69,7 @@ public:
 	float m_blinkCounter = 0;
 	Color m_blinkColour = Color(255, 0, 0);
 
+	Save::GameState *m_stats = nullptr;   /* Game.PlayerStats */
 	int State = STATE_IDLE;
 	bool m_isTouchingGround = false;
 	bool m_isJumping = false;
