@@ -1,4 +1,5 @@
 #include "RoomRenderer.h"
+#include <cstdlib>
 
 #include "../../DS2DEngine/GameObjs/ObjContainer.h"
 #include "../../DS2DEngine/GameObjs/SpriteObj.h"
@@ -186,8 +187,12 @@ namespace RogueCastle
 			bool rotatedContainer = (o.type == "ObjContainer" || o.type == "PhysicsObjContainer") && o.rotation != 0 && !o.breakable;
 			if (!plain && !rotatedContainer) continue;
 			GameObj *obj;
-			if (SpriteSystem::SpriteLibrary::ContainsCharacter(o.sprite)) obj = new ObjContainer(o.sprite);
-			else if (SpriteSystem::SpriteLibrary::ContainsSprite(o.sprite)) obj = new SpriteObj(o.sprite);
+			std::string sprite = o.sprite;
+			// LevelParser.cs line 205: the empty frames get a random painting
+			if (sprite == "CastleAssetFrame_Sprite")
+				sprite = "FramePicture" + std::to_string(1 + rand() % 16) + "_Sprite";
+			if (SpriteSystem::SpriteLibrary::ContainsCharacter(sprite)) obj = new ObjContainer(sprite);
+			else if (SpriteSystem::SpriteLibrary::ContainsSprite(sprite)) obj = new SpriteObj(sprite);
 			else continue; // a sheet that is not loaded
 			obj->X(o.x);
 			obj->Y(o.y);

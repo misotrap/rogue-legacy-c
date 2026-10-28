@@ -43,6 +43,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	m_roomRenderer.LoadContent(assets);
 	/* The enemies and their projectiles (the ported ones live in these). */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinalSpritesheetBig");
+	SpriteSystem::SpriteLibrary::LoadSheet(assets, "portraitSpritesheet");   /* the paintings in the portraits' frames */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinal2Spritesheet");
 	/* The chests and their icons. */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "miscSpritesheet");

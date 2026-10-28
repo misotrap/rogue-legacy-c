@@ -68,6 +68,10 @@ void PhysicsObjContainer::UpdateCollisionBoxes()
 	bounds.Y = topBound;
 	bounds.Width = rightBound - leftBound;
 	bounds.Height = bottomBound - topBound;
+	/* No terrain box in any part (the flying portraits): the overall
+	 * bounds, so the object still sits where it is (active area culling) */
+	if (leftBound == INT_MAX || topBound == INT_MAX)
+		bounds = Bounds();
 	m_terrainBounds = bounds;
 }
 

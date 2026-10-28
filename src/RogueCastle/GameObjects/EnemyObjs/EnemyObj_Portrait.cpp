@@ -22,8 +22,10 @@ EnemyObj_Portrait::EnemyObj_Portrait(PlayerObj *target, EnemyDifficulty difficul
 {
 	Type = EnemyType::Portrait;
 	/* A random painting in the frame (EnemyObj_Portrait.cs constructor) */
-	if (NumChildren() > 0)
-		GetChildAt(0)->ChangeSprite("FramePicture" + std::to_string((1 + rand() % 16)) + "_Sprite");
+	/* The painting covers the frame, which keeps the hit boxes (the C#
+	 * swaps the sprite and adds the boxes by hand, InitializeLogic) */
+	m_picture = "FramePicture" + std::to_string(1 + rand() % 16) + "_Sprite";
+	m_face = new SpriteObj(m_picture);
 }
 
 /* The difficulty blocks of InitializeEV only differ by their EV names
@@ -275,10 +277,10 @@ void EnemyObj_Portrait::UpdateEnemy(GameTime *gameTime)
 		// Spinning, with its true face (ChangePortrait)
 		Rotation(Rotation() + (DifficultyType == MINIBOSS ? 420 : 600) * dt);
 		std::string face = "EnemyPortrait" + std::to_string((int) DifficultyType) + "_Sprite";
-		if (NumChildren() > 0 && GetChildAt(0)->SpriteName() != face)
+		if (m_face != nullptr && m_face->SpriteName() != face)
 		{
 			Audio::PlaySound("FinalBoss_St2_BlockLaugh");
-			GetChildAt(0)->ChangeSprite(face);
+			m_face->ChangeSprite(face);
 			if (DifficultyType == MINIBOSS && NumChildren() > 1)
 				GetChildAt(1)->Visible(false);
 		}
@@ -307,6 +309,24 @@ void EnemyObj_Portrait::RunBasicLogic()
 	default:
 		break;
 	}
+}
+
+EnemyObj_Portrait::~EnemyObj_Portrait()
+{
+	delete m_face;
+}
+
+void EnemyObj_Portrait::Draw(Camera2D *camera)
+{
+	EnemyObj::Draw(camera);
+	if (m_face == nullptr || !Visible() || IsKilled || DifficultyType == MINIBOSS)
+		return;
+	m_face->Position(Position());
+	m_face->Scale(Scale());
+	m_face->Rotation(Rotation());
+	m_face->Flip(Flip());
+	m_face->Opacity(Opacity());
+	m_face->Draw(camera);
 }
 
 } // namespace RogueCastle

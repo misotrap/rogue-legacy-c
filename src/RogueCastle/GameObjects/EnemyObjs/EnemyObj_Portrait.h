@@ -17,7 +17,9 @@ class EnemyObj_Portrait : public EnemyObj
 {
 public:
 	EnemyObj_Portrait(PlayerObj *target, EnemyDifficulty difficulty);
+	~EnemyObj_Portrait() override;
 	void HitEnemy(int damage, Vector2 collisionPt, bool isPlayer) override;
+	void Draw(DS2DEngine::Camera2D *camera) override;
 
 protected:
 	void InitializeEV() override;
@@ -46,6 +48,8 @@ private:
 	bool m_chasing = false;   // Chasing: awake, spinning after the hero
 	bool m_giant = false;
 	float m_time = 0;
+	std::string m_picture;   /* the painting in the frame */
+	DS2DEngine::SpriteObj *m_face = nullptr;   /* the painting, then the true face */
 	void ChasePlayer();
 
 	bool ActionComplete() override
