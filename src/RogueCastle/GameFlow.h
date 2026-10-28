@@ -2,8 +2,8 @@
 //   start: load save.txt; no hero yet -> heir choice
 //   heir chosen -> castle (a new one, or the saved one) with the HUD
 //   death -> the hero joins the family tree, save -> manor -> heir choice
-// The castle screen calls OnPlayerDeath() when the hero dies. Until the
-// player has health, SELECT + START together simulates a death.
+// The castle player's death (CurrentHealth <= 0) calls OnPlayerDeath()
+// after a short pause, once the death lands.
 #pragma once
 
 #include "HUD/PlayerHUD.h"
@@ -42,6 +42,7 @@ namespace RogueCastle
 		ProceduralLevelScreen *m_level = nullptr;
 		State m_state = State::Lineage;
 		uint32_t m_previous = 0;
+		double m_deathTimer = 0;   /* the pause after the hero dies */
 
 		void StartCastle();
 		void Save();

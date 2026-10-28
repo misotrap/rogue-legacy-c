@@ -84,6 +84,7 @@ namespace RogueCastle
 		Save();
 		delete m_level;
 		m_level = nullptr;
+		m_deathTimer = 0;
 		m_state = State::Manor;
 		m_manor.Open(m_save);
 	}
@@ -110,9 +111,18 @@ namespace RogueCastle
 			GameTime gameTime(dt);
 			Game::GlobalInput.Update(buttons);
 			m_level->Update(&gameTime);
-			// Test stand-in until the hero has health: SELECT + START = death
-			if ((buttons & (BTN_SELECT | BTN_START)) == (BTN_SELECT | BTN_START) && (pressed & (BTN_SELECT | BTN_START)))
-				OnPlayerDeath();
+			/* The real death: PlayerObj hides the hero when the health
+			 * runs out; give it a short pause before the lineage flow
+			 * (the original waits for the death animation). */
+			if (m_level->Player() != nullptr && m_level->Player()->IsKilled)
+			{
+				m_deathTimer += dt;
+				if (m_deathTimer >= 1.0)
+				{
+					m_deathTimer = 0;
+					OnPlayerDeath();
+				}
+			}
 			break;
 		}
 		}
@@ -135,10 +145,15 @@ namespace RogueCastle
 			m_level->Camera()->ElapsedTotalSeconds(drawElapsed);
 			m_level->Draw(m_level->Camera());
 			HUDValues v;
-			v.maxHealth = 100; // TODO when the hero has stats: PlayerObj health/mana
-			v.health = 100;
+			/* The hero's real vitals (PlayerObj health, the save mana:
+			 * spells are not cast yet, so mana only comes from stats). */
+			if (m_level->Player() != nullptr)
+			{
+				v.maxHealth = (int) m_level->Player()->MaxHealth;
+				v.health = (int) m_level->Player()->CurrentHealth;
+			}
 			v.maxMana = 100;
-			v.mana = 100;
+			v.mana = m_save.CurrentMana;
 			v.gold = m_save.Gold;
 			v.level = m_save.skills.PlayerLevel();
 			v.heroName = Text::Loc::Format(m_save.hero.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
