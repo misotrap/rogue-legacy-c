@@ -4,8 +4,9 @@
 // its manor skill is bought (Smithy, Enchanter, Architect). Near one of
 // them the up-arrow bubble bobs over its head; Up talks to it (the shops,
 // the architect's dialogue). Walking out on the left opens the manor (the
-// skill screen), as in the original. The toll collector, the rain and the
-// architect's lever animation are not ported yet.
+// skill screen), as in the original. After the first death the toll
+// collector (Charon) stands on the bridge and blocks the way until paid.
+// The rain and the architect's lever animation are not ported yet.
 #pragma once
 
 #include "../../DS2DEngine/Camera2D.h"
@@ -22,7 +23,7 @@ namespace RogueCastle
 	class StartingRoom
 	{
 	public:
-		enum class Action { None, Blacksmith, Enchantress, Architect, Manor };
+		enum class Action { None, Blacksmith, Enchantress, Architect, Toll, Manor };
 
 		~StartingRoom();
 		bool LoadContent(const char *assetsDir);
@@ -31,9 +32,13 @@ namespace RogueCastle
 		void Draw(DS2DEngine::Camera2D *camera, const Skills::SkillTree &skills);
 		// Back from the manor: the hero walks in again from the left edge
 		static void PlaceAtLeftEdge(PlayerObj *player);
+		// A new castle run: Charon is back when the family has died before
+		void ResetToll(bool available) { m_tollVisible = available; }
+		void HideToll() { m_tollVisible = false; }
 
 	private:
-		DS2DEngine::ObjContainer *m_blacksmith = nullptr, *m_enchantress = nullptr, *m_architect = nullptr;
+		DS2DEngine::ObjContainer *m_blacksmith = nullptr, *m_enchantress = nullptr, *m_architect = nullptr, *m_toll = nullptr;
+		bool m_tollVisible = false;
 		DS2DEngine::SpriteObj *m_board = nullptr, *m_tent = nullptr, *m_gear = nullptr, *m_arrow = nullptr;
 		DS2DEngine::GameObj *m_near = nullptr;   // the NPC the arrow is over
 		double m_time = 0;

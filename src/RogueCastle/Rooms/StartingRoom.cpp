@@ -17,14 +17,14 @@ namespace RogueCastle
 		const float FLOOR = 720 - 60;   // the courtyard floor (one tile up)
 
 		// Puts the object's bottom on the floor: 720 - 60 - (Bounds.Bottom - Y) - lift
-		void OnFloor(GameObj *o, float x, float lift)
+		void OnFloor(GameObj *o, float x, float lift, float floor = FLOOR)
 		{
 			o->Position(Vector2(x, 0));
 			float below = o->Bounds().Bottom() - o->Y();
-			o->Y(FLOOR - below - lift);
+			o->Y(floor - below - lift);
 		}
 
-		ObjContainer *Npc(const char *name, float scale, float x, float lift)
+		ObjContainer *Npc(const char *name, float scale, float x, float lift, float floor = FLOOR)
 		{
 			ObjContainer *c = new ObjContainer(name);
 			c->ForceDraw(true);
@@ -32,7 +32,7 @@ namespace RogueCastle
 			c->Scale(Vector2(scale, scale));
 			c->AnimationDelay(1 / 10.0f);
 			c->PlayAnimation(true);
-			OnFloor(c, x, lift);
+			OnFloor(c, x, lift, floor);
 			return c;
 		}
 
@@ -59,7 +59,7 @@ namespace RogueCastle
 
 	StartingRoom::~StartingRoom()
 	{
-		delete m_blacksmith; delete m_enchantress; delete m_architect;
+		delete m_blacksmith; delete m_enchantress; delete m_architect; delete m_toll;
 		delete m_board; delete m_tent; delete m_gear; delete m_arrow;
 	}
 
@@ -88,6 +88,9 @@ namespace RogueCastle
 		m_gear = Prop("ArchitectGear_Sprite", 2);
 		m_gear->Position(Vector2(m_architect->X() + 30, m_architect->Bounds().Bottom() - 1));
 
+		// The toll collector on the bridge, 5 tiles up: 720 - 60 * 5
+		m_toll = Npc("NPCTollCollectorIdle_Character", 2.5f, 2565, 0, 720 - 60 * 5);
+
 		m_arrow = new SpriteObj("UpArrowBubble_Sprite");
 		m_arrow->ForceDraw(true);
 		m_arrow->Scale(Vector2(2, 2));
@@ -111,6 +114,24 @@ namespace RogueCastle
 		if (player == nullptr) return Action::None;
 		// Leaving on the left: the manor (StartingRoomObj.Update)
 		if (player->X() < 0) return Action::Manor;
+
+		// Charon is a wall (CollisionType_WALL): the hero cannot pass him
+		if (m_tollVisible)
+		{
+			float left = (float) m_toll->Bounds().Left();
+			float overlap = player->Bounds().Right() - left;
+			if (overlap > 0 && player->X() < m_toll->X())
+			{
+				player->X(player->X() - overlap);
+				player->UpdateCollisionBoxes();
+			}
+			if (player->X() < m_toll->X() && player->X() > left - 300)
+			{
+				m_near = m_toll;
+				if (pressed & BTN_UP) return Action::Toll;
+				return Action::None;
+			}
+		}
 
 		if (Has(skills, Skills::SkillType::Smithy) && Near(player, m_blacksmith)) m_near = m_blacksmith;
 		else if (Has(skills, Skills::SkillType::Enchanter) && Near(player, m_enchantress)) m_near = m_enchantress;
@@ -137,6 +158,7 @@ namespace RogueCastle
 			m_gear->Draw(camera);
 			m_architect->Draw(camera);
 		}
+		if (m_tollVisible) m_toll->Draw(camera);
 		if (m_near != nullptr)
 		{
 			// The talk arrow bobs over the NPC (sin(time * 20) * 2), above

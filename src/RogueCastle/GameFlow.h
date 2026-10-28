@@ -60,6 +60,7 @@ namespace RogueCastle
 		EquipmentScreen *m_shop = nullptr;
 		DialogueScreen m_dialogue;   /* over the castle while open */
 		bool m_architectAsking = false;   /* the open dialogue ends on the lock choice */
+		bool m_tollAsking = false;        /* the open dialogue ends on the toll choice */
 		std::vector<uint32_t> m_lastFrame;   /* the castle frame while dying */
 		bool m_paused = false;    /* Start in the castle */
 		ProceduralLevelScreen *m_level = nullptr;

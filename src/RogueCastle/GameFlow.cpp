@@ -6,6 +6,7 @@
 #include "../platform.h"
 #include "Game.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 
@@ -65,6 +66,7 @@ namespace RogueCastle
 	void GameFlow::StartCastle()
 	{
 		delete m_level;
+		m_court.ResetToll(m_save.TimesDead > 0);   // TollCollectorAvailable
 		if (!m_save.castleExists)
 		{
 			m_save.castleExists = true;
@@ -171,6 +173,20 @@ namespace RogueCastle
 			if (m_dialogue.IsOpen())
 			{
 				DialogueScreen::Result r = m_dialogue.Update(pressed, dt);
+				if (m_tollAsking && r != DialogueScreen::Result::Open)
+				{
+					m_tollAsking = false;
+					if (r == DialogueScreen::Result::Confirmed)
+					{
+						/* TollPaid: GATEKEEPER_TOLL_COST (all the gold) minus Haggle */
+						float cost = 1.0f - m_save.skills.ModifierAmount(Skills::SkillType::Prices_Down);
+						m_save.Gold -= (int) (m_save.Gold * cost);
+						m_save.SpokeToTollCollector = true;
+						m_court.HideToll();
+						Audio::PlaySound("Charon_LaughPoof");
+						Save();
+					}
+				}
 				if (m_architectAsking && r != DialogueScreen::Result::Open)
 				{
 					m_architectAsking = false;
@@ -223,6 +239,17 @@ namespace RogueCastle
 					m_shop->Open(m_save, MaxWeight());
 					Audio::PlaySound("ShopMenuOpen");
 					m_state = State::Shop;
+					break;
+				}
+				if (action == StartingRoom::Action::Toll)
+				{
+					// "Meet Toll Collector 1", then "...Skip<Haggle %>"
+					char name[48];
+					if (!m_save.SpokeToTollCollector) snprintf(name, sizeof(name), "Meet Toll Collector 1");
+					else snprintf(name, sizeof(name), "Meet Toll Collector Skip%d",
+						(int) (m_save.skills.ModifierAmount(Skills::SkillType::Prices_Down) * 100 + 0.5f));
+					m_dialogue.Open(name, m_save.hero.isFemale, "ConfirmTest1");
+					m_tollAsking = true;
 					break;
 				}
 				if (action == StartingRoom::Action::Architect)
