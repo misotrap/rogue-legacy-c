@@ -4,6 +4,7 @@
  * and stops colliding. Item drops come with the lineage milestone.
  */
 #ifndef ROGUE_CASTLE_BREAKABLE_OBJ_H
+#include <vector>
 #define ROGUE_CASTLE_BREAKABLE_OBJ_H
 
 #include "../../DS2DEngine/GameObjs/PhysicsObjContainer.h"
@@ -22,6 +23,8 @@ public:
 
 	void Break();
 	bool Broken = false;
+	/* The pieces fly off and fade (Break's tweens, 0.3 s) */
+	void Draw(DS2DEngine::Camera2D *camera) override;
 	bool DropItem = true;
 	bool HitBySpellsOnly = false;
 	/* The room object's Name attribute ("Health"/"Mana" force a drop,
@@ -34,6 +37,9 @@ public:
 
 private:
 	bool m_wasWeighted = true;
+	struct Piece { float x, y, dx, rotation; };
+	std::vector<Piece> m_pieces;
+	float m_breakTime = -1;
 	class ProceduralLevelScreen *m_levelScreen = nullptr;
 };
 

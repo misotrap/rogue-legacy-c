@@ -84,6 +84,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	/* The player exists before the rooms: he is the enemies' target. */
 	m_player = new PlayerObj();
 	m_player->SetTerrain(&m_allTerrain);
+	m_player->SetSlopes(&m_allSlopes);
 	m_player->SetLevelScreen(this);
 	m_physicsManager.AddObject(m_player);
 
@@ -104,6 +105,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			m_physicsManager.AddObject(terrain);
 			m_allTerrain.push_back(terrain);
 		}
+		for (const Slope &slope : room->SlopeList())
+			m_allSlopes.push_back(slope);
 		for (DS2DEngine::PhysicsObjContainer *obj : room->GameObjList())
 			m_physicsManager.AddObject(obj);
 		/* BreakableObj.cpp needs the level to drop its loot (no RTTI, so

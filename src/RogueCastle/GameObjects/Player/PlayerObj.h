@@ -11,6 +11,7 @@
 #include "../../Types/InputMapType.h"
 #include "../../Types/PlayerPart.h"
 #include "../../Types/ClassType.h"
+#include "../TerrainObj.h"
 
 namespace RogueCastle
 {
@@ -39,6 +40,7 @@ public:
 	 * through); needs the level's terrain list. */
 	void UpdatePlayerCollision();
 	void SetTerrain(const std::vector<DS2DEngine::IPhysicsObj *> *terrain) { m_attachedTerrain = terrain; }
+	void SetSlopes(const std::vector<Slope> *slopes) { m_slopes = slopes; }
 	void SetLevelScreen(class ProceduralLevelScreen *levelScreen) { m_levelScreen = levelScreen; }
 	class ProceduralLevelScreen *LevelScreen() const { return m_levelScreen; }
 
@@ -105,6 +107,7 @@ public:
 	Color m_blinkColour = Color(255, 0, 0);
 	DS2DEngine::SpriteObj *m_swearBubble = nullptr;   /* Tourettes */
 	float m_swearBubbleCounter = 0;
+	bool m_onOneWay = false;   /* standing on a platform open underneath */
 	void DrawSwearBubble(DS2DEngine::Camera2D *camera);   /* Tourettes */
 	Color m_partColour[PlayerPart::Light + 1];   /* the armour tints (UpdateEquipmentColours) */
 
@@ -149,6 +152,7 @@ public:
 	float m_dropThroughGroundTimer = 0;
 	float m_dropThroughGroundDuration = 0.1f;   /* PlayerObj.cs line 99 */
 	const std::vector<DS2DEngine::IPhysicsObj *> *m_attachedTerrain = nullptr;
+	const std::vector<Slope> *m_slopes = nullptr;
 
 	/* Attack / dash state (the C# LogicSet machinery, PlayerObj.cs
 	 * InitializeLogic line 276, compacted: the original only ever plays

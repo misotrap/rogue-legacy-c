@@ -67,10 +67,11 @@ namespace RogueCastle
 		}
 	}
 
-	void GameFlow::Save()
+	void GameFlow::Save(bool vitals)
 	{
-		/* The hero's vitals persist between runs (PlayerStats). */
-		if (m_level != nullptr && m_level->Player() != nullptr && m_state == State::Castle)
+		/* The hero's vitals persist between runs (PlayerStats); not once
+		 * the hero is gone (AddFamilyNode reset them for the next heir) */
+		if (vitals && m_level != nullptr && m_level->Player() != nullptr && m_state == State::Castle)
 		{
 			m_save.CurrentHealth = (int) m_level->Player()->CurrentHealth;
 			m_save.CurrentMana = (int) m_level->Player()->CurrentMana;
@@ -149,6 +150,9 @@ namespace RogueCastle
 	// ProceduralLevelScreen death -> GameOverScreen -> SkillScreen
 	void GameFlow::AddFamilyNode(bool beatenABoss)
 	{
+		// The next heir starts with full health and mana (0 = the maximum)
+		m_save.CurrentHealth = 0;
+		m_save.CurrentMana = 0;
 		Save::FamilyTreeNode node;
 		const Lineage::Heir &h = m_save.hero;
 		node.name = h.name;
@@ -180,7 +184,7 @@ namespace RogueCastle
 		m_save.castleExists = false;
 		m_save.LockCastle = false;
 		m_save.HasArchitectFee = false;
-		Save();
+		Save(false);
 		delete m_level;
 		m_level = nullptr;
 		m_credits.Open((int) m_save.familyTree.size());
@@ -200,7 +204,7 @@ namespace RogueCastle
 		m_save.castleExists = m_save.LockCastle;
 		m_save.LockCastle = false;
 		m_save.HasArchitectFee = false;
-		Save();
+		Save(false);
 		delete m_level;
 		m_level = nullptr;
 		m_deathTimer = 0;

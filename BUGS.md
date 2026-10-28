@@ -5,13 +5,15 @@
 - [x] Portraits : tableau dans le cadre, tremblement, poursuite en tournant, tirs (à vérifier en jeu)
 - [x] Canon : tirait du mauvais côté une fois retourné vers le joueur
 - [x] Lustres posés par terre (Weighted=False ignoré)
-- [ ] Chandeliers, chandelles, chaises : le coup est reçu (Break) mais l'image reste entière
+- [x] Objets cassables (chandeliers, chaises...) : les morceaux s'envolent et disparaissent (tweens de Break)
 - [x] Étagères : plateformes (PhysicsObj Collidable, dessus seulement)
-- [ ] Rampes : font des marches au lieu de pentes
-- [ ] Saut non variable (relâcher le bouton doit couper le saut)
-- [ ] Bas + saut sur une plateforme : descendre à travers
-- [ ] Bas + attaque en l'air : attaque vers le bas
-- [ ] Ennemis qui ne font pas de dégâts (ex. le fantôme à l'œil)
-- [ ] Après un coup, le héros glisse lentement sur le côté
-- [ ] À la mort, le héros disparaît
-- [ ] Le héros dérive parfois sur le côté, même immobile
+- [x] Rampes : pentes à 45° (CollHullObj tournés), le héros repose sur son coin côté montée
+- [x] Saut variable (JumpDeceleration 5000 quand on relâche)
+- [x] Bas + saut sur une plateforme : descendre à travers
+- [x] Bas + attaque en l'air : attaque vers le bas (sinon coup normal)
+- [x] Ennemis « sans dégâts » : c'était l'invincibilité après un coup, maintenant visible (héros transparent)
+- [x] Après un coup, le héros glisse lentement sur le côté (même cause)
+- [x] Le héros dérivait : pas de freinage de l'élan vers la droite
+- [x] Mana de départ : chaque héritier commence avec vie et mana au maximum
+- [ ] Animation de mort : caméra centrée, lumière qui s'éteint, mort sous le projecteur, puis le fantôme
+- [ ] Lancer d'os du squelette pas bon

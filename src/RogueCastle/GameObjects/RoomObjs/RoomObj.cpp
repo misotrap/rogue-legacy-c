@@ -159,7 +159,11 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 		if (obj.type == "CollHullObj")
 		{
 			if (obj.rotation != 0)
+			{
+				if (obj.rotation == 45 && obj.collidesTop)
+					m_slopeList.push_back({ obj.x, obj.y, obj.width, obj.height });
 				continue;
+			}
 			TerrainObj *terrain = new TerrainObj((int) obj.width, (int) obj.height);
 			terrain->Populate((int) obj.x, (int) obj.y, (int) obj.width, (int) obj.height,
 			                  obj.collidesTop, obj.collidesBottom, obj.collidesLeft, obj.collidesRight);

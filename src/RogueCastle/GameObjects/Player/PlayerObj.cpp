@@ -304,7 +304,12 @@ void PlayerObj::Update(GameTime *gameTime)
 	if (m_dropThroughGroundTimer > 0)
 		m_dropThroughGroundTimer -= elapsedSeconds;
 	if (m_invincibleCounter > 0)
+	{
 		m_invincibleCounter -= elapsedSeconds;
+		Opacity(0.6f);   /* PlayerObj.cs line 1383: see-through while invincible */
+	}
+	else if (Opacity() == 0.6f)
+		Opacity(1);
 	if (m_blinkCounter > 0)
 		m_blinkCounter -= elapsedSeconds;
 	if (m_swearBubbleCounter > 0)
@@ -354,8 +359,9 @@ void PlayerObj::Update(GameTime *gameTime)
 		/* Code for jumping and double jumping (PlayerObj.cs line 854). */
 		if (State != STATE_BLOCKING && State != STATE_FLYING && State != STATE_TANOOKI)
 		{
+			bool downHeld = Game::GlobalInput.Pressed(PLAYER_DOWN1) || Game::GlobalInput.Pressed(PLAYER_DOWN2);
 			if ((Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2))
-			    && m_isTouchingGround)
+			    && m_isTouchingGround && m_dropThroughGroundTimer <= 0 && !(downHeld && m_onOneWay))
 			{
 				State = STATE_JUMPING;
 				AccelerationY(-JumpHeight);
@@ -382,12 +388,14 @@ void PlayerObj::Update(GameTime *gameTime)
 		if (!IsLogicSetActive() && State != STATE_BLOCKING && State != STATE_TANOOKI
 		    && Game::GlobalInput.JustPressed(PLAYER_ATTACK))
 		{
-			if (State == STATE_JUMPING)
+			if (State == STATE_JUMPING || !m_isTouchingGround)
 			{
-				/* In the air the same attack set plays; holding down aims
-				 * it downward (the sprite is the same, PlayerObj.cs line
-				 * 944). */
-				ExecuteLogicSet(LS_AIR_ATTACK);
+				/* PlayerObj.cs line 944: holding down attacks downward,
+				 * otherwise the standing swing plays in the air */
+				if (Game::GlobalInput.Pressed(PLAYER_DOWN1) || Game::GlobalInput.Pressed(PLAYER_DOWN2))
+					ExecuteLogicSet(LS_AIR_ATTACK);
+				else
+					ExecuteLogicSet(LS_STANDING_ATTACK3);
 			}
 			else
 			{
@@ -484,9 +492,17 @@ void PlayerObj::Update(GameTime *gameTime)
 		}
 	}
 
+	/* PlayerObj.cs line 1400: releasing jump cuts the rise (JumpDeceleration) */
+	if (State != STATE_HURT && !m_isTouchingGround && AccelerationY() < 0
+	    && ((!Game::GlobalInput.Pressed(PLAYER_JUMP1) && !Game::GlobalInput.Pressed(PLAYER_JUMP2))
+	        || (m_activeLS == LS_AIR_ATTACK && !IsAirAttacking)))
+		AccelerationY(AccelerationY() + 5000.0f * elapsedSeconds);
+
 	/* PlayerObj.cs line 1335: friction on knockback, then the position. */
 	if (AccelerationX() < 0)
 		AccelerationX(AccelerationX() + 200.0f * elapsedSeconds);
+	else if (AccelerationX() > 0)
+		AccelerationX(AccelerationX() - 200.0f * elapsedSeconds);
 	X(X() + Heading().X * (CurrentSpeed() * elapsedSeconds));
 
 	UpdatePlayerCollision();
@@ -524,6 +540,35 @@ void PlayerObj::UpdatePlayerCollision()
 		break;
 	}
 
+	/* The 45 degree ramps (rotated CollHullObj; PlayerObj.cs moves the
+	 * player out of rotated boxes along the slope): the top surface is
+	 * y = corner.y + |x - corner.x| between the two upper edges. The feet
+	 * are put back on it from inside, or kept on it when walking down. */
+	if (m_slopes != nullptr && AccelerationY() >= 0 && m_dropThroughGroundTimer <= 0)
+	{
+		const float k = 0.70710678f;
+		float left = (float) tb.X, right = (float) tb.Right(), fy = (float) tb.Bottom();
+		for (const Slope &sl : *m_slopes)
+		{
+			float x0 = sl.x - sl.height * k, x1 = sl.x + sl.width * k;
+			if (right < x0 || left > x1)
+				continue;
+			/* The box rests on its uphill corner (the rotated MTD), the
+			 * highest point of the ramp under it */
+			float cx = sl.x < left ? left : sl.x > right ? right : sl.x;
+			if (cx < x0) cx = x0;
+			if (cx > x1) cx = x1;
+			float surface = sl.y + fabsf(cx - sl.x);
+			if (fy < surface - 14 || fy > surface + 40)
+				continue;
+			Y(Y() + surface - fy);
+			AccelerationY(0);
+			touching = true;
+			onOneWay = false;
+			break;
+		}
+	}
+
 	if (touching && State != STATE_DRAGON)
 	{
 		/* Player just landed (PlayerObj.cs line 1795). */
@@ -536,17 +581,21 @@ void PlayerObj::UpdatePlayerCollision()
 			if (State != STATE_BLOCKING && State != STATE_TANOOKI && State != STATE_DASHING)
 				State = STATE_IDLE;
 
-			/* Code for dropping through ground (PlayerObj.cs line 1812). */
-			bool down = Game::GlobalInput.Pressed(PLAYER_DOWN1) || Game::GlobalInput.Pressed(PLAYER_DOWN2);
-			bool jumpJustPressed = Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2);
-			if (down && jumpJustPressed && onOneWay && State != STATE_TANOOKI)
-			{
-				AccelerationY(0);
-				Y(Y() + 15.0f);   /* must be 1 larger than the ground probe */
-				m_isTouchingGround = false;
-				m_isJumping = true;
-				m_dropThroughGroundTimer = m_dropThroughGroundDuration;
-			}
+		}
+		/* Code for dropping through ground (PlayerObj.cs line 1812):
+		 * Down + Jump on a platform open underneath */
+		m_onOneWay = onOneWay;
+		bool down = Game::GlobalInput.Pressed(PLAYER_DOWN1) || Game::GlobalInput.Pressed(PLAYER_DOWN2);
+		bool jumpJustPressed = Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2);
+		if (down && jumpJustPressed && onOneWay && !ControlsLocked && State != STATE_TANOOKI
+		    && State != STATE_BLOCKING && State != STATE_DASHING && m_dropThroughGroundTimer <= 0)
+		{
+			AccelerationY(0);
+			Y(Y() + 15.0f);   /* must be 1 larger than the ground probe */
+			m_isTouchingGround = false;
+			m_isJumping = true;
+			m_dropThroughGroundTimer = m_dropThroughGroundDuration;
+			return;
 		}
 		if (m_isTouchingGround == false && m_dropThroughGroundTimer <= 0)
 			m_isTouchingGround = true;

@@ -98,6 +98,6 @@ namespace RogueCastle
 		bool InCourtyard() const;
 		void UpdateMusic();
 		int MaxWeight() const;
-		void Save();
+		void Save(bool vitals = true);
 	};
 }

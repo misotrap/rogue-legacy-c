@@ -54,6 +54,10 @@ void BreakableObj::Break()
 
 	GoToFrame(2);
 	Broken = true;
+	m_pieces.clear();
+	for (int i = 0; i < NumChildren(); i++)
+		m_pieces.push_back({ GetChildAt(i)->X(), GetChildAt(i)->Y(), (float) (rand() % 101 - 50), (float) (rand() % 721 - 360) });
+	m_breakTime = 0;
 	m_wasWeighted = IsWeightedFlag;
 	IsWeightedFlag = false;
 	IsCollidableFlag = false;
@@ -128,3 +132,29 @@ void BreakableObj::Break()
 }
 
 } // namespace RogueCastle
+
+namespace RogueCastle
+{
+void BreakableObj::Draw(DS2DEngine::Camera2D *camera)
+{
+	/* Tween.By X +-50, Y +50, Rotation +-360 over 0.3 s; Opacity to 0
+	 * from 0.2 to 0.3 s. The pieces are in the parent's scaled space. */
+	if (m_breakTime >= 0 && m_breakTime < 0.3f)
+	{
+		m_breakTime += (float) camera->ElapsedTotalSeconds();
+		float t = m_breakTime < 0.3f ? m_breakTime / 0.3f : 1;
+		for (int i = 0; i < NumChildren() && i < (int) m_pieces.size(); i++)
+		{
+			const Piece &p = m_pieces[i];
+			GameObj *child = GetChildAt(i);
+			child->X(p.x + p.dx * t / ScaleX());
+			child->Y(p.y + 50 * t / ScaleY());
+			child->Rotation(p.rotation * t);
+			child->Opacity(m_breakTime < 0.2f ? 1 : 1 - (m_breakTime - 0.2f) / 0.1f);
+		}
+		if (m_breakTime >= 0.3f)
+			for (int i = 0; i < NumChildren(); i++) GetChildAt(i)->Visible(false);
+	}
+	PhysicsObjContainer::Draw(camera);
+}
+}
