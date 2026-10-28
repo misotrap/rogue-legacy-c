@@ -237,12 +237,12 @@ void SpriteObj::Draw(Camera2D *camera)
 		 * parent's test (SpriteObj.cs). */
 		if (ForceDraw() || Bounds().Intersects(camera->Bounds()))
 			camera->Draw(sprite, AbsPosition(), _ssRect, ColourOf(TextureColor(), Opacity()),
-			             0, Anchor(), Scale(), Flip(), Layer());
+			             Rotation() * 3.14159265f / 180.0f, Anchor(), Scale(), Flip(), Layer());
 	}
 	else
 	{
 		camera->Draw(sprite, AbsPosition(), _ssRect, ColourOf(TextureColor(), Opacity()),
-		             0, Anchor(), Parent()->Scale() * Scale(), Flip(), Layer());
+		             (Parent()->Rotation() + Rotation()) * 3.14159265f / 180.0f, Anchor(), Parent()->Scale() * Scale(), Flip(), Layer());
 	}
 
 	/* Animation advances in Draw (SpriteObj.cs), once per drawn frame. */

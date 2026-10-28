@@ -33,9 +33,7 @@ void Camera2D::Draw(const Texture *texture, Vector2 position, Rectangle srcRect,
                    float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layer)
 {
 	(void) layer;
-	(void) rotation;   /* TODO C++: no rotation in the blitter yet; player
-	                   * parts never rotate (the original ignores
-	                   * childRotation), so nothing is lost so far. */
+	/* rotation is in radians, like XNA SpriteBatch */
 	Vector2 screen((position.X - m_position.X) * m_zoom + VIEW_CX,
 	               (position.Y - m_position.Y) * m_zoom + VIEW_CY);
 	/* XNA: the camera zoom scales the whole draw, so a scale-2 object in a
@@ -46,6 +44,12 @@ void Camera2D::Draw(const Texture *texture, Vector2 position, Rectangle srcRect,
 	float s = screenScale.X;
 	/* XNA draw colour (TextureColor * Opacity); white costs nothing extra */
 	uint32_t argb = ((uint32_t) color.A << 24) | ((uint32_t) color.R << 16) | ((uint32_t) color.G << 8) | color.B;
+	if (rotation != 0.0f || screenScale.X != screenScale.Y)
+	{
+		gfx_blit_ex(texture, srcRect.X, srcRect.Y, srcRect.Width, srcRect.Height, screen.X, screen.Y, origin.X, origin.Y,
+		            screenScale.X, screenScale.Y, rotation, effects == SpriteEffects::FlipHorizontally ? 1 : 0, argb);
+		return;
+	}
 	gfx_blit_tinted(texture, srcRect.X, srcRect.Y, srcRect.Width, srcRect.Height,
 	                dx, dy, s, effects == SpriteEffects::FlipHorizontally ? 1 : 0, argb);
 }

@@ -28,5 +28,12 @@ void gfx_blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float 
 /* Same, multiplied by a colour 0xAARRGGBB (XNA's draw colour: TextureColor
  * and Opacity). An opaque white colour takes the plain gfx_blit path. */
 void gfx_blit_tinted(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip, uint32_t colour);
+/* General sprite draw (XNA SpriteBatch.Draw): the texel (originX, originY)
+ * of the source rectangle lands on screen point (x, y); the sprite is
+ * scaled by (scaleX, scaleY), rotated by 'rotation' radians around that
+ * point, mirrored when flip is set, and tinted by colour. Falls back to the
+ * fast axis-aligned blits when there is no rotation and the scale is even. */
+void gfx_blit_ex(const Texture *t, int sx, int sy, int sw, int sh, float x, float y, float originX, float originY,
+	float scaleX, float scaleY, float rotation, int flip, uint32_t colour);
 
 #endif
