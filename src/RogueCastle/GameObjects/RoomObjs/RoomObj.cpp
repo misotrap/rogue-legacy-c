@@ -27,6 +27,7 @@
 #include "../EnemyObjs/EnemyObj_Portrait.h"
 #include "../EnemyObjs/EnemyObj_Chicken.h"
 #include "../EnemyObjs/EnemyObj_Starburst.h"
+#include "../EnemyObjs/EnemyObj_Energon.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -120,6 +121,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Chicken(player, diff);
 	case EnemyType::Starburst:
 		return new EnemyObj_Starburst(player, diff);
+	case EnemyType::Energon:
+		return new EnemyObj_Energon(player, diff);
 	default:
 		return nullptr;
 	}
