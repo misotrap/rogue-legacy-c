@@ -28,6 +28,7 @@ public:
 	void Draw(DS2DEngine::Camera2D *camera);
 
 	/* The ProjectileManager subset: bones and later the spells. */
+	void AddProjectile(class ProjectileObj *proj);   /* takes ownership */
 	void FireProjectile(const char *spriteName, Vector2 position,
 	                    Vector2 heading, float speed, int damage,
 	                    Vector2 scale, bool weighted, class EnemyObj *source,

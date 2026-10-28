@@ -290,6 +290,12 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		m_player->Draw(camera);
 }
 
+void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
+{
+	m_projectiles.push_back(proj);
+	m_physicsManager.AddObject(proj);
+}
+
 void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,
                                            Vector2 heading, float speed, int damage,
                                            Vector2 scale, bool weighted, EnemyObj *source,

@@ -15,6 +15,7 @@
 #include "../EnemyObjs/EnemyObj_Wolf.h"
 #include "../EnemyObjs/EnemyObj_Ninja.h"
 #include "../EnemyObjs/EnemyObj_ShieldKnight.h"
+#include "../EnemyObjs/EnemyObj_FireWizard.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -84,6 +85,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Ninja(player, diff);
 	case EnemyType::ShieldKnight:
 		return new EnemyObj_ShieldKnight(player, diff);
+	case EnemyType::FireWizard:
+		return new EnemyObj_FireWizard(player, diff);
 	default:
 		return nullptr;
 	}
