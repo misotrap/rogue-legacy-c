@@ -161,9 +161,10 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		    : Rectangle(-100000, -100000, 200000, 200000);
 		bool outOfPlay = proj->X() < level.X - 600 || proj->X() > level.Right() + 600
 		              || proj->Y() > level.Bottom() + 600 || proj->Y() < level.Y - 1200;
-		if (proj->IsKilled || outOfPlay)
+		if (proj->IsKilled || (!proj->Held && outOfPlay))
 		{
 			m_physicsManager.RemoveObject(proj);
+			proj->IsAlive = false;
 			delete proj;
 			m_projectiles.erase(m_projectiles.begin() + i);
 		}
@@ -245,12 +246,21 @@ void ProceduralLevelScreen::CheckForRoomTransition()
 		{
 			/* ProjectileManager: enemy projectiles do not survive room
 			 * transitions (ProjectileObj DestroyOnRoomTransition). */
-			for (ProjectileObj *proj : m_projectiles)
+			/* Held projectiles (the flail ball, channel markers) are
+			 * released by their owners; free only the loose ones. */
+			for (size_t i = 0; i < m_projectiles.size(); )
 			{
+				ProjectileObj *proj = m_projectiles[i];
+				if (proj->Held)
+				{
+					i++;
+					continue;
+				}
 				m_physicsManager.RemoveObject(proj);
+				proj->IsAlive = false;
 				delete proj;
+				m_projectiles.erase(m_projectiles.begin() + i);
 			}
-			m_projectiles.clear();
 			if (m_currentRoom != nullptr)
 				for (EnemyObj *enemy : m_currentRoom->EnemyList())
 					enemy->ResetState();

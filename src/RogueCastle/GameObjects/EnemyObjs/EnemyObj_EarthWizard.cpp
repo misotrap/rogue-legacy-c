@@ -153,6 +153,14 @@ void EnemyObj_EarthWizard::InitializeOne(EnemyDifficulty difficulty)
 	}
 }
 
+void EnemyObj_EarthWizard::ResetState()
+{
+	/* A room transition interrupts any cast: release the held summon
+	 * (it survives the transition, its owner may never update again). */
+	CancelEarthSpell();
+	EnemyObj::ResetState();
+}
+
 void EnemyObj_EarthWizard::InitializeEV()
 {
 	InitializeOne(DifficultyType);
@@ -241,6 +249,7 @@ void EnemyObj_EarthWizard::StartAction(Action action)
 		                                  (int) ProjectileDamage, ProjectileScale, false);
 		m_earthSummon->IsCollidableFlag = false;
 		m_earthSummon->Source = this;
+	m_earthSummon->Held = true;
 		m_levelScreen->AddProjectile(m_earthSummon);
 		m_actionTimer = 0.5f;   /* CastEarthSpellIn, then CastEarthSpellOut */
 		m_runCooldown = true;
@@ -268,7 +277,10 @@ void EnemyObj_EarthWizard::UpdateAction()
 	switch (m_action)
 	{
 	case ACTION_CAST_EARTH:
-		/* The channel marker tracks the player's feet (line 567). */
+		/* The channel marker tracks the player's feet (line 567); the
+		 * level screen may have freed it (room transition). */
+		if (m_earthSummon != nullptr && !m_earthSummon->IsAlive)
+			m_earthSummon = nullptr;
 		if (m_earthSummon != nullptr)
 			m_earthSummon->Position(m_target->Position());
 		if (m_actionPhase == 0 && m_actionTimer <= 0)

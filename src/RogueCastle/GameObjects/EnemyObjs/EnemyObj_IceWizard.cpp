@@ -151,6 +151,14 @@ void EnemyObj_IceWizard::InitializeOne(EnemyDifficulty difficulty)
 	}
 }
 
+void EnemyObj_IceWizard::ResetState()
+{
+	/* A room transition interrupts any cast: release the held summon
+	 * (it survives the transition, its owner may never update again). */
+	ResetIceball();
+	EnemyObj::ResetState();
+}
+
 void EnemyObj_IceWizard::InitializeEV()
 {
 	InitializeOne(DifficultyType);
@@ -168,6 +176,7 @@ void EnemyObj_IceWizard::SummonIceball()
 	                                     (int) ProjectileDamage, ProjectileScale, false);
 	m_iceballSummon->IsCollidableFlag = false;
 	m_iceballSummon->Source = this;
+	m_iceballSummon->Held = true;
 	m_levelScreen->AddProjectile(m_iceballSummon);
 }
 
@@ -298,6 +307,8 @@ void EnemyObj_IceWizard::UpdateEnemy(GameTime *gameTime)
 {
 	(void) gameTime;
 	/* The held iceball follows the wizard. */
+	if (m_iceballSummon != nullptr && !m_iceballSummon->IsAlive)
+		m_iceballSummon = nullptr;
 	if (m_iceballSummon != nullptr)
 	{
 		float facing = Flip() == SpriteEffects::FlipHorizontally ? -1.0f : 1.0f;

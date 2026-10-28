@@ -18,6 +18,7 @@ class EnemyObj_FireWizard : public EnemyObj
 public:
 	EnemyObj_FireWizard(PlayerObj *target, EnemyDifficulty difficulty);
 	~EnemyObj_FireWizard() override;
+	void ResetState() override;
 
 protected:
 	void InitializeEV() override;

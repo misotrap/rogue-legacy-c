@@ -19,6 +19,7 @@ class EnemyObj_EarthWizard : public EnemyObj
 public:
 	EnemyObj_EarthWizard(PlayerObj *target, EnemyDifficulty difficulty);
 	~EnemyObj_EarthWizard() override;
+	void ResetState() override;
 
 protected:
 	void InitializeEV() override;

@@ -150,6 +150,14 @@ void EnemyObj_FireWizard::InitializeOne(EnemyDifficulty difficulty)
 	}
 }
 
+void EnemyObj_FireWizard::ResetState()
+{
+	/* A room transition interrupts any cast: release the held summon
+	 * (it survives the transition, its owner may never update again). */
+	ResetFireball();
+	EnemyObj::ResetState();
+}
+
 void EnemyObj_FireWizard::InitializeEV()
 {
 	InitializeOne(DifficultyType);
@@ -167,6 +175,7 @@ void EnemyObj_FireWizard::SummonFireball()
 	                                     (int) ProjectileDamage, ProjectileScale, false);
 	m_fireballSummon->IsCollidableFlag = false;   /* held, not live yet */
 	m_fireballSummon->Source = this;
+	m_fireballSummon->Held = true;
 	m_levelScreen->AddProjectile(m_fireballSummon);
 }
 
@@ -295,6 +304,8 @@ void EnemyObj_FireWizard::UpdateEnemy(GameTime *gameTime)
 {
 	(void) gameTime;
 	/* The held fireball follows the wizard's hand (line 381). */
+	if (m_fireballSummon != nullptr && !m_fireballSummon->IsAlive)
+		m_fireballSummon = nullptr;
 	if (m_fireballSummon != nullptr)
 	{
 		float facing = Flip() == SpriteEffects::FlipHorizontally ? -1.0f : 1.0f;

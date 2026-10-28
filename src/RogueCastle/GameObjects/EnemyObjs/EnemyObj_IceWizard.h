@@ -18,6 +18,7 @@ class EnemyObj_IceWizard : public EnemyObj
 public:
 	EnemyObj_IceWizard(PlayerObj *target, EnemyDifficulty difficulty);
 	~EnemyObj_IceWizard() override;
+	void ResetState() override;
 
 protected:
 	void InitializeEV() override;

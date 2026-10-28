@@ -30,6 +30,14 @@ public:
 	float RotationSpeed = 0;   /* TODO C++: spinning blits */
 	bool DestroysWithTerrain = false;
 	bool IsKilled = false;
+	/* Set to false right before the level screen frees the projectile;
+	 * the enemies that hold one (the flail ball, the wizards' summons)
+	 * check it so they never touch freed memory. */
+	bool IsAlive = true;
+	/* A held projectile (the flail ball, a channel marker) is owned by
+	 * an enemy: the level screen must not free it on a room transition.
+	 * The owner releases it (IsKilled, then nulls its pointer). */
+	bool Held = false;
 	/* ProjectileObj.cs: projectiles are given a lifespan; 0 = live until
 	 * they hit something or leave play. */
 	float LifeSpan = 0;
