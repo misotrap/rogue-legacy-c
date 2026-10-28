@@ -281,3 +281,16 @@ Miyoo buttons are mapped in `platform_miyoo.cpp` (evdev key codes). MENU quits.
   death stinger) and the menu sounds of the screens Claude wrote.
 - Mac: SDL2 audio. Console: the console's own SDL 1.2 (/customer/lib),
   loaded with dlopen; launch.sh puts /customer/lib after ./lib.
+
+## Dialogue and the architect (done by Claude)
+
+- `Screens/DialogueScreen` shows any DialogueManager.cs dialogue by its key
+  (data generated in `Dialogue/DialogueData.h` by tools/convert_dialogue.py),
+  with an optional confirm choice. GameFlow owns one (`m_dialogue`), drawn
+  over the castle; use it for the other NPCs/diaries rather than a new box.
+- The architect sets `LockCastle` + `HasArchitectFee`: when you port the gold
+  pickup (ItemDropObj / PlayerObj), multiply the gold by GameEV.ARCHITECT_FEE
+  (0.6) while `HasArchitectFee` is true, as the C# does.
+- tools/make_subsheet.py cuts the few miscSpritesheet images the UI needs
+  into uiExtraSpritesheet (1.7 MB instead of 16 MB): add names there rather
+  than loading miscSpritesheet.
