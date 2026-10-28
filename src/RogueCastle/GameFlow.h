@@ -2,7 +2,8 @@
 //   start: load save.txt, title screen; no hero yet -> heir choice
 //   heir chosen -> castle (a new one, or the saved one) with the HUD
 //   death -> the hero joins the family tree, save -> death screen -> heir
-//   choice -> manor -> castle
+//   choice -> castle courtyard (left exit: manor; NPCs: blacksmith,
+//   enchantress) -> castle
 // The castle player's death (CurrentHealth <= 0) calls OnPlayerDeath()
 // after a short pause, once the death lands.
 #pragma once
@@ -15,6 +16,8 @@
 #include "Screens/PauseScreen.h"
 #include "Screens/TitleScreen.h"
 #include "Screens/GameOverScreen.h"
+#include "Screens/EquipmentScreen.h"
+#include "Rooms/StartingRoom.h"
 #include "Screens/ManorScreen.h"
 #include "Screens/ProceduralLevelScreen.h"
 
@@ -26,7 +29,7 @@ namespace RogueCastle
 	class GameFlow
 	{
 	public:
-		enum class State { Title, Lineage, Castle, GameOver, Manor };
+		enum class State { Title, Lineage, Castle, Shop, GameOver, Manor };
 
 		// savePath: e.g. "save.txt" next to the game
 		bool Init(const char *assetsDir, const char *savePath);
@@ -50,6 +53,10 @@ namespace RogueCastle
 		PauseScreen m_pause;
 		TitleScreen m_title;
 		GameOverScreen m_gameOver;
+		StartingRoom m_court;   /* the courtyard: rooms[0] of the castle */
+		EquipmentScreen m_smith{ EquipmentScreen::Mode::Blacksmith };
+		EquipmentScreen m_enchant{ EquipmentScreen::Mode::Enchantress };
+		EquipmentScreen *m_shop = nullptr;
 		std::vector<uint32_t> m_lastFrame;   /* the castle frame while dying */
 		bool m_paused = false;    /* Start in the castle */
 		ProceduralLevelScreen *m_level = nullptr;
@@ -59,6 +66,8 @@ namespace RogueCastle
 
 		void StartCastle();
 		void LeaveTitle();
+		bool InCourtyard() const;
+		int MaxWeight() const;
 		void Save();
 	};
 }

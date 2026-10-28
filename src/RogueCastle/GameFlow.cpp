@@ -19,7 +19,8 @@ namespace RogueCastle
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
-			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir);
+			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir)
+			&& m_court.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
 		if (getenv("RL_DEBUG_LEVEL") == nullptr)
 		{
@@ -120,22 +121,18 @@ namespace RogueCastle
 		switch (m_state)
 		{
 		case State::Lineage:
-			if (m_lineage.Update(buttons, pressed, dt))
-			{
-				/* The new heir goes to the manor first (in the original:
-				 * the starting room in front of the castle, whose left exit
-				 * is the manor); the very first hero has nothing to buy. */
-				if (m_save.familyTree.empty()) StartCastle();
-				else
-				{
-					Save();
-					m_state = State::Manor;
-					m_manor.Open(m_save);
-				}
-			}
+			/* The new heir starts in the courtyard (the castle's first room) */
+			if (m_lineage.Update(buttons, pressed, dt)) StartCastle();
 			break;
 		case State::Title:
 			if (m_title.Update(pressed, dt)) LeaveTitle();
+			break;
+		case State::Shop:
+			if (m_shop == nullptr || m_shop->Update(buttons, pressed, dt))
+			{
+				Save();
+				m_state = State::Castle;
+			}
 			break;
 		case State::GameOver:
 			if (m_gameOver.Update(pressed, dt))
@@ -149,7 +146,13 @@ namespace RogueCastle
 			if (m_manor.Update(buttons, pressed, dt))
 			{
 				Save();
-				StartCastle();
+				/* Back to the courtyard, walking in from the left */
+				if (m_level != nullptr && m_level->Player() != nullptr)
+				{
+					StartingRoom::PlaceAtLeftEdge(m_level->Player());
+					m_state = State::Castle;
+				}
+				else StartCastle();
 			}
 			break;
 		case State::Castle:
@@ -175,6 +178,24 @@ namespace RogueCastle
 				m_map.Open(player->X(), player->Y());
 				m_mapOpen = true;
 				break;
+			}
+			if (player != nullptr && InCourtyard())
+			{
+				StartingRoom::Action action = m_court.Update(player, m_save.skills, pressed, dt);
+				if (action == StartingRoom::Action::Blacksmith || action == StartingRoom::Action::Enchantress)
+				{
+					m_shop = action == StartingRoom::Action::Blacksmith ? &m_smith : &m_enchant;
+					m_shop->Open(m_save, MaxWeight());
+					m_state = State::Shop;
+					break;
+				}
+				if (action == StartingRoom::Action::Manor)
+				{
+					Save();
+					m_state = State::Manor;
+					m_manor.Open(m_save);
+					break;
+				}
 			}
 			GameTime gameTime(dt);
 			Game::GlobalInput.Update(buttons);
@@ -211,6 +232,9 @@ namespace RogueCastle
 		case State::Lineage:
 			m_lineage.Draw(frame);
 			break;
+		case State::Shop:
+			if (m_shop != nullptr) m_shop->Draw(frame);
+			break;
 		case State::GameOver:
 			m_gameOver.Draw(frame);
 			break;
@@ -223,6 +247,7 @@ namespace RogueCastle
 			gfx_clear(0xFF000000u);
 			m_level->Camera()->ElapsedTotalSeconds(drawElapsed);
 			m_level->Draw(m_level->Camera());
+			if (InCourtyard()) m_court.Draw(m_level->Camera(), m_save.skills);
 			HUDValues v;
 			/* The hero's real vitals (PlayerObj health, the save mana:
 			 * spells are not cast yet, so mana only comes from stats). */
@@ -248,5 +273,24 @@ namespace RogueCastle
 			break;
 		}
 		}
+	}
+}
+
+namespace RogueCastle
+{
+	// The hero stands in the castle's first room, the courtyard
+	bool GameFlow::InCourtyard() const
+	{
+		if (m_level == nullptr || m_level->Player() == nullptr || m_level->Castle().rooms.empty()) return false;
+		const Levels::PlacedRoom &r = m_level->Castle().rooms[0];
+		float x = m_level->Player()->X(), y = m_level->Player()->Y();
+		return r.name == "Start" && x < r.Right() && y >= r.y && y < r.Bottom();
+	}
+
+	// PlayerObj.MaxWeight: BaseWeight 50 + Equip_Up skills + weight drops * 5
+	int GameFlow::MaxWeight() const
+	{
+		return Equipment::EquipmentSystem::MaxWeight(50, m_save.skills.ModifierAmount(Skills::SkillType::Equip_Up),
+			m_save.skills.ModifierAmount(Skills::SkillType::Equip_Up_Final), m_save.BonusWeight, 5);
 	}
 }

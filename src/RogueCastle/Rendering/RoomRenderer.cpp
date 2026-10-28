@@ -231,8 +231,9 @@ namespace RogueCastle
 		Decorations &d = DecorationsFor(room);
 		// 0. sky (only seen through the transparent parts of the art)
 		DrawSky(camera);
-		// 1. background over the whole room
-		Tile(camera, art.background, room.x, room.y, (float) room.width, (float) room.height, 2);
+		// 1. background over the whole room (not in the courtyard: DisplayBG=False)
+		if (room.name != "Start")
+			Tile(camera, art.background, room.x, room.y, (float) room.width, (float) room.height, 2);
 		// 2. background-layer decorations
 		for (GameObj *o : d.back) o->Draw(camera);
 		// 3. walls: the foreground tile inside every solid block taller than 40
