@@ -27,7 +27,8 @@ namespace RogueCastle
 		// Loads the four area sheets (castle, tower, dungeon, garden terrain)
 		bool LoadContent(const char *assetsDir);
 		// Everything behind the room objects (steps 1 to 5 above)
-		void Draw(DS2DEngine::Camera2D *camera, const Levels::PlacedRoom &room);
+		// bgObjs: the room's Layer -1 containers, drawn behind the walls
+		void Draw(DS2DEngine::Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<DS2DEngine::GameObj *> *bgObjs = nullptr);
 		// Frees the decorations built for the rooms (on a new castle)
 		void Clear();
 

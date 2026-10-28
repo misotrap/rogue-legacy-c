@@ -1,5 +1,7 @@
 /* Port of RogueCastle/src/Game Objects/RoomObjs/RoomObj.cs (subset). */
 #include "RoomObj.h"
+#include "../../../DS2DEngine/GameObjs/SpriteObj.h"
+#include "../../../SpriteSystem/SpriteLibrary.h"
 #include "../EnemyObjs/EnemyObj.h"
 #include "../EnemyObjs/EnemyObj_Skeleton.h"
 #include "../EnemyObjs/EnemyObj_Knight.h"
@@ -163,6 +165,20 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 			                  obj.collidesTop, obj.collidesBottom, obj.collidesLeft, obj.collidesRight);
 			m_terrainList.push_back(terrain);
 		}
+		/* Collidable PhysicsObj (bookcases...): WALL_FOR_PLAYER, solid on
+		 * top only (LevelParser.cs line 161), so the hero can stand on them */
+		else if (obj.type == "PhysicsObj" && obj.collidable && obj.rotation == 0
+		         && SpriteSystem::SpriteLibrary::ContainsSprite(obj.sprite))
+		{
+			DS2DEngine::SpriteObj sprite(obj.sprite);
+			sprite.Position(Vector2(obj.x, obj.y));
+			sprite.Scale(Vector2(obj.scaleX, obj.scaleY));
+			sprite.Flip(obj.flip ? SpriteEffects::FlipHorizontally : SpriteEffects::None);
+			Rectangle b = sprite.Bounds();
+			TerrainObj *terrain = new TerrainObj(b.Width, b.Height);
+			terrain->Populate(b.X, b.Y, b.Width, b.Height, true, false, false, false);
+			m_terrainList.push_back(terrain);
+		}
 	}
 
 	for (const Levels::Door &door : placed.doors)
@@ -205,8 +221,8 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 			delete container;
 			continue;
 		}
-		container->IsCollidableFlag = breakable;
-		container->IsWeightedFlag = breakable;
+		container->IsCollidableFlag = breakable;   /* LevelParser: breakables always collide */
+		container->IsWeightedFlag = breakable && obj.weighted;
 		if (breakable)
 		{
 			container->UpdateCollisionBoxes();
@@ -227,7 +243,11 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 			container->PlayAnimation(true);
 		}
 		m_gameObjList.push_back(container);
-		m_drawableList.push_back(container);
+		/* BGLayer (Layer -1): behind the walls (RoomObj.DrawBGObjs) */
+		if (obj.bgLayer && !breakable)
+			m_bgDrawableList.push_back(container);
+		else
+			m_drawableList.push_back(container);
 	}
 
 	/* The room's enemies (LevelBuilder2 resolved the procedural ones into

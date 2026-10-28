@@ -36,6 +36,7 @@ namespace Levels
 		bool flip = false;
 		int levelType = 0;     // LevelType of the original object (0 = all areas)
 		bool bgLayer = false;  // BGLayer: drawn behind (Layer -1)
+		bool weighted = false, collidable = false;   // Weighted / Collidable (PhysicsObj, containers)
 
 		// DoorObj
 		DoorPos doorPos = DoorPos::None;

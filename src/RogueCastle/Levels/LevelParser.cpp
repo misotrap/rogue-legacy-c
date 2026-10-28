@@ -94,7 +94,8 @@ namespace Levels
 				else if (!strcmp(k, "Breakable")) o.breakable = IsTrue(v);
 				break;
 			case 'C':
-				if (!strcmp(k, "CollidesTop")) o.collidesTop = IsTrue(v);
+				if (!strcmp(k, "Collidable")) o.collidable = IsTrue(v);
+				else if (!strcmp(k, "CollidesTop")) o.collidesTop = IsTrue(v);
 				else if (!strcmp(k, "CollidesBottom")) o.collidesBottom = IsTrue(v);
 				else if (!strcmp(k, "CollidesLeft")) o.collidesLeft = IsTrue(v);
 				else if (!strcmp(k, "CollidesRight")) o.collidesRight = IsTrue(v);
@@ -143,6 +144,7 @@ namespace Levels
 				break;
 			case 'W':
 				if (!strcmp(k, "Width")) o.width = (float) atof(v);
+				else if (!strcmp(k, "Weighted")) o.weighted = IsTrue(v);
 				break;
 			case 'X':
 				if (!k[1]) o.x = (float) atof(v);

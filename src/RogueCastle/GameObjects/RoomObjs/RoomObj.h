@@ -70,6 +70,7 @@ public:
 	 * enemy difficulty (ProceduralLevelScreen.cs line 886). */
 	int Level = 0;
 	const std::vector<DS2DEngine::GameObj *> &DrawableObjList() const { return m_drawableList; }
+	const std::vector<DS2DEngine::GameObj *> &BGObjList() const { return m_bgDrawableList; }
 
 	/* Colours: one background and wall tone per area (AGENTS.md). */
 	uint32_t BackgroundColour() const;
@@ -89,6 +90,7 @@ private:
 	std::vector<class BreakableObj *> m_breakableList;              /* = the breakables of m_gameObjList */
 	std::vector<class ChestObj *> m_chestList;                      /* owned */
 	std::vector<class EnemyObj *> m_enemyList;                     /* owned */
+	std::vector<DS2DEngine::GameObj *> m_bgDrawableList;             /* Layer -1 containers */
 	std::vector<DS2DEngine::GameObj *> m_drawableList;               /* = m_gameObjList */
 
 	std::vector<DoorInfo> m_doorList;

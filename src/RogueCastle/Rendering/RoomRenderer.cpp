@@ -225,7 +225,7 @@ namespace RogueCastle
 		}
 	}
 
-	void RoomRenderer::Draw(Camera2D *camera, const Levels::PlacedRoom &room)
+	void RoomRenderer::Draw(Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<GameObj *> *bgObjs)
 	{
 		const Art art = ArtFor(room.levelType);
 		Decorations &d = DecorationsFor(room);
@@ -236,6 +236,8 @@ namespace RogueCastle
 			Tile(camera, art.background, room.x, room.y, (float) room.width, (float) room.height, 2);
 		// 2. background-layer decorations
 		for (GameObj *o : d.back) o->Draw(camera);
+		if (bgObjs != nullptr)
+			for (GameObj *o : *bgObjs) o->Draw(camera);
 		// 3. walls: the foreground tile inside every solid block taller than 40
 		for (const Levels::ObjData &o : room.objs)
 			if (o.type == "CollHullObj" && o.rotation == 0 && o.height > 40)

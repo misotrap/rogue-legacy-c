@@ -530,7 +530,7 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 	{
 		const Levels::PlacedRoom &r = m_castle.rooms[i];
 		if (Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
-			m_roomRenderer.Draw(camera, r);
+			m_roomRenderer.Draw(camera, r, &m_roomList[i]->BGObjList());
 	}
 	for (RoomObj *room : m_roomList)
 		room->Draw(camera);

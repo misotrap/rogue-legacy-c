@@ -102,15 +102,16 @@ void EnemyObj_HomingTurret::RunBasicLogic()
 void EnemyObj_HomingTurret::UpdateEnemy(GameTime *gameTime)
 {
 	(void) gameTime;
-	if (m_actionActive && m_actionTimer <= 0)
+	if (m_actionActive && m_actionTimer <= 0 && State != STATE_WANDER)
 	{
 		/* FireProjectileLogicAction: along the rotation, from the
-		 * SourceAnchor (35, 0). */
+		 * SourceAnchor (35, 0), both mirrored when the turret faces left */
+		bool flipped = Flip() == SpriteEffects::FlipHorizontally;
 		float rad = Rotation() * PI / 180.0f;
-		Vector2 heading(cosf(rad), sinf(rad));
+		Vector2 heading(flipped ? -cosf(rad) : cosf(rad), sinf(rad));
 		Audio::PlaySound("Turret_Attack01", "Turret_Attack02", "Turret_Attack03");   /* the C# fireProjectileLS */
 		m_levelScreen->FireProjectile("HomingProjectile_Sprite",
-		                              Position() + Vector2(35, 0), heading,
+		                              Position() + Vector2(flipped ? -35.0f : 35.0f, 0), heading,
 		                              ProjectileSpeed, (int) Damage,
 		                              ProjectileScale, false, this);
 		m_actionTimer = m_fireDelay;

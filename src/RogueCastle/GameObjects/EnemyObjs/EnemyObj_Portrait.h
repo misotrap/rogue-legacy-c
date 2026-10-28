@@ -17,6 +17,7 @@ class EnemyObj_Portrait : public EnemyObj
 {
 public:
 	EnemyObj_Portrait(PlayerObj *target, EnemyDifficulty difficulty);
+	void HitEnemy(int damage, Vector2 collisionPt, bool isPlayer) override;
 
 protected:
 	void InitializeEV() override;
@@ -41,7 +42,11 @@ private:
 
 	Action m_action = ACTION_NONE;
 	int m_endPhase = 0;
-	bool m_shakeOn = false;
+	bool m_shake = false;     // Shake: the warning wobble
+	bool m_chasing = false;   // Chasing: awake, spinning after the hero
+	bool m_giant = false;
+	float m_time = 0;
+	void ChasePlayer();
 
 	bool ActionComplete() override
 	{

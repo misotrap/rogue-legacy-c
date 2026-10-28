@@ -3,6 +3,7 @@
 #include "../../Audio/Audio.h"
 #include "../../Text/Loc.h"
 #include "../../platform.h"
+#include "../GameObjects/BreakableObj.h"
 #include "../GameObjects/ChestObj.h"
 #include "../GameObjects/EnemyObjs/EnemyObj.h"
 #include "../GameObjects/EnemyObjs/EnemyObj_LastBoss.h"
@@ -21,6 +22,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 namespace RogueCastle
 {
@@ -383,6 +385,38 @@ namespace RogueCastle
 					fprintf(stderr, "boss: at the door of area %d, boss room %d\n", type, r->LinkedRoom());
 					return true;
 				}
+		}
+
+		/* Dev/test: RL_DEBUG_NEAR=<EnemyType>[,dx] puts the hero dx (default
+		 * -150) beside the first enemy of that type outside the boss rooms;
+		 * RL_DEBUG_NEAR=b<n> beside the n-th breakable. */
+		static const char *debugNear = getenv("RL_DEBUG_NEAR");
+		if (debugNear != nullptr)
+		{
+			const char *arg = debugNear;
+			debugNear = nullptr;
+			bool breakable = arg[0] == 'b';
+			int want = atoi(breakable ? arg + 1 : arg), seen = 0;
+			const char *comma = strchr(arg, ',');
+			float dx = comma != nullptr ? (float) atof(comma + 1) : -150;
+			for (RoomObj *r : level->RoomList())
+			{
+				if (r->Name() == "Boss") continue;
+				DS2DEngine::GameObj *target = nullptr;
+				if (breakable)
+				{
+					for (BreakableObj *b : r->BreakableObjList())
+						if (seen++ == want) { target = b; break; }
+				}
+				else
+					for (EnemyObj *e : r->EnemyList())
+						if (e != nullptr && e->Type == want) { target = e; break; }
+				if (target == nullptr) continue;
+				player->X(target->X() + dx);
+				player->Y(target->Y() - 60);
+				fprintf(stderr, "near: %s at %.0f,%.0f in %s\n", target->SpriteName().c_str(), target->X(), target->Y(), r->Name().c_str());
+				return false;
+			}
 		}
 
 		// The boss door: Up in front of it, while that boss lives

@@ -5,6 +5,10 @@
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
+#include <cstdlib>
+#include <string>
+#include "../../../DS2DEngine/GameObjs/SpriteObj.h"
+#include "../../../Audio/Audio.h"
 
 namespace RogueCastle
 {
@@ -17,6 +21,9 @@ EnemyObj_Portrait::EnemyObj_Portrait(PlayerObj *target, EnemyDifficulty difficul
 	: EnemyObj("EnemyPortrait_Character", target, difficulty)
 {
 	Type = EnemyType::Portrait;
+	/* A random painting in the frame (EnemyObj_Portrait.cs constructor) */
+	if (NumChildren() > 0)
+		GetChildAt(0)->ChangeSprite("FramePicture" + std::to_string((1 + rand() % 16)) + "_Sprite");
 }
 
 /* The difficulty blocks of InitializeEV only differ by their EV names
@@ -52,6 +59,16 @@ void EnemyObj_Portrait::InitializeOne(EnemyDifficulty difficulty)
 		EngageRadius = EnemyEV::Portrait_Miniboss_EngageRadius;
 		ProjectileDamage = Damage;
 		KnockBack = Vector2(EnemyEV::Portrait_Miniboss_KnockBack.X, EnemyEV::Portrait_Miniboss_KnockBack.Y);
+		/* InitializeLogic: the giant portrait and its painting */
+		if (NumChildren() > 0 && !m_giant)
+		{
+			m_giant = true;
+			GetChildAt(0)->ChangeSprite("GiantPortrait_Sprite");
+			Scale(Vector2(2, 2));
+			SpriteObj *pic = new SpriteObj("Portrait" + std::to_string((rand() % 8)) + "_Sprite");
+			pic->Scale(Vector2(0.5f, 0.5f));   // OverrideParentScale
+			AddChild(pic);
+		}
 		break;
 	case EXPERT:
 		Name = EnemyEV::Portrait_Expert_Name;
@@ -147,18 +164,20 @@ void EnemyObj_Portrait::InitializeEV()
 
 void EnemyObj_Portrait::FireSpread()
 {
-	/* The ghost projectile spreads: ThrowProjectiles fires the
-	 * diagonals (135/45/-45/-135), the advanced and expert sets the
-	 * cross (0/90/-90/180). */
-	static const float diagonals[4] = { 135, 45, -45, -135 };
+	/* ThrowAdvancedProjectiles (90/-90), ThrowExpertProjectiles (the
+	 * cross), ThrowProjectiles (the miniboss's diagonals) */
+	static const float advanced[2] = { 90, -90 };
 	static const float cross[4] = { 0, 90, -90, 180 };
-	const float *angles = DifficultyType == MINIBOSS ? diagonals : cross;
-	for (int i = 0; i < 4; i++)
+	static const float diagonals[4] = { 135, 45, -45, -135 };
+	const float *angles = DifficultyType == MINIBOSS ? diagonals : DifficultyType == EXPERT ? cross : advanced;
+	int count = DifficultyType == ADVANCED ? 2 : 4;
+	Audio::PlaySound("FairyAttack1");
+	for (int i = 0; i < count; i++)
 	{
 		float rad = angles[i] * PI / 180.0f;
 		m_levelScreen->FireProjectile("GhostProjectile_Sprite", Position(),
 		                              Vector2(cosf(rad), sinf(rad)), ProjectileSpeed,
-		                              (int) ProjectileDamage, ProjectileScale, false, this);
+		                              (int) Damage, ProjectileScale, false, this);
 	}
 }
 
@@ -172,22 +191,15 @@ void EnemyObj_Portrait::StartAction(Action action)
 	switch (action)
 	{
 	case ACTION_SHAKE:
-		/* basicWarningLS (line 186): shake for a second, rest a second
-		 * (the visual offset is not ported). */
+		/* basicWarningLS: shake for a second, rest a second */
 		CurrentSpeed(0);
-		m_shakeOn = true;
+		m_shake = true;
 		m_actionTimer = 1.0f;
 		break;
 	case ACTION_CHASE:
-		/* moveTowardsLS (line 194): fly at the player; the higher
-		 * difficulties open with the spread (ThrowXProjectiles). */
-		ChangeSprite("EnemyPortrait_Character");
-		PlayAnimation(true);
+		/* moveTowards*LS: fly at the hero, then (above basic) fire */
 		CurrentSpeed(Speed);
-		if (DifficultyType != BASIC)
-			FireSpread();
-		m_actionTimer = DifficultyType == MINIBOSS ? 1.25f
-		              : (DifficultyType == ADVANCED || DifficultyType == EXPERT ? 1.75f : 1.0f);
+		m_actionTimer = DifficultyType == MINIBOSS ? 1.25f : DifficultyType == BASIC ? 1.0f : 1.75f;
 		break;
 	default:
 		break;
@@ -201,9 +213,9 @@ void EnemyObj_Portrait::UpdateAction()
 	case ACTION_SHAKE:
 		if (m_actionTimer <= 0)
 		{
-			if (m_shakeOn)
+			if (m_shake)
 			{
-				m_shakeOn = false;
+				m_shake = false;
 				m_actionTimer = 1.0f;
 			}
 			else
@@ -211,7 +223,6 @@ void EnemyObj_Portrait::UpdateAction()
 		}
 		break;
 	case ACTION_CHASE:
-		/* Re-aim at the player (ChaseLogicAction). */
 		{
 			float dx = m_target->X() - X();
 			float dy = m_target->Y() - Y();
@@ -219,9 +230,10 @@ void EnemyObj_Portrait::UpdateAction()
 			if (len > 1)
 				Heading(Vector2(dx / len, dy / len));
 		}
-		if (m_actionTimer <= 0)
+		if (m_actionTimer <= 0 && m_actionPhase == 0)
 		{
-			CurrentSpeed(0);
+			if (DifficultyType != BASIC)
+				FireSpread();
 			m_actionPhase = 1;
 		}
 		break;
@@ -230,27 +242,69 @@ void EnemyObj_Portrait::UpdateAction()
 	}
 }
 
+void EnemyObj_Portrait::ChasePlayer()
+{
+	/* Hit, touched or approached: the portrait wakes up for good */
+	if (m_chasing)
+		return;
+	m_actionActive = false;
+	m_shake = false;
+	m_chasing = true;
+}
+
+void EnemyObj_Portrait::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
+{
+	ChasePlayer();
+	EnemyObj::HitEnemy(damage, collisionPt, isPlayer);
+}
+
 void EnemyObj_Portrait::UpdateEnemy(GameTime *gameTime)
 {
-	(void) gameTime;
+	float dt = (float) gameTime->ElapsedGameTime;
+	m_time += dt;
+	if (!IsKilled && Bounds().Intersects(m_target->Bounds()))
+		ChasePlayer();   // CollisionResponse with the player
+
+	if (!m_chasing)
+	{
+		if (DifficultyType != MINIBOSS)
+			Rotation(m_shake ? sinf(m_time * 15) * 2 : 0);
+	}
+	else
+	{
+		// Spinning, with its true face (ChangePortrait)
+		Rotation(Rotation() + (DifficultyType == MINIBOSS ? 420 : 600) * dt);
+		std::string face = "EnemyPortrait" + std::to_string((int) DifficultyType) + "_Sprite";
+		if (NumChildren() > 0 && GetChildAt(0)->SpriteName() != face)
+		{
+			Audio::PlaySound("FinalBoss_St2_BlockLaugh");
+			GetChildAt(0)->ChangeSprite(face);
+			if (DifficultyType == MINIBOSS && NumChildren() > 1)
+				GetChildAt(1)->Visible(false);
+		}
+	}
 	UpdateAction();
 }
 
 void EnemyObj_Portrait::RunBasicLogic()
 {
-	/* EnemyObj_Portrait.cs line 283: shake when the player is engaged,
-	 * fly after them when they wander away. */
+	/* EnemyObj_Portrait.cs line 283: close by, it chases; in sight, it
+	 * shakes a warning; once chasing, it keeps flying at the hero */
+	if (m_chasing)
+	{
+		StartAction(ACTION_CHASE);
+		return;
+	}
 	switch (State)
 	{
 	case STATE_MELEE_ENGAGE:
 	case STATE_PROJECTILE_ENGAGE:
-	case STATE_ENGAGE:
-		if (!m_actionActive || m_action == ACTION_CHASE)
-			StartAction(ACTION_SHAKE);
+		ChasePlayer();
 		break;
-	default: /* WANDER */
-		if (!m_actionActive || m_action == ACTION_SHAKE)
-			StartAction(ACTION_CHASE);
+	case STATE_ENGAGE:
+		StartAction(ACTION_SHAKE);
+		break;
+	default:
 		break;
 	}
 }

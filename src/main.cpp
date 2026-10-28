@@ -2,6 +2,7 @@
  * room with its walls, the player walking, jumping, colliding, and room
  * transitions through the door openings (see AGENTS.md).
  */
+#include <cstdlib>
 #include "RogueCastle/Game.h"
 #include "RogueCastle/GameFlow.h"
 #include "gfx.h"
@@ -23,7 +24,9 @@ int main(int argc, char **argv)
 
 	/* Heir choice -> castle -> death -> manor -> heir choice (GameFlow) */
 	RogueCastle::GameFlow flow;
-	if (!flow.Init(assets, "save.txt"))
+	/* Dev/test: RL_SAVE=<file> plays on another save (tests leave the real one alone) */
+	const char *savePath = getenv("RL_SAVE") != nullptr ? getenv("RL_SAVE") : "save.txt";
+	if (!flow.Init(assets, savePath))
 		fprintf(stderr, "some content is missing (see assets/)\n");
 
 	last = plat_time();

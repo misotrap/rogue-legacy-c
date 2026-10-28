@@ -36,7 +36,7 @@ public:
 	int FindLabelIndex(const std::string &label) const override;
 	bool IsAnimating() const override { return _animate; }
 	bool IsLooping() const override { return _loop; }
-	int CurrentFrame() const override { return _frameIndex; }
+	int CurrentFrame() const override { return _currentFrameIndex / AnimationSpeed(); }   /* SpriteObj.cs line 502 */
 	int TotalFrames() const override;
 	void AnimationSpeed(int value) { m_hackFrameRate = value; }
 	int AnimationSpeed() const override;
