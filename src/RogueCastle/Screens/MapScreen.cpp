@@ -51,6 +51,7 @@ namespace RogueCastle
 		delete m_door;
 		delete m_boss;
 		delete m_player;
+		delete m_miniBG;
 		for (SpriteObj *s : m_rooms) delete s;
 	}
 
@@ -67,6 +68,9 @@ namespace RogueCastle
 		m_player->AnimationDelay(1 / 30.0f);
 		m_player->PlayAnimation(true);
 		m_rooms.assign(100, nullptr);
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite("MinimapBG_Sprite"))
+			SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "uiExtraSpritesheet");
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("MinimapBG_Sprite")) m_miniBG = Make("MinimapBG_Sprite");
 		m_camera.Position(Vector2(SCREEN_W / 2, SCREEN_H / 2));
 		m_camera.Zoom(1.0f);
 		return ok;
@@ -130,64 +134,8 @@ namespace RogueCastle
 		}
 
 		// Map pixel (mx, my) -> screen: the player sits in the middle
-		const float ox = SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX;
-		const float oy = SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY;
-		m_door->TextureColor(Color(255, 255, 255));
-
-		for (size_t i = 0; i < castle.rooms.size() && i < m_visited.size(); i++)
-		{
-			if (!m_visited[i]) continue;
-			const Levels::PlacedRoom &r = castle.rooms[i];
-			SpriteObj *s = RoomSprite(r.width / 1320, r.height / 720);
-			if (s == nullptr) continue;   // too large a room is not added
-			float sw = s->SpriteRect().Width, sh = s->SpriteRect().Height;
-			s->Scale(Vector2((sw - 3) / sw, (sh - 3) / sh));
-			s->Position(Vector2(ox + r.x / SCALE_X, oy + r.y / SCALE_Y));
-			s->TextureColor(AreaColour(r.levelType));
-			s->Draw(&m_camera);
-
-			for (const Levels::Door &d : r.doors)
-			{
-				if (r.name == "CastleEntrance" && d.pos == Levels::DoorPos::Left) continue;
-				float dw = m_door->SpriteRect().Width;
-				switch (d.pos)
-				{
-				case Levels::DoorPos::Left:
-					m_door->Rotation(0);
-					m_door->Position(Vector2(ox + r.x / SCALE_X - dw + 2, oy + d.y / SCALE_Y - 2));
-					break;
-				case Levels::DoorPos::Right:
-					m_door->Rotation(0);
-					m_door->Position(Vector2(ox + r.Right() / SCALE_X - 5, oy + d.y / SCALE_Y - 2));
-					break;
-				case Levels::DoorPos::Bottom:
-					m_door->Rotation(-90);
-					m_door->Position(Vector2(ox + d.x / SCALE_X, oy + (d.y + d.height) / SCALE_Y + 2));
-					break;
-				case Levels::DoorPos::Top:
-					m_door->Rotation(-90);
-					m_door->Position(Vector2(ox + d.x / SCALE_X, oy + d.y / SCALE_Y + 2));
-					break;
-				default:
-					continue;
-				}
-				m_door->Draw(&m_camera);
-			}
-
-			if (r.name == "EntranceBoss")
-			{
-				m_boss->Position(Vector2(ox + (r.x + r.width / 2.0f) / SCALE_X - m_boss->Width() / 2 - 1,
-					oy + (r.y + r.height / 2.0f) / SCALE_Y - m_boss->Height() / 2 - 2));
-				m_boss->Draw(&m_camera);
-			}
-		}
-
-		// Player icon (the original blinks it)
-		if (((int) (m_time * 4)) % 2 == 0)
-		{
-			m_player->Position(Vector2(ox + m_playerX / SCALE_X - 4, oy + m_playerY / SCALE_Y - 4));
-			m_player->Draw(&m_camera);
-		}
+		DrawRooms(castle, SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX,
+			SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY, 1);
 
 		// Help texts at the bottom
 		std::string close = WithButton(Text::Loc::Get("LOC_ID_MAP_SCREEN_1_NEW"), "[Input:9]", "SELECT");
@@ -195,5 +143,89 @@ namespace RogueCastle
 		m_font.DrawOutlined(frame, Text::Loc::Get("LOC_ID_MAP_SCREEN_3"), SCREEN_W / 2, SCREEN_H - 70, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
 		m_font.DrawOutlined(frame, centre.c_str(), SCREEN_W / 2, SCREEN_H - 50, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
 		m_font.DrawOutlined(frame, close.c_str(), SCREEN_W / 2, SCREEN_H - 30, 0.26f, GOLD, BLACK, 1, Text::Align::Centre);
+	}
+	// MapObj.Draw: the visited rooms in their area colours, their doors, the
+	// boss icon and the blinking player icon. Map pixel p -> screen o + p * k
+	// (k = 1 for the map screen, 0.5 for the minimap).
+	void MapScreen::DrawRooms(const Levels::Castle &castle, float ox, float oy, float k)
+	{
+		m_door->TextureColor(Color(255, 255, 255));
+		m_door->Scale(Vector2(k, k));
+		m_boss->Scale(Vector2(k, k));
+		m_player->Scale(Vector2(k, k));
+		for (size_t i = 0; i < castle.rooms.size() && i < m_visited.size(); i++)
+		{
+			if (!m_visited[i]) continue;
+			const Levels::PlacedRoom &r = castle.rooms[i];
+			SpriteObj *s = RoomSprite(r.width / 1320, r.height / 720);
+			if (s == nullptr) continue;   // too large a room is not added
+			float sw = s->SpriteRect().Width, sh = s->SpriteRect().Height;
+			s->Scale(Vector2((sw - 3) / sw * k, (sh - 3) / sh * k));
+			s->Position(Vector2(ox + r.x / SCALE_X * k, oy + r.y / SCALE_Y * k));
+			s->TextureColor(AreaColour(r.levelType));
+			s->Draw(&m_camera);
+
+			for (const Levels::Door &d : r.doors)
+			{
+				if (r.name == "CastleEntrance" && d.pos == Levels::DoorPos::Left) continue;
+				float dw = m_door->SpriteRect().Width;
+				float mx, my;   // map pixels
+				switch (d.pos)
+				{
+				case Levels::DoorPos::Left: m_door->Rotation(0); mx = r.x / SCALE_X - dw + 2; my = d.y / SCALE_Y - 2; break;
+				case Levels::DoorPos::Right: m_door->Rotation(0); mx = r.Right() / SCALE_X - 5; my = d.y / SCALE_Y - 2; break;
+				case Levels::DoorPos::Bottom: m_door->Rotation(-90); mx = d.x / SCALE_X; my = (d.y + d.height) / SCALE_Y + 2; break;
+				case Levels::DoorPos::Top: m_door->Rotation(-90); mx = d.x / SCALE_X; my = d.y / SCALE_Y + 2; break;
+				default: continue;
+				}
+				m_door->Position(Vector2(ox + mx * k, oy + my * k));
+				m_door->Draw(&m_camera);
+			}
+
+			if (r.name == "EntranceBoss")
+			{
+				m_boss->Position(Vector2(ox + ((r.x + r.width / 2.0f) / SCALE_X - m_boss->SpriteRect().Width / 2.0f - 1) * k,
+					oy + ((r.y + r.height / 2.0f) / SCALE_Y - m_boss->SpriteRect().Height / 2.0f - 2) * k));
+				m_boss->Draw(&m_camera);
+			}
+		}
+
+		// Player icon (the original blinks it)
+		if (((int) (m_time * 4)) % 2 == 0)
+		{
+			m_player->Position(Vector2(ox + (m_playerX / SCALE_X - 4) * k, oy + (m_playerY / SCALE_Y - 4) * k));
+			m_player->Draw(&m_camera);
+		}
+	}
+
+	// The minimap (ProceduralLevelScreen: MapObj in Rectangle(1320 - 250,
+	// 50, 200, 100) over MinimapBG): half size on the 640x480 screen, the
+	// player in the middle, clipped to the frame through a scratch buffer.
+	void MapScreen::DrawMini(uint32_t *frame, const Levels::Castle &castle, float playerX, float playerY, double dt)
+	{
+		const int X = (1320 - 250 - 660) / 2 + SCREEN_W / 2, Y = (50 - 360) / 2 + SCREEN_H / 2, W = 100, H = 50;
+		const uint32_t KEY = 0xFF010203u;
+		m_time += dt;
+		m_playerX = playerX;
+		m_playerY = playerY;
+		gfx_begin(frame);
+		if (m_miniBG != nullptr)
+		{
+			m_miniBG->Position(Vector2((float) X, (float) Y));
+			m_miniBG->Scale(Vector2(0.5f, 0.5f));
+			m_miniBG->Draw(&m_camera);
+		}
+		m_scratch.resize((size_t) SCREEN_W * SCREEN_H);
+		for (int y = Y; y < Y + H; y++)
+			for (int x = X; x < X + W; x++) m_scratch[(size_t) y * SCREEN_W + x] = KEY;
+		gfx_begin(m_scratch.data());
+		DrawRooms(castle, X + W / 2.0f - playerX / SCALE_X * 0.5f, Y + H / 2.0f - playerY / SCALE_Y * 0.5f, 0.5f);
+		gfx_begin(frame);
+		for (int y = Y; y < Y + H; y++)
+			for (int x = X; x < X + W; x++)
+			{
+				uint32_t c = m_scratch[(size_t) y * SCREEN_W + x];
+				if (c != KEY) frame[(size_t) y * SCREEN_W + x] = c;
+			}
 	}
 }

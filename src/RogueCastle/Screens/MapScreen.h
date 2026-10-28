@@ -31,6 +31,8 @@ namespace RogueCastle
 		// false once closed
 		bool Update(uint32_t buttons, uint32_t pressed, double dt);
 		void Draw(uint32_t *frame, const Levels::Castle &castle);
+		// The minimap in the top right corner of the play area
+		void DrawMini(uint32_t *frame, const Levels::Castle &castle, float playerX, float playerY, double dt);
 
 	private:
 		std::vector<bool> m_visited;
@@ -42,6 +44,10 @@ namespace RogueCastle
 		float m_offsetX = 0, m_offsetY = 0;   // map pan, in map pixels
 		double m_time = 0;
 
+		DS2DEngine::SpriteObj *m_miniBG = nullptr;
+		std::vector<uint32_t> m_scratch;   // the minimap is drawn here, then clipped
+
 		DS2DEngine::SpriteObj *RoomSprite(int w, int h);
+		void DrawRooms(const Levels::Castle &castle, float ox, float oy, float k);
 	};
 }

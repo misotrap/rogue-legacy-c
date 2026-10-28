@@ -7,7 +7,7 @@ convert_assets.py (stdlib only):
 
 Writes assets/uiExtraSpritesheet.tex/.spr from miscSpritesheet: the
 dialogue box, the choice highlight, the stat plate, the talk bubbles, the
-death screen spotlight and ghost. Same sprite and character names as the
+death screen spotlight and ghost, the minimap frame. Same sprite and character names as the
 original sheet, so the code just loads the small sheet instead.
 """
 import os
@@ -18,7 +18,7 @@ SOURCE = 'miscSpritesheet'
 OUT = 'uiExtraSpritesheet'
 SPRITES = ['DialogBox_Sprite', 'DialogueChoiceHighlight_Sprite', 'GameOverStatPlate_Sprite',
            'ContinueTextIcon_Sprite', 'UpArrowBubble_Sprite', 'ExclamationSquare_Sprite',
-           'GameOverSpotlight_Sprite', 'PlayerGhost_Sprite']
+           'GameOverSpotlight_Sprite', 'PlayerGhost_Sprite', 'MinimapBG_Sprite']
 CHARACTERS = ['DialogBox_Character', 'GameOverStatPlate_Character']
 WIDTH = 1024
 

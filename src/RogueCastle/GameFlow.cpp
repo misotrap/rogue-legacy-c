@@ -315,6 +315,16 @@ namespace RogueCastle
 			if (m_level->Player() != nullptr)
 				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
 			if (m_deathTimer > 0) m_lastFrame.assign(frame, frame + (size_t) SCREEN_W * SCREEN_H);
+			/* The minimap (not in the courtyard nor the boss rooms) */
+			if (m_level->Player() != nullptr && !InCourtyard() && !m_mapOpen)
+			{
+				const Levels::PlacedRoom *room = nullptr;
+				float px = m_level->Player()->X(), py = m_level->Player()->Y();
+				for (const Levels::PlacedRoom &r : m_level->Castle().rooms)
+					if (px >= r.x && px < r.Right() && py >= r.y && py < r.Bottom()) room = &r;
+				if (room == nullptr || (room->name != "Boss" && room->name != "ChallengeBoss"))
+					m_map.DrawMini(frame, m_level->Castle(), px, py, 1 / 60.0);
+			}
 			if (m_dialogue.IsOpen()) m_dialogue.Draw(frame);
 			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
 			else if (m_paused)
