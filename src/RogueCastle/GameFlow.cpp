@@ -133,6 +133,13 @@ namespace RogueCastle
 		m_level->Player()->CurrentMana =
 			m_save.CurrentMana > 0 && m_save.CurrentMana <= maxMana
 			? (float) m_save.CurrentMana : maxMana;
+		/* Dev/test: RL_DEBUG_TRAIT=<t1>[,<t2>] from the start (also below) */
+		if (const char *debugTrait = getenv("RL_DEBUG_TRAIT"))
+		{
+			m_save.hero.trait1 = (uint8_t) atoi(debugTrait);
+			const char *comma = strchr(debugTrait, ',');
+			m_save.hero.trait2 = comma != nullptr ? (uint8_t) atoi(comma + 1) : 0;
+		}
 		/* Dev/test: RL_DEBUG_CHEST opens a chest (index, optional p/s). */
 		{ GetItem::Reward r; while (GetItem::Pop(r)) {} }
 		const char *debugChest = getenv("RL_DEBUG_CHEST");
@@ -453,6 +460,23 @@ namespace RogueCastle
 			GameTime gameTime(dt);
 			Game::GlobalInput.Update(blocked ? 0 : buttons);
 			if (!m_bossRoom.Cutscene()) m_level->Update(&gameTime);
+			/* Clonus (ProceduralLevelScreen.cs line 1603): every 12-35 s,
+			 * the screen shakes for 1-1.5 s (ShakeScreen(1), UpdateShake) */
+			if (m_save.hero.HasTrait(TraitType::Clonus))
+			{
+				auto randomFloat = [](float a, float b) { return a + (b - a) * (float) rand() / (float) RAND_MAX; };
+				if (m_clonusTimer <= 0 && m_shakeTimer <= 0) m_clonusTimer = randomFloat(GameEV::TRAIT_CLONUS_MIN, GameEV::TRAIT_CLONUS_MAX);
+				m_clonusTimer -= (float) dt;
+				if (m_clonusTimer <= 0 && m_shakeTimer <= 0)
+					m_shakeTimer = randomFloat(1, 1.5f);
+				if (m_shakeTimer > 0)
+				{
+					m_shakeTimer -= (float) dt;
+					DS2DEngine::Camera2D *cam = m_level->Camera();
+					cam->X(cam->X() + (rand() % 2 ? 1 : -1) * randomFloat(0, 1) * 2);
+					cam->Y(cam->Y() + (rand() % 2 ? 1 : -1) * randomFloat(0, 1) * 2);
+				}
+			}
 			/* Dev/test: RL_DEBUG_SPELL=<SpellType> casts that spell once
 			 * after the first update (so the current room is known);
 			 * the hero's spell is overridden. */
@@ -545,6 +569,14 @@ namespace RogueCastle
 			m_level->Draw(m_level->Camera());
 			if (InCourtyard()) m_court.Draw(m_level->Camera(), m_save.skills);
 			m_bossRoom.DrawWorld(m_level->Camera());
+			const bool glasses = m_save.SpecialItem == 8;   // SpecialItemType.Glasses
+			if (m_level->Player() != nullptr)
+			{
+				DS2DEngine::Camera2D *cam = m_level->Camera();
+				bool dungeon = m_level->CurrentRoom() != nullptr && m_level->CurrentRoom()->LevelType() == Levels::LevelType::DUNGEON;
+				m_traitEffects.World(frame, m_save.hero, glasses, dungeon,
+					(m_level->Player()->X() - cam->X()) * 0.5f + SCREEN_W / 2, (m_level->Player()->Y() - cam->Y()) * 0.5f + SCREEN_H / 2);
+			}
 			HUDValues v;
 			/* The hero's real vitals (PlayerObj health and mana). */
 			if (m_level->Player() != nullptr)
@@ -573,6 +605,8 @@ namespace RogueCastle
 				if (room == nullptr || (room->name != "Boss" && room->name != "ChallengeBoss"))
 					m_map.DrawMini(frame, m_level->Castle(), px, py, 1 / 60.0);
 			}
+			m_traitEffects.Screen(frame, m_save.hero, glasses, m_level->Camera(), drawElapsed);
+			m_dialogue.Dyslexia = m_save.hero.HasTrait(TraitType::Dyslexia);
 			if (m_dialogue.IsOpen()) m_dialogue.Draw(frame);
 			m_bossRoom.Draw(frame);
 			if (m_getItemOpen) m_getItem.Draw(frame);

@@ -1,5 +1,7 @@
 /* Port of RogueCastle/src/Screens/ProceduralLevelScreen.cs (subset). */
 #include "ProceduralLevelScreen.h"
+#include "../Types/EnemyType.h"
+#include "../Types/TraitType.h"
 #include "../EVs/GlobalEV.h"
 #include "../Game.h"
 #include "../GameObjects/EnemyObjs/EnemyObj.h"
@@ -506,11 +508,15 @@ void ProceduralLevelScreen::CheckForRoomTransition()
 				m_projectiles.erase(m_projectiles.begin() + i);
 			}
 			if (m_currentRoom != nullptr)
+			{
+				m_currentRoom->ClearTempEnemies(m_physicsManager);
 				for (EnemyObj *enemy : m_currentRoom->EnemyList())
 					enemy->ResetState();
+			}
 			m_currentRoom = roomObj;
 			for (EnemyObj *enemy : roomObj->EnemyList())
 				enemy->ResetState();
+			SpawnDementiaEnemy();
 			m_player->RoomTransitionReset();
 			if (getenv("RL_DEBUG_TRANSITIONS") != nullptr)
 				fprintf(stderr, "room transition -> %s (%.0f, %.0f)\n",
@@ -610,12 +616,25 @@ void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
 void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,
                                            Vector2 heading, float speed, int damage,
                                            Vector2 scale, bool weighted, EnemyObj *source,
-                                           float lifeSpan)
+                                           float lifeSpan, bool collidesWithTerrain)
 {
 	ProjectileObj *proj = new ProjectileObj(spriteName, position, heading, speed,
 	                                        damage, scale, weighted);
 	proj->Source = source;
+	proj->Demented = source != nullptr && source->Demented;
 	proj->LifeSpan = lifeSpan;
+	/* ProjectileManager.cs line 109: the sprite points along the shot */
+	proj->Rotation(atan2f(heading.Y, heading.X) * 180.0f / (float) M_PI);
+	/* CollidesWithTerrain: a terrain box, destroyed by the walls */
+	if (collidesWithTerrain)
+	{
+		proj->CollidesWithTerrainFlag = true;
+		proj->DestroysWithTerrain = true;
+		proj->UpdateCollisionBoxes();
+		Rectangle b = proj->RelativeBounds();
+		proj->AddCollisionBox(b.X, b.Y, b.Width, b.Height, ::Consts::TERRAIN_HITBOX);
+		proj->UpdateTerrainBox();
+	}
 	/* ProjectileManager.cs line 139: the launch speed goes into the
 	 * acceleration, so the weighted ones (bones) fly in an arc */
 	if (weighted)
@@ -718,3 +737,46 @@ void ProceduralLevelScreen::StopTimeStop()
 }
 
 } // namespace RogueCastle
+
+namespace RogueCastle
+{
+void ProceduralLevelScreen::SpawnDementiaEnemy()
+{
+	/* ProceduralLevelScreen.cs line 1382: entering an ordinary room, a 20%
+	 * chance of an imaginary enemy where a real one stands (the flying or
+	 * walking kind like it), harmless and unkillable */
+	const RoomObj *room = m_currentRoom;
+	if (room == nullptr || m_player == nullptr || m_player->Stats() == nullptr
+	    || !m_player->Stats()->hero.HasTrait(TraitType::Dementia))
+		return;
+	static const char *const skip[] = { "Start", "Tutorial", "Ending", "CastleEntrance", "Bonus", "Throne", "Secret", "Boss", "ChallengeBoss" };
+	for (const char *name : skip)
+		if (room->Name() == name) return;
+	/* Dev/test: RL_DEBUG_DEMENTIA=1 spawns one in every room */
+	bool always = getenv("RL_DEBUG_DEMENTIA") != nullptr;
+	if (room->LevelType() == Levels::LevelType::NONE || (!always && rand() % 1000 >= (int) (GameEV::TRAIT_DEMENTIA_SPAWN_CHANCE * 1000)))
+		return;
+	std::vector<EnemyObj *> candidates;
+	for (EnemyObj *e : room->EnemyList())
+		if (e != nullptr && !e->IsKilled && e->Type != EnemyType::Turret && e->Type != EnemyType::SpikeTrap
+		    && e->Type != EnemyType::Portrait && e->Type != EnemyType::Eyeball && e->Type != EnemyType::Starburst)
+			candidates.push_back(e);
+	if (candidates.empty())
+		return;
+	EnemyObj *model = candidates[rand() % candidates.size()];
+	uint8_t type = model->IsWeightedFlag
+		? LevelEV::DEMENTIA_GROUND_LIST[rand() % (sizeof(LevelEV::DEMENTIA_GROUND_LIST))]
+		: LevelEV::DEMENTIA_FLIGHT_LIST[rand() % (sizeof(LevelEV::DEMENTIA_FLIGHT_LIST))];
+	EnemyObj *enemy = m_currentRoom->SpawnTempEnemy(type, model->Position(), m_player);
+	if (enemy == nullptr)
+		return;
+	enemy->Demented = true;
+	enemy->NonKillable = true;
+	enemy->SetPlayerTarget(m_player);
+	enemy->SetLevelScreen(this);
+	enemy->SetTerrain(&m_allTerrain);
+	m_physicsManager.AddObject(enemy);
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+		fprintf(stderr, "dementia: enemy %d in %s\n", (int) type, room->Name().c_str());
+}
+}

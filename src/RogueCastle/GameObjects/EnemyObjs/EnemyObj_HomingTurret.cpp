@@ -113,7 +113,7 @@ void EnemyObj_HomingTurret::UpdateEnemy(GameTime *gameTime)
 		m_levelScreen->FireProjectile("HomingProjectile_Sprite",
 		                              Position() + Vector2(flipped ? -35.0f : 35.0f, 0), heading,
 		                              ProjectileSpeed, (int) Damage,
-		                              ProjectileScale, false, this);
+		                              ProjectileScale, false, this, 10, true);   /* Lifespan 10, CollidesWithTerrain */
 		m_actionTimer = m_fireDelay;
 	}
 }

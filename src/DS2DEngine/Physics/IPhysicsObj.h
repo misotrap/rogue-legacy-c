@@ -58,6 +58,8 @@ public:
 	/* The enemy was damaged by this object: the projectiles that die
 	 * with their enemy destroy themselves here. */
 	virtual void OnEnemyHit() {}
+	/* The Dementia trait's imaginary enemies (and their shots) hurt no one */
+	virtual bool IsHallucination() const { return false; }
 };
 
 } // namespace DS2DEngine

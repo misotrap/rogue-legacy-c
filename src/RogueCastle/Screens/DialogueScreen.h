@@ -28,6 +28,9 @@ namespace RogueCastle
 		// dialogue shown after the last page ("ConfirmTest1"), or nullptr
 		bool Open(const char *name, bool isFemale, const char *choice = nullptr);
 		bool IsOpen() const { return m_entry != nullptr; }
+		// The Dyslexia trait: the letters inside the words are shuffled
+		// (TextObj.RandomizeSentence), once per page
+		bool Dyslexia = false;
 		Result Update(uint32_t pressed, double dt);
 		void Draw(uint32_t *frame);
 
@@ -38,6 +41,8 @@ namespace RogueCastle
 		const Dialogue::Entry *m_entry = nullptr, *m_choice = nullptr;
 		bool m_female = false, m_choosing = false;
 		int m_page = 0, m_selected = 0;
+		int m_scrambledPage = -1;
+		std::string m_scrambled;
 		double m_time = 0;
 
 		const char *Text(const char *id) const;

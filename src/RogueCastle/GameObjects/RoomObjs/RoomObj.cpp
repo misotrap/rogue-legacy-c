@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/RoomObjs/RoomObj.cs (subset). */
 #include "RoomObj.h"
+#include <algorithm>
 #include "../../../DS2DEngine/GameObjs/SpriteObj.h"
 #include "../../../SpriteSystem/SpriteLibrary.h"
 #include "../EnemyObjs/EnemyObj.h"
@@ -372,6 +373,35 @@ void RoomObj::Draw(Camera2D *camera)
 	/* Breakables and decorations. */
 	for (DS2DEngine::GameObj *obj : m_drawableList)
 		obj->Draw(camera);
+}
+
+EnemyObj *RoomObj::SpawnTempEnemy(uint8_t type, Vector2 position, PlayerObj *player)
+{
+	Levels::ObjData data;
+	data.enemyType = type;
+	data.difficulty = "BASIC";
+	EnemyObj *enemy = CreateEnemy(data, player);
+	if (enemy == nullptr)
+		return nullptr;
+	enemy->X(position.X);
+	enemy->Y(position.Y);
+	enemy->Initialize();
+	m_tempEnemies.push_back(enemy);
+	m_enemyList.push_back(enemy);
+	m_drawableList.push_back(enemy);
+	return enemy;
+}
+
+void RoomObj::ClearTempEnemies(DS2DEngine::PhysicsManager &physics)
+{
+	for (EnemyObj *enemy : m_tempEnemies)
+	{
+		physics.RemoveObject(enemy);
+		m_enemyList.erase(std::remove(m_enemyList.begin(), m_enemyList.end(), enemy), m_enemyList.end());
+		m_drawableList.erase(std::remove(m_drawableList.begin(), m_drawableList.end(), enemy), m_drawableList.end());
+		delete enemy;
+	}
+	m_tempEnemies.clear();
 }
 
 } // namespace RogueCastle

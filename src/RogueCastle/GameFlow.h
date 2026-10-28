@@ -24,6 +24,7 @@
 #include "Types/TraitType.h"
 #include "Screens/DialogueScreen.h"
 #include "Screens/OptionsScreen.h"
+#include "Screens/TraitEffects.h"
 #include "Screens/ManorScreen.h"
 #include "Screens/ProceduralLevelScreen.h"
 
@@ -70,6 +71,8 @@ namespace RogueCastle
 		bool m_mapOpen = false;   /* Select in the castle */
 		GetItemScreen m_getItem;
 		BossRoom m_bossRoom;
+		TraitEffects m_traitEffects;
+		float m_clonusTimer = 0, m_shakeTimer = 0;   // Clonus
 		CreditsScreen m_credits;
 		bool m_getItemOpen = false;   /* a chest reward on screen */
 		PauseScreen m_pause;

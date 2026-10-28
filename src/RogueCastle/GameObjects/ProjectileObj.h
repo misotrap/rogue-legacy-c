@@ -72,6 +72,8 @@ public:
 
 	/* The source (for the damage return and the debug); not owned. */
 	class EnemyObj *Source = nullptr;
+	bool Demented = false;   /* fired by a hallucination */
+	bool IsHallucination() const override { return Demented; }
 	/* The player who cast the spell; not owned. */
 	class PlayerObj *SourcePlayer = nullptr;
 

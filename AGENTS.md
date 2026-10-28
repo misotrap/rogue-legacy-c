@@ -315,8 +315,13 @@ the map/minimap and the options; the game code below is yours.
    (Screens/GetItemScreen.h) for a blueprint, rune or stat drop, and
    GameFlow shows it. Not yet: SpecialItem, Spell, FountainPiece.
 5. **Spells and class powers**: the spell projectiles (SpellType), mana,
-   the class specials (barbarian shout, knight block...), the traits'
-   gameplay effects (gigantism, dwarfism, vertigo...).
+   the class specials (barbarian shout, knight block...). The traits are
+   done (Claude): screen effects in Screens/TraitEffects (dungeon/Glaucoma
+   darkness, near/far sighted blur, colour blind, nostalgic), Clonus shake
+   in GameFlow, Dyslexia in DialogueScreen, Dementia hallucinations
+   (ProceduralLevelScreen::SpawnDementiaEnemy, EnemyObj::Demented). Test
+   with RL_DEBUG_TRAIT=<t1>[,<t2>], RL_DEBUG_DEMENTIA=1, RL_DEBUG_NEAR=
+   <EnemyType>[,dx] or b<n> (beside the n-th breakable), RL_SAVE=<file>.
 6. **Bosses**: the boss rooms are done (Claude, Rooms/BossRoom.cpp): Up at
    the EntranceBoss door, the intro and boss title, the *BossBeaten flag,
    the boss chest (GetItem) and the teleport back. Test with

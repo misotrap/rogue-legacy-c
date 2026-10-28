@@ -1,5 +1,13 @@
 #include "DialogueScreen.h"
 
+#include <string>
+
+#include <cstdlib>
+
+#include <vector>
+
+#include <cctype>
+
 #include "../../Audio/Audio.h"
 #include "../../SpriteSystem/SpriteLibrary.h"
 #include "../../Text/Loc.h"
@@ -73,8 +81,39 @@ namespace RogueCastle
 		return strcmp(t, id) == 0 ? "" : t;
 	}
 
+	// TextObj.RandomizeSentence(false): in each word of more than three
+	// letters (numbers left alone), the letters between the first and the
+	// last are shuffled. Letters are UTF-8 code points.
+	static std::string RandomizeSentence(const std::string &text)
+	{
+		std::string out;
+		size_t i = 0;
+		while (i < text.size())
+		{
+			auto isLetter = [&](size_t at) { unsigned char c = text[at]; return c >= 0x80 || isalnum(c) || c == '\''; };
+			if (!isLetter(i)) { out += text[i++]; continue; }
+			std::vector<std::string> letters;
+			bool number = true;
+			while (i < text.size() && isLetter(i))
+			{
+				size_t len = 1;
+				unsigned char c = text[i];
+				if (c >= 0xF0) len = 4; else if (c >= 0xE0) len = 3; else if (c >= 0xC0) len = 2;
+				if (!isdigit(c)) number = false;
+				letters.push_back(text.substr(i, len));
+				i += len;
+			}
+			if (letters.size() > 3 && !number)
+				for (size_t k = letters.size() - 2; k > 1; k--)
+					std::swap(letters[k], letters[1 + rand() % k]);
+			for (const std::string &l : letters) out += l;
+		}
+		return out;
+	}
+
 	bool DialogueScreen::Open(const char *name, bool isFemale, const char *choice)
 	{
+		m_scrambledPage = -1;
 		m_entry = Find(name);
 		m_choice = Find(choice);
 		m_female = isFemale;
@@ -132,7 +171,13 @@ namespace RogueCastle
 		const float w = m_box->Width(), h = m_box->Height();
 		// speaker at (-W/2.2, -H/1.6), text at (-W/2.15, -H/3.5) from the box centre
 		m_font.DrawOutlined(frame, Text(page.speaker), SX(BOX_X - w / 2.2f), SY(BOX_Y - h / 1.6f), 0.34f, SPEAKER, BLACK, 1);
-		std::string text = m_font.Wrap(Text(page.text), 0.28f, w * 0.5f * 0.9f);
+		const char *pageText = Text(page.text);
+		if (Dyslexia)
+		{
+			if (m_scrambledPage != m_page) { m_scrambled = RandomizeSentence(pageText); m_scrambledPage = m_page; }
+			pageText = m_scrambled.c_str();
+		}
+		std::string text = m_font.Wrap(pageText, 0.28f, w * 0.5f * 0.9f);
 		m_font.DrawOutlined(frame, text.c_str(), SX(BOX_X - w / 2.15f), SY(BOX_Y - h / 3.5f), 0.28f, WHITE, BLACK, 1);
 		if (!m_choosing && ((int) (m_time * 3)) % 2 == 0)
 		{

@@ -391,6 +391,14 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 		if (otherParent != nullptr
 		    && (otherParent->CollisionTypeTag() == 2 || otherParent->CollisionTypeTag() == 4))
 		{
+			/* EnemyObj.cs line 660: a hallucination only shows a "?" */
+			if (Demented)
+			{
+				if (m_invincibleCounter <= 0 && m_invincibleCounterProjectile <= 0 && m_levelScreen != nullptr)
+					m_levelScreen->AddPopup("?", X(), (float) Bounds().Top(), 0xFFFFFFFFu);
+				m_invincibleCounter = m_invincibleCounterProjectile = InvincibilityTime;
+				return;
+			}
 			bool isProjectile = otherParent->IsSpellProjectile();
 			float invincible = isProjectile ? m_invincibleCounterProjectile
 			                                : m_invincibleCounter;

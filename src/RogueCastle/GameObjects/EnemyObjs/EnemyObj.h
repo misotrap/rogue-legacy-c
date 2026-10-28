@@ -76,6 +76,8 @@ public:
 	bool DropsItem = true;
 	bool GivesLichHealth = true;
 	bool NonKillable = false;
+	bool Demented = false;   /* IsDemented: a Dementia hallucination */
+	bool IsHallucination() const override { return Demented; }
 	std::string Name;
 	std::string Tag;        /* the room object's Tag (delay:2.0, speed:600...) */
 	int Type = 0;           /* EnemyType.h value */

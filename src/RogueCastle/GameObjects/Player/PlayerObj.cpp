@@ -895,6 +895,8 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 3 /* enemy */
 		    && State != STATE_HURT)
 		{
+			if (otherParent->IsHallucination())   /* IsDemented */
+				return;
 			/* PlayerObj.cs line 2065: the upgraded knight blocks
 			 * projectiles while he has mana. */
 			if (State == STATE_BLOCKING && (CurrentMana > 0 || m_blockInvincibleCounter > 0))

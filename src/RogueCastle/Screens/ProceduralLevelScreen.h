@@ -54,7 +54,7 @@ public:
 	void FireProjectile(const char *spriteName, Vector2 position,
 	                    Vector2 heading, float speed, int damage,
 	                    Vector2 scale, bool weighted, class EnemyObj *source,
-	                    float lifeSpan = 0);
+	                    float lifeSpan = 0, bool collidesWithTerrain = false);
 
 	PlayerObj *Player() const { return m_player; }
 	const Levels::Castle &Castle() const { return m_castle; }
@@ -63,6 +63,7 @@ public:
 	DS2DEngine::Camera2D *Camera() { return &m_camera; }
 	bool IsValid() const { return m_valid; }
 	void UpdateCamera();               /* ProceduralLevelScreen.cs line 1621 */
+	void SpawnDementiaEnemy();         /* ProceduralLevelScreen.cs line 2382 */
 
 private:
 	void CheckForRoomTransition();     /* ProceduralLevelScreen.cs line 1189 */
