@@ -29,6 +29,7 @@
 #include "../EnemyObjs/EnemyObj_Starburst.h"
 #include "../EnemyObjs/EnemyObj_Energon.h"
 #include "../EnemyObjs/EnemyObj_Fairy.h"
+#include "../EnemyObjs/EnemyObj_LastBoss.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -126,6 +127,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Energon(player, diff);
 	case EnemyType::Fairy:
 		return new EnemyObj_Fairy(player, diff);
+	case EnemyType::LastBoss:
+		return new EnemyObj_LastBoss(player, diff);
 	default:
 		return nullptr;
 	}
