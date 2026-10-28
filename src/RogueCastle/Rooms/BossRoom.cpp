@@ -358,7 +358,7 @@ namespace RogueCastle
 					bottom = d.y + d.height;
 					break;
 				}
-		Rectangle b = player->Bounds();
+		Rectangle b = player->TerrainBounds();   // the feet, not the sword
 		player->X(x);
 		player->Y(bottom - (b.Bottom() - player->Y()) - 1);
 		m_fade = 0.4;

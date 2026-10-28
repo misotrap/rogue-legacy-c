@@ -935,7 +935,8 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 			/* not from above: the feet were already under its top last frame
 			 * (jumping up through it, or it is at waist height) */
 			Rectangle theirs = other->TerrainBounds();
-			if (m_prevBottom > theirs.Top() + 10)
+			float moved = TerrainBounds().Bottom() - m_prevBottom;   // > 100 in a frame: a teleport
+			if (m_prevBottom > theirs.Top() + 10 && moved < 100 && moved > -100)
 				return;
 		}
 		PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);
