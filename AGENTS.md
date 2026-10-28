@@ -133,8 +133,11 @@ Rendering rules:
   area backgrounds, every room decoration (SpriteObj, ObjContainer,
   PhysicsObj... in rooms.txt), armour colours (TextureColor), the
   original HUD art. Only costly full-screen effects may be simplified
-  (dungeon darkness gradient, blurs). Claude does the room rendering in
-  parallel; enemies stay with Vibe. Plain colours are temporary.
+  (dungeon darkness gradient, blurs). Done by Claude:
+  src/RogueCastle/Rendering/RoomRenderer (sky, area BG, decorations,
+  textured walls, borders), drawn by ProceduralLevelScreen::Draw behind
+  each visible room. Do not draw walls/doors as plain rectangles again
+  (RoomObj::PlainWalls = true only for debugging). Enemies stay with Vibe.
 - Load only the sheets the current area needs; free the others.
 - Performance budget per frame on the console (16 ms at 60 fps): a few
   thousand blits at most. Measure with `plat_time()` and print fps.
