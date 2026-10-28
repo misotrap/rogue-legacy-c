@@ -5,6 +5,7 @@
 #include "../../platform.h"
 
 #include <cmath>
+#include <cstdlib>
 
 using DS2DEngine::GameObj;
 using DS2DEngine::ObjContainer;
@@ -91,6 +92,10 @@ namespace RogueCastle
 		// The toll collector on the bridge, 5 tiles up: 720 - 60 * 5
 		m_toll = Npc("NPCTollCollectorIdle_Character", 2.5f, 2565, 0, 720 - 60 * 5);
 
+		// RaindropObj(RandomInt(-100, 1270 * 2), RandomInt(-400, 720)), 800..1200 down
+		for (int i = 0; i < 200; i++)
+			m_rain.push_back({ (float) (rand() % 2640 - 100), (float) (rand() % 1120 - 400), 800.0f + rand() % 400 });
+
 		m_arrow = new SpriteObj("UpArrowBubble_Sprite");
 		m_arrow->ForceDraw(true);
 		m_arrow->Scale(Vector2(2, 2));
@@ -111,6 +116,17 @@ namespace RogueCastle
 	{
 		m_time += dt;
 		m_near = nullptr;
+		// The drops fall at -200 x and restart at the top below the floor
+		for (Drop &d : m_rain)
+		{
+			d.y += d.speedY * (float) dt;
+			d.x -= 200 * (float) dt;
+			if (d.y > 720)
+			{
+				d.y = (float) (rand() % 200 - 400);
+				d.x = (float) (rand() % 2640 - 100);
+			}
+		}
 		if (player == nullptr) return Action::None;
 		// Leaving on the left: the manor (StartingRoomObj.Update)
 		if (player->X() < 0) return Action::Manor;
@@ -169,6 +185,27 @@ namespace RogueCastle
 			m_arrow->Position(Vector2(b.X + b.Width / 2.0f,
 				top - 40 + (float) std::sin(m_time * 20) * 2));
 			m_arrow->Draw(camera);
+		}
+	}
+
+	void StartingRoom::DrawRain(uint32_t *frame, DS2DEngine::Camera2D *camera)
+	{
+		gfx_begin(frame);
+		// Camera.Draw(GenericTexture, room, Color.Black * 0.3f) over the play area
+		for (size_t i = (size_t) 60 * SCREEN_W; i < (size_t) 420 * SCREEN_W; i++)
+		{
+			uint32_t c = frame[i];
+			frame[i] = 0xFF000000u | (((c & 0xFF00FFu) * 179 >> 8) & 0xFF00FFu) | (((c & 0xFF00u) * 179 >> 8) & 0xFF00u);
+		}
+		const float zoom = camera->Zoom();
+		const Vector2 cam = camera->Position();
+		for (const Drop &d : m_rain)
+		{
+			// a slanted streak: Raindrop_Sprite at scale 2, rotation 5
+			int x = (int) ((d.x - cam.X) * zoom + SCREEN_W / 2), y = (int) ((d.y - cam.Y) * zoom + SCREEN_H / 2);
+			if (x < 0 || x >= SCREEN_W - 1 || y < 60 || y >= 415) continue;
+			gfx_fill(x, y, 1, 3, 0xFF9AAEC0u);
+			gfx_fill(x - 1, y + 3, 1, 2, 0xFF9AAEC0u);
 		}
 	}
 }

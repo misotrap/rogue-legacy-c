@@ -383,6 +383,7 @@ namespace RogueCastle
 			if (m_level->Player() != nullptr)
 				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
 			if (m_deathTimer > 0) m_lastFrame.assign(frame, frame + (size_t) SCREEN_W * SCREEN_H);
+			if (InCourtyard()) m_court.DrawRain(frame, m_level->Camera());
 			/* The minimap (not in the courtyard nor the boss rooms) */
 			if (m_level->Player() != nullptr && !InCourtyard() && !m_mapOpen)
 			{
