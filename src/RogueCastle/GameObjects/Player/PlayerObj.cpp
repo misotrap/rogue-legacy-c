@@ -297,6 +297,10 @@ void PlayerObj::Update(GameTime *gameTime)
 				AccelerationY(-JumpHeight);
 				m_isJumping = true;
 				Audio::PlaySound("Player_Jump_04");   /* PlayerObj.cs line 867 */
+				/* The IBS trait (PlayerObj.cs line 871): a fart chance. */
+				if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::IBS)
+				    && rand() % 100 >= GameEV::FART_CHANCE)
+					Audio::PlaySound("Fart1", "Fart2", "Fart3");
 			}
 			else if ((Game::GlobalInput.JustPressed(PLAYER_JUMP1) || Game::GlobalInput.JustPressed(PLAYER_JUMP2))
 			         && !m_isTouchingGround && m_doubleJumpCount < TotalDoubleJumps)
@@ -616,11 +620,24 @@ float PlayerObj::MaxHealth() const
 {
 	/* PlayerObj.cs line 3670: (100 + equipment health + the health
 	 * skills) times the class multiplier, plus the Lich health. The
-	 * Dextrocardia trait swaps it with MaxMana (line 3673). */
+	 * Dextrocardia trait swaps it with MaxMana (line 3673): the two
+	 * formulas below never call each other, so no recursion. */
 	if (m_stats == nullptr)
 		return 100;
 	if (m_stats->hero.HasTrait(TraitType::Dextrocardia))
-		return MaxMana();
+	{
+		/* The mana formula. */
+		Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+		int maxMana = (int) ((100 + equip.mana
+		                     + m_stats->BonusMana * GameEV::ITEM_STAT_MAXMP_AMOUNT
+		                     + m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Up)
+		                     + m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Up_Final))
+		                     * ClassTotalMPMultiplier(m_stats->hero.classType))
+		                  + m_stats->LichMana;
+		if (maxMana < 1)
+			maxMana = 1;
+		return maxMana;
+	}
 	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
 	int maxHealth = (int) ((100 + equip.health
 	                       + m_stats->BonusHealth * GameEV::ITEM_STAT_MAXHP_AMOUNT
@@ -635,11 +652,23 @@ float PlayerObj::MaxHealth() const
 
 float PlayerObj::MaxMana() const
 {
-	/* PlayerObj.cs line 3631 (Dextrocardia swaps it with MaxHealth). */
+	/* PlayerObj.cs line 3631 (Dextrocardia swaps it with MaxHealth: the
+	 * health formula, never a call back into MaxHealth). */
 	if (m_stats == nullptr)
 		return 100;
 	if (m_stats->hero.HasTrait(TraitType::Dextrocardia))
-		return MaxHealth();
+	{
+		Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+		int maxHealth = (int) ((100 + equip.health
+		                       + m_stats->BonusHealth * GameEV::ITEM_STAT_MAXHP_AMOUNT
+		                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up)
+		                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up_Final))
+		                       * ClassTotalHPMultiplier(m_stats->hero.classType))
+		                  + m_stats->LichHealth;
+		if (maxHealth < 1)
+			maxHealth = 1;
+		return maxHealth;
+	}
 	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
 	int maxMana = (int) ((100 + equip.mana
 	                     + m_stats->BonusMana * GameEV::ITEM_STAT_MAXMP_AMOUNT
@@ -680,7 +709,8 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 
 	if (CurrentHealth > 0)
 	{
-		/* Knockback: away from the attack (HitPlayer continues at line 2335). */
+		/* Knockback: away from the attack (HitPlayer continues at line
+		 * 2335), with the Ectomorph/Endomorph trait mods (line 2353). */
 		State = STATE_HURT;
 		/* PlayerObj.cs line 2295: the injury cues (male or female). */
 		if (m_stats != nullptr && m_stats->hero.isFemale)
@@ -689,11 +719,32 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 			Audio::PlaySound("Player_Male_Injury_01", "Player_Male_Injury_02", "Player_Male_Injury_03");
 		m_invincibleCounter = BaseInvincibilityTime;
 		CurrentSpeed(0);
+		float knockbackMod = 1;
+		if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::Ectomorph))
+			knockbackMod = GameEV::TRAIT_ECTOMORPH;
+		else if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::Endomorph))
+			knockbackMod = GameEV::TRAIT_ENDOMORPH;
+		/* The Hypochondriac sees a hugely inflated number (line 2407). */
+		if (m_stats != nullptr && m_levelScreen != nullptr)
+		{
+			if (m_stats->hero.HasTrait(TraitType::Hypochondriac))
+			{
+				char buf[32];
+				snprintf(buf, sizeof(buf), "%d", damage * 100 + rand() % 99 + 1);
+				m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top(), 0xFFFF0000u);
+			}
+			else
+			{
+				char buf[32];
+				snprintf(buf, sizeof(buf), "-%d", damage);
+				m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top(), 0xFFFF0000u);
+			}
+		}
 		if (AccelerationX() > 0 || HeadingX() > 0)
-			AccelerationX(-KnockBack.X);
+			AccelerationX(-KnockBack.X * knockbackMod);
 		else
-			AccelerationX(KnockBack.X);
-		AccelerationY(-KnockBack.Y);
+			AccelerationX(KnockBack.X * knockbackMod);
+		AccelerationY(-KnockBack.Y * knockbackMod);
 	}
 	else
 	{

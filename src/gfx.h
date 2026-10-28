@@ -21,6 +21,9 @@ void gfx_begin(uint32_t *frame);
  * HUD, e.g. the level screen's floating pickup texts). */
 uint32_t *gfx_frame();
 void gfx_clear(uint32_t color);
+/* The Vertigo trait: the world plays upside down, so the whole frame
+ * flips vertically just before it is presented. */
+void gfx_flip_vertical(uint32_t *frame);
 void gfx_fill(int x, int y, int w, int h, uint32_t color);
 /* Draws the source rectangle (sx, sy, sw, sh) of a texture with its
  * top-left corner at (dx, dy), scaled by scale (nearest texel, any

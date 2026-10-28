@@ -46,6 +46,9 @@ int main(int argc, char **argv)
 		double drawElapsed = now - lastDraw;
 		lastDraw = now;
 		flow.Draw(plat_frame(), drawElapsed);
+		/* The Vertigo trait: the whole world plays upside down. */
+		if (flow.VertigoActive())
+			gfx_flip_vertical(plat_frame());
 		plat_present();
 	}
 	plat_quit();

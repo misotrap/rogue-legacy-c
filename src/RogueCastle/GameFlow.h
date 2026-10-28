@@ -18,6 +18,7 @@
 #include "Screens/GameOverScreen.h"
 #include "Screens/EquipmentScreen.h"
 #include "Rooms/StartingRoom.h"
+#include "Types/TraitType.h"
 #include "Screens/DialogueScreen.h"
 #include "Screens/OptionsScreen.h"
 #include "Screens/ManorScreen.h"
@@ -42,6 +43,14 @@ namespace RogueCastle
 		void OnPlayerDeath();
 		State Current() const { return m_state; }
 		bool WantsQuit() const { return m_quit; }   /* "Quitter Rogue Legacy" */
+		/* The Vertigo trait: the world draws upside down (the frame
+		 * flips in main before the present). */
+		bool VertigoActive() const
+		{
+			return m_level != nullptr && m_level->Player() != nullptr
+			       && m_state == State::Castle
+			       && m_save.hero.HasTrait(TraitType::Vertigo);
+		}
 		Save::GameState &Game() { return m_save; }
 
 	private:

@@ -5,9 +5,12 @@
 #include "../Text/LocIDs.h"
 #include "../platform.h"
 #include "Game.h"
+#include "EVs/GameEV.h"
+#include "Types/TraitType.h"
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 
 namespace RogueCastle
@@ -91,6 +94,29 @@ namespace RogueCastle
 		                                     &m_save.chestsOpened);
 		/* The hero's real stats (Game.PlayerStats) drive the player. */
 		m_level->Player()->SetPlayerStats(&m_save);
+		/* The trait scale and speed (ProceduralLevelScreen.cs OnEnter,
+		 * lines 2953-2975). */
+		{
+			PlayerObj *player = m_level->Player();
+			Vector2 scale(2, 2);
+			if (m_save.hero.HasTrait(TraitType::Gigantism))
+				scale = Vector2(GameEV::TRAIT_GIGANTISM, GameEV::TRAIT_GIGANTISM);
+			else if (m_save.hero.HasTrait(TraitType::Dwarfism))
+				scale = Vector2(GameEV::TRAIT_DWARFISM, GameEV::TRAIT_DWARFISM);
+			if (m_save.hero.HasTrait(TraitType::Ectomorph))
+			{
+				scale.X *= 0.825f;
+				scale.Y *= 1.15f;
+			}
+			else if (m_save.hero.HasTrait(TraitType::Endomorph))
+			{
+				scale.X *= 1.25f;
+				scale.Y *= 1.175f;
+			}
+			player->Scale(scale);
+			if (m_save.hero.HasTrait(TraitType::Hyperactive))
+				player->Speed *= 1 + GameEV::TRAIT_MOVESPEED_AMOUNT;
+		}
 		if (getenv("RL_DEBUG_TRACE") != nullptr)
 			fprintf(stderr, "hero-stats: hp=%.0f/%.0f mp=%.0f dmg=%d magic=%d armor=%.0f weight=%d\n",
 			        m_level->Player()->MaxHealth(), m_level->Player()->MaxHealth(),
@@ -354,11 +380,22 @@ namespace RogueCastle
 			 * fires that class power once. */
 			static const char *debugClass = getenv("RL_DEBUG_CLASS");
 			static const char *debugPower = getenv("RL_DEBUG_POWER");
+			static const char *debugTrait = getenv("RL_DEBUG_TRAIT");
 			static bool powerCast = false;
-			if (debugClass != nullptr && !powerCast && m_level->Player() != nullptr)
+			if ((debugClass != nullptr || debugTrait != nullptr) && !powerCast
+			    && m_level->Player() != nullptr)
 			{
 				powerCast = true;
-				m_save.hero.classType = (uint8_t) atoi(debugClass);
+				if (debugClass != nullptr)
+					m_save.hero.classType = (uint8_t) atoi(debugClass);
+				if (debugTrait != nullptr)
+				{
+					/* "trait1" or "trait1,trait2". */
+					m_save.hero.trait1 = (uint8_t) atoi(debugTrait);
+					const char *comma = strchr(debugTrait, ',');
+					m_save.hero.trait2 = comma != nullptr
+					                     ? (uint8_t) atoi(comma + 1) : 0;
+				}
 				if (debugPower != nullptr)
 					m_level->Player()->CastClassPower();
 			}

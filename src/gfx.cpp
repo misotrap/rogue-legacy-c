@@ -51,6 +51,22 @@ uint32_t *gfx_frame()
 	return fb;
 }
 
+void gfx_flip_vertical(uint32_t *frame)
+{
+	/* The Vertigo trait: row swap, top against bottom. */
+	for (int y = 0; y < SCREEN_H / 2; y++)
+	{
+		uint32_t *a = frame + (size_t) y * SCREEN_W;
+		uint32_t *b = frame + (size_t) (SCREEN_H - 1 - y) * SCREEN_W;
+		for (int x = 0; x < SCREEN_W; x++)
+		{
+			uint32_t t = a[x];
+			a[x] = b[x];
+			b[x] = t;
+		}
+	}
+}
+
 void gfx_clear(uint32_t color)
 {
 	int i;
