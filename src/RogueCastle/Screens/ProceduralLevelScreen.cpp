@@ -294,6 +294,9 @@ void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
 {
 	m_projectiles.push_back(proj);
 	m_physicsManager.AddObject(proj);
+	if (getenv("RL_DEBUG_TRACE") != nullptr)
+		fprintf(stderr, "proj: %s (%.0f,%.0f) [add]\n",
+		        proj->SpriteName().c_str(), proj->X(), proj->Y());
 }
 
 void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,

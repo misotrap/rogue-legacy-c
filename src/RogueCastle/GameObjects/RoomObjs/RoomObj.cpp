@@ -17,6 +17,7 @@
 #include "../EnemyObjs/EnemyObj_ShieldKnight.h"
 #include "../EnemyObjs/EnemyObj_FireWizard.h"
 #include "../EnemyObjs/EnemyObj_IceWizard.h"
+#include "../EnemyObjs/EnemyObj_EarthWizard.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -90,6 +91,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_FireWizard(player, diff);
 	case EnemyType::IceWizard:
 		return new EnemyObj_IceWizard(player, diff);
+	case EnemyType::EarthWizard:
+		return new EnemyObj_EarthWizard(player, diff);
 	default:
 		return nullptr;
 	}
