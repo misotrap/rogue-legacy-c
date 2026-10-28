@@ -24,6 +24,7 @@
 #include "../EnemyObjs/EnemyObj_Horse.h"
 #include "../EnemyObjs/EnemyObj_Fireball.h"
 #include "../EnemyObjs/EnemyObj_Mimic.h"
+#include "../EnemyObjs/EnemyObj_Portrait.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -111,6 +112,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Fireball(player, diff);
 	case EnemyType::Mimic:
 		return new EnemyObj_Mimic(player, diff);
+	case EnemyType::Portrait:
+		return new EnemyObj_Portrait(player, diff);
 	default:
 		return nullptr;
 	}
