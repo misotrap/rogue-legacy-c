@@ -41,7 +41,7 @@ namespace RogueCastle
 		}
 	}
 
-	bool GameOverScreen::Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName)
+	bool GameOverScreen::Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName, bool isFemale)
 	{
 		Close();
 		bool ok = m_font.Loaded() || m_font.Load(assetsDir, "Junicode");
@@ -61,11 +61,11 @@ namespace RogueCastle
 
 		std::string name = heroName;   // "Sieur Lee " when there is no numeral
 		while (!name.empty() && name.back() == ' ') name.pop_back();
-		m_slain = Text::Loc::Format("LOC_ID_GAME_OVER_SCREEN_7_NEW", name);
+		m_slain = Text::Loc::Format(isFemale ? "LOC_ID_GAME_OVER_SCREEN_7_NEW_F" : "LOC_ID_GAME_OVER_SCREEN_7_NEW", name);
 		char id[32];
 		snprintf(id, sizeof(id), "LOC_ID_HINT_%d", 1 + rand() % NUM_HINTS);
 		m_hint = Text::Loc::Get(id);
-		m_partingTitle = Text::Loc::Format("LOC_ID_GAME_OVER_SCREEN_8_NEW", name);
+		m_partingTitle = Text::Loc::Format(isFemale ? "LOC_ID_GAME_OVER_SCREEN_8_NEW_F" : "LOC_ID_GAME_OVER_SCREEN_8_NEW", name);
 		m_continue = Text::Loc::Get("LOC_ID_GAME_OVER_SCREEN_1_NEW");
 		size_t at = m_continue.find("[Input:0]");
 		if (at != std::string::npos) m_continue.replace(at, 9, "A");

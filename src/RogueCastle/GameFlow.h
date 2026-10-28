@@ -1,8 +1,8 @@
 // The game loop between screens (the original RCScreenManager flow):
 //   start: load save.txt, title screen; no hero yet -> heir choice
 //   heir chosen -> castle (a new one, or the saved one) with the HUD
-//   death -> the hero joins the family tree, save -> death screen -> manor
-//   -> heir choice
+//   death -> the hero joins the family tree, save -> death screen -> heir
+//   choice -> manor -> castle
 // The castle player's death (CurrentHealth <= 0) calls OnPlayerDeath()
 // after a short pause, once the death lands.
 #pragma once

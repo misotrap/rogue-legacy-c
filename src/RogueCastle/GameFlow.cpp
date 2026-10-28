@@ -108,7 +108,7 @@ namespace RogueCastle
 		m_deathTimer = 0;
 		std::string name = Text::Loc::Format(h.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
 			h.name, h.romanNumeral);
-		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name);
+		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name, h.isFemale);
 		m_lastFrame.clear();
 		m_state = State::GameOver;
 	}
@@ -120,7 +120,19 @@ namespace RogueCastle
 		switch (m_state)
 		{
 		case State::Lineage:
-			if (m_lineage.Update(buttons, pressed, dt)) StartCastle();
+			if (m_lineage.Update(buttons, pressed, dt))
+			{
+				/* The new heir goes to the manor first (in the original:
+				 * the starting room in front of the castle, whose left exit
+				 * is the manor); the very first hero has nothing to buy. */
+				if (m_save.familyTree.empty()) StartCastle();
+				else
+				{
+					Save();
+					m_state = State::Manor;
+					m_manor.Open(m_save);
+				}
+			}
 			break;
 		case State::Title:
 			if (m_title.Update(pressed, dt)) LeaveTitle();
@@ -129,16 +141,15 @@ namespace RogueCastle
 			if (m_gameOver.Update(pressed, dt))
 			{
 				m_gameOver.Close();
-				m_state = State::Manor;
-				m_manor.Open(m_save);
+				m_state = State::Lineage;
+				m_lineage.Open(m_save, m_generator);
 			}
 			break;
 		case State::Manor:
 			if (m_manor.Update(buttons, pressed, dt))
 			{
 				Save();
-				m_state = State::Lineage;
-				m_lineage.Open(m_save, m_generator);
+				StartCastle();
 			}
 			break;
 		case State::Castle:
