@@ -35,7 +35,7 @@ public:
 
 	void Initialize();
 	void Update(GameTime *gameTime) override;
-	void HitEnemy(int damage, Vector2 collisionPt, bool isPlayer);
+	virtual void HitEnemy(int damage, Vector2 collisionPt, bool isPlayer);
 	virtual void Kill(bool giveXP = true);
 	void CollisionResponse(DS2DEngine::CollisionBox *thisBox, DS2DEngine::CollisionBox *otherBox,
 	                       int collisionResponseType) override;
