@@ -1,6 +1,7 @@
 /* Port of RogueCastle/src/Game Objects/EnemyObjs/EnemyObj_SpikeTrap.cs. */
 #include "EnemyObj_SpikeTrap.h"
 #include "../../Types/EnemyType.h"
+#include "../../Types/TraitType.h"
 #include "../Player/PlayerObj.h"
 #include "../../../DS2DEngine/CollisionMath.h"
 
@@ -49,7 +50,8 @@ void EnemyObj_SpikeTrap::UpdateEnemy(GameTime *gameTime)
 	 * top of the trap (X - w/2, Y - h, w, h). */
 	Rectangle detect((int) (X() - m_detectWidth / 2.0f),
 	                 (int) (Y() - m_detectHeight), m_detectWidth, m_detectHeight);
-	bool playerOn = CollisionMath::Intersects(detect, m_target->Bounds());
+	bool playerOn = CollisionMath::Intersects(detect, m_target->Bounds())
+		&& (m_target->Stats() == nullptr || !m_target->Stats()->hero.HasTrait(TraitType::PAD));   // PAD: not felt
 
 	switch (m_trapState)
 	{

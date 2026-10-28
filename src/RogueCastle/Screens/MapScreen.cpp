@@ -123,7 +123,7 @@ namespace RogueCastle
 		return (pressed & (BTN_SELECT | BTN_B)) == 0;
 	}
 
-	void MapScreen::Draw(uint32_t *frame, const Levels::Castle &castle)
+	void MapScreen::Draw(uint32_t *frame, const Levels::Castle &castle, bool alzheimers)
 	{
 		gfx_begin(frame);
 		// The level screen at 30% under the map
@@ -134,8 +134,11 @@ namespace RogueCastle
 		}
 
 		// Map pixel (mx, my) -> screen: the player sits in the middle
-		DrawRooms(castle, SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX,
-			SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY, 1);
+		if (alzheimers)
+			m_font.DrawOutlined(frame, "?????", SCREEN_W / 2, SCREEN_H / 2 - 20, 0.8f, WHITE, BLACK, 2, Text::Align::Centre);
+		else
+			DrawRooms(castle, SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX,
+				SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY, 1);
 
 		// Help texts at the bottom
 		std::string close = WithButton(Text::Loc::Get("LOC_ID_MAP_SCREEN_1_NEW"), "[Input:9]", "SELECT");

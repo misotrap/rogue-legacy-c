@@ -14,7 +14,11 @@
 #include "../Save/SaveGame.h"
 
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <vector>
+
+namespace DS2DEngine { class Camera2D; class GameObj; class ObjContainer; class SpriteObj; }
 
 namespace RogueCastle
 {
@@ -24,11 +28,17 @@ namespace RogueCastle
 	class BossRoom
 	{
 	public:
+		BossRoom();
+		~BossRoom();
 		bool LoadContent(const char *assetsDir);
 		void Reset();
 		// Before the level update; true while the hero's input is blocked
 		bool Update(ProceduralLevelScreen *level, Save::GameState &save, uint32_t pressed, double dt, bool getItemOpen);
 		void Draw(uint32_t *frame);
+		// The intro's extra objects (orbs, blobs, the fairy's shadow), in the world
+		void DrawWorld(DS2DEngine::Camera2D *camera);
+		// FinalBossTalk01: the dialogue to open now (once), or nullptr
+		const char *TakeDialogue() { const char *d = m_dialogue; m_dialogue = nullptr; return d; }
 		// m_cutsceneRunning: the room (boss included) waits
 		bool Cutscene() const { return m_phase == Phase::Intro || m_phase == Phase::Leaving; }
 		// The last boss is dead: time for the ending (once)
@@ -43,6 +53,23 @@ namespace RogueCastle
 		double m_time = 0, m_fade = 0;
 		std::string m_title1, m_title2;
 		Text::Font m_font;
+
+		// The intro (each boss room's OnEnter and its tweens)
+		struct CamKey { double t0, t1; float x, y; };
+		std::vector<CamKey> m_camKeys;
+		float m_camX0 = 0, m_camY0 = 0;
+		double m_titleAt = 1, m_introEnd = 4.6, m_borders = 0;
+		class EnemyObj *m_boss = nullptr;
+		float m_bossScale = 1, m_bossX = 0, m_bossY = 0;
+		std::vector<std::unique_ptr<DS2DEngine::SpriteObj>> m_orbs;
+		std::vector<std::unique_ptr<DS2DEngine::ObjContainer>> m_blobs;
+		std::unique_ptr<DS2DEngine::ObjContainer> m_shadow;
+		const char *m_dialogue = nullptr;
+		int m_heroClass = 0;
+
+		void StartIntro(ProceduralLevelScreen *level, Save::GameState &save);
+		void UpdateIntro(ProceduralLevelScreen *level, double before);
+		void EndIntro();
 
 		static bool *BeatenFlag(Save::GameState &save, int levelType);
 		static bool DoorOpen(RoomObj *room, Save::GameState &save);

@@ -413,6 +413,8 @@ namespace RogueCastle
 				}
 			}
 			bool blocked = m_bossRoom.Update(m_level, m_save, pressed, dt, m_getItemOpen);
+			if (const char *talk = m_bossRoom.TakeDialogue())
+				m_dialogue.Open(talk, m_save.hero.isFemale);
 			if (m_bossRoom.LastBossBeaten())
 			{
 				OnCastleBeaten();
@@ -512,6 +514,7 @@ namespace RogueCastle
 			m_level->Camera()->ElapsedTotalSeconds(drawElapsed);
 			m_level->Draw(m_level->Camera());
 			if (InCourtyard()) m_court.Draw(m_level->Camera(), m_save.skills);
+			m_bossRoom.DrawWorld(m_level->Camera());
 			HUDValues v;
 			/* The hero's real vitals (PlayerObj health and mana). */
 			if (m_level->Player() != nullptr)
@@ -522,6 +525,7 @@ namespace RogueCastle
 				v.mana = (int) m_level->Player()->CurrentMana;
 			}
 			v.gold = m_save.Gold;
+			v.cip = m_save.hero.HasTrait(TraitType::CIP);
 			v.level = m_save.skills.PlayerLevel();
 			v.heroName = Text::Loc::Format(m_save.hero.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
 				m_save.hero.name, m_save.hero.romanNumeral);
@@ -543,7 +547,7 @@ namespace RogueCastle
 			if (m_dialogue.IsOpen()) m_dialogue.Draw(frame);
 			m_bossRoom.Draw(frame);
 			if (m_getItemOpen) m_getItem.Draw(frame);
-			if (m_mapOpen) m_map.Draw(frame, m_level->Castle());
+			if (m_mapOpen) m_map.Draw(frame, m_level->Castle(), m_save.hero.HasTrait(TraitType::Alzheimers));
 			else if (m_paused)
 				m_pause.Draw(frame, m_level->Camera(), m_level->Player(), m_level->CurrentRoom(), v.heroName,
 					Text::Loc::Get(LocIDs::ClassType_ToStringID(m_save.hero.classType, m_save.hero.isFemale)));

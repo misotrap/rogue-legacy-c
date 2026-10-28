@@ -62,9 +62,9 @@ public:
 	const std::vector<RoomObj *> &RoomList() const { return m_roomList; }
 	DS2DEngine::Camera2D *Camera() { return &m_camera; }
 	bool IsValid() const { return m_valid; }
+	void UpdateCamera();               /* ProceduralLevelScreen.cs line 1621 */
 
 private:
-	void UpdateCamera();               /* ProceduralLevelScreen.cs line 1621 */
 	void CheckForRoomTransition();     /* ProceduralLevelScreen.cs line 1189 */
 	/* ProceduralLevelScreen.cs line 742: the chest colour roll and level. */
 	void InitializeChests();

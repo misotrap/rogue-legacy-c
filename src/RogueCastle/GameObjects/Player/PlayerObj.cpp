@@ -1,5 +1,8 @@
 /* Port of RogueCastle/src/Game Objects/Player/PlayerObj.cs. */
 #include "PlayerObj.h"
+#include "../../../DS2DEngine/GameObjs/SpriteObj.h"
+#include "../../Equipment/Equipment.h"
+#include "../../Types/PlayerPart.h"
 #include "../../Game.h"
 #include "../../../DS2DEngine/Consts.h"
 #include "../../EVs/GameEV.h"
@@ -80,19 +83,72 @@ void PlayerObj::ChangeSprite(const std::string &spriteName)
 
 void PlayerObj::UpdateEquipmentObjs()
 {
-	/* PlayerObj.cs line 526 (UpdateEquipmentObjs): for the default male
-	 * knight without special items, the glasses, female parts, class extra
-	 * and dragon wings are hidden. Hair IS visible (Baldness only). */
-	if (NumChildren() < PlayerPart::NumHeadPieces + 11)
+	/* PlayerObj.cs line 455 (UpdateEquipmentObjs): the class piece (shield,
+	 * lamp, headband, beard, horns), the glasses, the hair (Baldness), the
+	 * female parts and the dragon's wings. */
+	if (NumChildren() <= PlayerPart::Light)
 		return;   /* container smaller than expected: nothing to toggle */
-	GetChildAt(PlayerPart::Glasses)->Visible(false);
-	GetChildAt(PlayerPart::Boobs)->Visible(false);
-	GetChildAt(PlayerPart::Bowtie)->Visible(false);
-	GetChildAt(PlayerPart::Extra)->Visible(false);
-	GetChildAt(PlayerPart::Wings)->Visible(false);
+	int cls = m_stats != nullptr ? m_stats->hero.classType : ClassType::Knight;
+	const std::string name = SpriteName();
+	auto extra = [&](const char *part) {
+		std::string partName = name;
+		size_t at = partName.find("_Character");
+		if (at != std::string::npos) partName.replace(at, 10, part);
+		GetChildAt(PlayerPart::Extra)->Visible(true);
+		GetChildAt(PlayerPart::Extra)->ChangeSprite(partName);
+	};
+	if (cls == ClassType::Knight || cls == ClassType::Knight2) extra("Shield_Sprite");
+	else if (cls == ClassType::Banker || cls == ClassType::Banker2) extra("Lamp_Sprite");
+	else if (cls == ClassType::Ninja || cls == ClassType::Ninja2) extra("Headband_Sprite");
+	else if (cls == ClassType::Wizard || cls == ClassType::Wizard2) extra("Beard_Sprite");
+	else if (cls == ClassType::Barbarian || cls == ClassType::Barbarian2) extra("Horns_Sprite");
+	else GetChildAt(PlayerPart::Extra)->Visible(false);
+
 	GetChildAt(PlayerPart::Light)->Visible(false);
-	if (GetChildAt(PlayerPart::Hair) != nullptr)
-		GetChildAt(PlayerPart::Hair)->Visible(true);
+	GetChildAt(PlayerPart::Glasses)->Visible(m_stats != nullptr && m_stats->SpecialItem == 8 /* SpecialItemType.Glasses */);
+	GetChildAt(PlayerPart::Hair)->Visible(m_stats == nullptr || !m_stats->hero.HasTrait(TraitType::Baldness));
+	bool female = m_stats != nullptr && m_stats->hero.isFemale;
+	GetChildAt(PlayerPart::Boobs)->Visible(female);
+	GetChildAt(PlayerPart::Bowtie)->Visible(female);
+	GetChildAt(PlayerPart::Wings)->Visible(cls == ClassType::Dragon);
+}
+
+void PlayerObj::UpdateEquipmentColours()
+{
+	/* Each equipped part takes its item's two tints; bare parts are white,
+	 * except the red cape and hair, the light blue blade and the pink bow. */
+	for (Color &c : m_partColour) c = Color(255, 255, 255);
+	if (State == STATE_TANOOKI)
+		return;
+	static const int PARTS[EquipmentCategoryType::Total][3] = {
+		{ PlayerPart::Sword1, PlayerPart::Sword2, PlayerPart::None },       // Sword
+		{ PlayerPart::Head, PlayerPart::Hair, PlayerPart::None },           // Helm
+		{ PlayerPart::Chest, PlayerPart::ShoulderB, PlayerPart::ShoulderA }, // Chest
+		{ PlayerPart::Arms, PlayerPart::Legs, PlayerPart::None },           // Limbs
+		{ PlayerPart::Cape, PlayerPart::Neck, PlayerPart::None },           // Cape
+	};
+	auto argb = [](uint32_t c) { return Color((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF); };
+	const Color red(255, 0, 0);
+	for (int i = 0; i < EquipmentCategoryType::Total; i++)
+	{
+		const int *part = PARTS[i];
+		int equipped = m_stats != nullptr ? m_stats->equipment.equipped[i] : -1;
+		const Equipment::ItemData *item = equipped >= 0 ? Equipment::EquipmentSystem::Item(i, equipped) : nullptr;
+		if (item != nullptr)
+		{
+			m_partColour[part[0]] = argb(item->firstColour);
+			m_partColour[part[1]] = argb(item->secondColour);
+			if (part[2] != PlayerPart::None) m_partColour[part[2]] = argb(item->secondColour);
+			if (i == EquipmentCategoryType::Chest) m_partColour[PlayerPart::Boobs] = argb(item->firstColour);
+		}
+		else
+		{
+			if (i == EquipmentCategoryType::Helm) m_partColour[PlayerPart::Hair] = red;
+			else if (i == EquipmentCategoryType::Cape) m_partColour[part[0]] = m_partColour[part[1]] = red;
+			else if (i == EquipmentCategoryType::Sword) m_partColour[part[1]] = Color(11, 172, 239);   // light blue
+			m_partColour[PlayerPart::Bowtie] = Color(251, 156, 172);   // dark pink
+		}
+	}
 }
 
 void PlayerObj::ExecuteLogicSet(ActiveLS ls)
@@ -118,7 +174,13 @@ void PlayerObj::UpdateLogicSet()
 		switch (m_lsStep)
 		{
 		case 0:   /* ChangeSprite + AnimationDelay + PlayAnimation(2, 4) */
-			Audio::PlaySound("Player_Attack01", "Player_Attack02");   /* the attack LogicSets */
+			/* PlayerObj.cs line 2150: lower or higher with the gonad traits */
+			if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::Hypergonadism))
+				Audio::PlaySound("Player_Attack01_Low", "Player_Attack02_Low");
+			else if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::Hypogonadism))
+				Audio::PlaySound("Player_Attack01_High", "Player_Attack02_High");
+			else
+				Audio::PlaySound("Player_Attack01", "Player_Attack02");   /* the attack LogicSets */
 			ChangeSprite("PlayerAttacking3_Character");
 			UpdateEquipmentObjs();
 			AnimationDelay(AttackAnimationDelay);
@@ -245,8 +307,10 @@ void PlayerObj::Update(GameTime *gameTime)
 		m_invincibleCounter -= elapsedSeconds;
 	if (m_blinkCounter > 0)
 		m_blinkCounter -= elapsedSeconds;
+	if (m_swearBubbleCounter > 0)
+		m_swearBubbleCounter -= elapsedSeconds;
 	for (int i = 0; i < NumChildren(); i++)
-		GetChildAt(i)->TextureColor(m_blinkCounter > 0 ? m_blinkColour : Color(255, 255, 255));
+		GetChildAt(i)->TextureColor(m_blinkCounter > 0 ? m_blinkColour : i <= PlayerPart::Light ? m_partColour[i] : Color(255, 255, 255));
 
 	if (!ControlsLocked)
 	{
@@ -712,6 +776,17 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 		/* Knockback: away from the attack (HitPlayer continues at line
 		 * 2335), with the Ectomorph/Endomorph trait mods (line 2353). */
 		State = STATE_HURT;
+		/* Tourettes (PlayerObj.cs line 2335): a swearing bubble for 1 s */
+		if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::Tourettes))
+		{
+			if (m_swearBubble == nullptr)
+			{
+				m_swearBubble = new SpriteObj("SwearBubble1_Sprite");
+				m_swearBubble->Flip(SpriteEffects::FlipHorizontally);
+			}
+			m_swearBubble->ChangeSprite("SwearBubble" + std::to_string(1 + rand() % 4) + "_Sprite");
+			m_swearBubbleCounter = 1;
+		}
 		/* PlayerObj.cs line 2295: the injury cues (male or female). */
 		if (m_stats != nullptr && m_stats->hero.isFemale)
 			Audio::PlaySound("Player_Female_Damage_03", "Player_Female_Damage_04", "Player_Female_Damage_05");
@@ -1381,6 +1456,16 @@ void PlayerObj::ThrowAxeProjectiles()
 	m_throwingAxes = true;
 	m_rapidDaggerQueue = 3;
 	m_rapidDaggerTimer = 0;
+}
+
+void PlayerObj::DrawSwearBubble(Camera2D *camera)
+{
+	/* PlayerObj.cs line 3434: above the hero's head */
+	if (m_swearBubble == nullptr || m_swearBubbleCounter <= 0 || IsKilled)
+		return;
+	m_swearBubble->Scale(Vector2(ScaleX() * 1.2f, ScaleY() * 1.2f));
+	m_swearBubble->Position(Vector2(X() - 30 * ScaleX(), Y() - 35 * ScaleX()));
+	m_swearBubble->Draw(camera);
 }
 
 } // namespace RogueCastle

@@ -1,5 +1,7 @@
 /* Port of RogueCastle/src/Game Objects/EnemyObjs/EnemyObj.cs (subset). */
 #include "EnemyObj.h"
+#include "../../EVs/GameEV.h"
+#include "../../Types/TraitType.h"
 #include "../../../DS2DEngine/CollisionMath.h"
 #include "../../../DS2DEngine/Consts.h"
 #include "../Player/PlayerObj.h"
@@ -285,24 +287,26 @@ void EnemyObj::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
 		}
 	}
 
-	if (CanBeKnockedBack && !IsPaused)
+	const Lineage::Heir *hero = m_target->Stats() != nullptr ? &m_target->Stats()->hero : nullptr;
+	if (CanBeKnockedBack && !IsPaused && (hero == nullptr || !hero->HasTrait(TraitType::Hypogonadism)))
 	{
 		CurrentSpeed(0);
+		float knockbackMod = hero != nullptr && hero->HasTrait(TraitType::Hypergonadism) ? GameEV::TRAIT_HYPERGONADISM : 1;
 		if (KnockBack == Vector2(0, 0))
 		{
 			if (X() < m_target->X())
-				AccelerationX(-m_target->EnemyKnockBack.X);
+				AccelerationX(-m_target->EnemyKnockBack.X * knockbackMod);
 			else
-				AccelerationX(m_target->EnemyKnockBack.X);
-			AccelerationY(-m_target->EnemyKnockBack.Y);
+				AccelerationX(m_target->EnemyKnockBack.X * knockbackMod);
+			AccelerationY(-m_target->EnemyKnockBack.Y * knockbackMod);
 		}
 		else
 		{
 			if (X() < m_target->X())
-				AccelerationX(-KnockBack.X);
+				AccelerationX(-KnockBack.X * knockbackMod);
 			else
-				AccelerationX(KnockBack.X);
-			AccelerationY(-KnockBack.Y);
+				AccelerationX(KnockBack.X * knockbackMod);
+			AccelerationY(-KnockBack.Y * knockbackMod);
 		}
 	}
 }

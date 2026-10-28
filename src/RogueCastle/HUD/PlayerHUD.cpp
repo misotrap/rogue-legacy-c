@@ -91,10 +91,11 @@ namespace RogueCastle
 
 		// HP frame (34 px) over MP frame (24 px): together they fill the band
 		const float x = 8, hpY = 1, mpY = 35;
-		DrawBar(m_hp, x, hpY, v.health, v.maxHealth, v.baseHealth, 6);
+		// CIP (PlayerHUDObj.cs line 323): the health frame stays empty
+		DrawBar(m_hp, x, hpY, v.cip ? 0 : v.health, v.maxHealth, v.baseHealth, 6);
 		DrawBar(m_mp, x, mpY, v.mana, v.maxMana, v.baseMana, 7);
 		snprintf(buf, sizeof(buf), "%d/%d", v.health, v.maxHealth);
-		m_font.DrawOutlined(frame, buf, x + 6, hpY + 6, 0.26f, WHITE, BLACK, 1);
+		if (!v.cip) m_font.DrawOutlined(frame, buf, x + 6, hpY + 6, 0.26f, WHITE, BLACK, 1);
 		snprintf(buf, sizeof(buf), "%d/%d", v.mana, v.maxMana);
 		m_font.DrawOutlined(frame, buf, x + 6, mpY + 4, 0.22f, WHITE, BLACK, 1);
 

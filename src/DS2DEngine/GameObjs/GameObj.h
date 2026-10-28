@@ -74,9 +74,16 @@ public:
 	bool ForceDraw() const { return _forceDraw; }
 	void ForceDraw(bool value) { _forceDraw = value; }
 	/* C# GameObj.TextureColor: tint applied when drawing (white = none) */
-	Color TextureColor() const { return _textureColor; }
+	/* GameObj.cs: a child takes its parent's tint unless that is white,
+	 * and its opacity is multiplied by the parent's */
+	Color TextureColor() const
+	{
+		if (_parent == nullptr) return _textureColor;
+		Color p = _parent->TextureColor();
+		return p.R == 255 && p.G == 255 && p.B == 255 ? _textureColor : p;
+	}
 	void TextureColor(const Color &value) { _textureColor = value; }
-	float Opacity() const { return _opacity; }
+	float Opacity() const { return _parent == nullptr ? _opacity : _opacity * _parent->Opacity(); }
 	void Opacity(float value) { _opacity = value; }
 	float Layer() const { return _layer; }
 	void Layer(float value) { _layer = value; }

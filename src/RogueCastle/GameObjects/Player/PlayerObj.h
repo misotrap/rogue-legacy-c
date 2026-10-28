@@ -78,7 +78,8 @@ public:
 	 * stats come from the save (Game.PlayerStats in the C#): the class,
 	 * the manor skills, the equipment and the bonus drops. Until
 	 * SetPlayerStats is called the base knight values apply. */
-	void SetPlayerStats(Save::GameState *stats) { m_stats = stats; }
+	void SetPlayerStats(Save::GameState *stats) { m_stats = stats; UpdateEquipmentObjs(); UpdateEquipmentColours(); }
+	void UpdateEquipmentColours();   /* PlayerObj.cs line 2558 */
 	Save::GameState *Stats() const { return m_stats; }
 
 	float CurrentHealth = 100;
@@ -102,6 +103,10 @@ public:
 	void Blink(Color colour, float blinkTime);
 	float m_blinkCounter = 0;
 	Color m_blinkColour = Color(255, 0, 0);
+	DS2DEngine::SpriteObj *m_swearBubble = nullptr;   /* Tourettes */
+	float m_swearBubbleCounter = 0;
+	void DrawSwearBubble(DS2DEngine::Camera2D *camera);   /* Tourettes */
+	Color m_partColour[PlayerPart::Light + 1];   /* the armour tints (UpdateEquipmentColours) */
 
 	Save::GameState *m_stats = nullptr;   /* Game.PlayerStats */
 	int State = STATE_IDLE;

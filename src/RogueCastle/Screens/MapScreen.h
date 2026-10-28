@@ -30,7 +30,8 @@ namespace RogueCastle
 		void Open(float playerX, float playerY);
 		// false once closed
 		bool Update(uint32_t buttons, uint32_t pressed, double dt);
-		void Draw(uint32_t *frame, const Levels::Castle &castle);
+		// alzheimers: the rooms are forgotten, "?????" instead (MapScreen.cs line 259)
+		void Draw(uint32_t *frame, const Levels::Castle &castle, bool alzheimers = false);
 		// The minimap in the top right corner of the play area
 		void DrawMini(uint32_t *frame, const Levels::Castle &castle, float playerX, float playerY, double dt);
 

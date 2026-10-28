@@ -553,7 +553,10 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		                Text::Align::Left);
 	}
 	if (m_player != nullptr)
+	{
 		m_player->Draw(camera);
+		m_player->DrawSwearBubble(camera);
+	}
 }
 
 void ProceduralLevelScreen::DropItem(Vector2 position, int dropType, float amount)

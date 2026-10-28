@@ -18,6 +18,7 @@ namespace RogueCastle
 		int health = 0, maxHealth = 1, baseHealth = 0;  // base 0: = max
 		int mana = 0, maxMana = 1, baseMana = 0;
 		int gold = 0;
+		bool cip = false;       // Congenital insensitivity to pain: no health bar
 		int level = 0;          // PlayerStats.CurrentLevel (manor level)
 		std::string heroName;   // e.g. "Sieur Mark II"
 	};
