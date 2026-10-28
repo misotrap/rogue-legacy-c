@@ -294,3 +294,30 @@ Miyoo buttons are mapped in `platform_miyoo.cpp` (evdev key codes). MENU quits.
 - tools/make_subsheet.py cuts the few miscSpritesheet images the UI needs
   into uiExtraSpritesheet (1.7 MB instead of 16 MB): add names there rather
   than loading miscSpritesheet.
+
+## Next for Vibe, in this order (after the last enemies)
+
+Claude did the screens, the courtyard, the sound system, the dialogues,
+the map/minimap and the options; the game code below is yours.
+1. **Player stats**: PlayerObj TotalDamage / TotalMagicDamage / TotalArmor /
+   MaxHealth / MaxMana / MaxWeight from the class, the manor skills
+   (`save.skills.ModifierAmount`), the equipment and the runes
+   (`Equipment`), the bonus drops. Replace the fixed 25.
+2. **Sounds in game**: every `SoundManager.PlaySound/Play3DSound` of
+   PlayerObj, the enemies and projectiles as `Audio::PlaySound` (same cue
+   names, see "Sound" above).
+3. **Loot**: ItemDropObj (coins, bags, diamonds, the stat drops) from
+   enemies and breakables, picked up by the player (gold x0.6 while
+   `HasArchitectFee`), the gold number text.
+4. **Chests**: ChestObj / FairyChestObj (conditions), blueprints and runes
+   unlocked in `save` (the blacksmith/enchantress screens read them), then
+   a GetItem screen (ask Claude, or port GetItemScreen.cs).
+5. **Spells and class powers**: the spell projectiles (SpellType), mana,
+   the class specials (barbarian shout, knight block...), the traits'
+   gameplay effects (gigantism, dwarfism, vertigo...).
+6. **Bosses**: the four area bosses and their rooms (boss doors, the
+   EntranceBoss teleporter), then the last boss.
+7. **Armour colours**: PlayerObj.UpdateEquipmentColours (TextureColor of the
+   equipped parts; keep it out of the damage blink at line ~165).
+8. Quick drop option, special rooms (bonus, challenge, carnival), garden
+   HoverObj rocks.
