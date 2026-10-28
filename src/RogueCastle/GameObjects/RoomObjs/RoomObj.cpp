@@ -20,6 +20,7 @@
 #include "../EnemyObjs/EnemyObj_EarthWizard.h"
 #include "../EnemyObjs/EnemyObj_BallAndChain.h"
 #include "../EnemyObjs/EnemyObj_SkeletonArcher.h"
+#include "../EnemyObjs/EnemyObj_HomingTurret.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -99,6 +100,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_BallAndChain(player, diff);
 	case EnemyType::SkeletonArcher:
 		return new EnemyObj_SkeletonArcher(player, diff);
+	case EnemyType::HomingTurret:
+		return new EnemyObj_HomingTurret(player, diff);
 	default:
 		return nullptr;
 	}
