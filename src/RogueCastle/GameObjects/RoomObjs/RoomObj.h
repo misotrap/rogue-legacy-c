@@ -26,6 +26,8 @@ public:
 	 * The player is passed as the enemies' target. */
 	void LoadRoom(const Levels::PlacedRoom &placed, class PlayerObj *player);
 	void Update(GameTime *gameTime);
+	/* Debug fallback: plain-colour walls instead of RoomRenderer */
+	static bool PlainWalls;
 	void Draw(DS2DEngine::Camera2D *camera);
 
 	const std::string &Name() const { return m_name; }

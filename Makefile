@@ -82,3 +82,7 @@ hudtest: tools/hudtest.cpp src/RogueCastle/HUD/*.cpp src/Text/Font.cpp src/gfx.c
 # Folder for the Miyoo SD card: build/RogueLegacyC (copy to SD:/App/)
 package: miyoo
 	sh tools/package_miyoo.sh
+
+# Room look check (no window): ./roomrendertest out [seed]
+roomrendertest: tools/roomrendertest.cpp $(SRC) $(shell find src -name "*.h")
+	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ tools/roomrendertest.cpp $(filter-out src/main.cpp,$(SRC)) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm

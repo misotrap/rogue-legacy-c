@@ -12,6 +12,7 @@
 #include "../GameObjects/RoomObjs/RoomObj.h"
 #include "../Levels/LevelBuilder2.h"
 #include "../Levels/LevelParser.h"
+#include "../Rendering/RoomRenderer.h"
 #include <vector>
 
 namespace RogueCastle
@@ -44,6 +45,7 @@ private:
 
 	std::vector<class ProjectileObj *> m_projectiles;   /* owned */
 	Levels::Castle m_castle;
+	RoomRenderer m_roomRenderer;   /* the original look behind the room objects */
 	std::vector<RoomObj *> m_roomList;
 	std::vector<DS2DEngine::IPhysicsObj *> m_allTerrain;
 	RoomObj *m_currentRoom = nullptr;

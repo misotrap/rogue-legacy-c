@@ -148,3 +148,54 @@ void gfx_blit_tinted(const Texture *t, int sx, int sy, int sw, int sh, float dx,
 		}
 	}
 }
+
+void gfx_blit_ex(const Texture *t, int sx, int sy, int sw, int sh, float x, float y, float originX, float originY,
+	float scaleX, float scaleY, float rotation, int flip, uint32_t colour)
+{
+	if (t == NULL || t->px == NULL || sw <= 0 || sh <= 0 || scaleX <= 0 || scaleY <= 0 || (colour >> 24) == 0) return;
+	if (rotation == 0.0f && scaleX == scaleY)
+	{
+		/* XNA: the origin is a point of the destination quad; flipping
+		 * mirrors the texels inside it (as Camera2D always did) */
+		gfx_blit_tinted(t, sx, sy, sw, sh, x - originX * scaleX, y - originY * scaleY, scaleX, flip, colour);
+		return;
+	}
+	float c = cosf(rotation), s = sinf(rotation);
+	/* Screen bounding box of the four transformed corners */
+	float cx[4] = { -originX, sw - originX, -originX, sw - originX };
+	float cy[4] = { -originY, -originY, sh - originY, sh - originY };
+	float minX = 1e9f, minY = 1e9f, maxX = -1e9f, maxY = -1e9f;
+	for (int i = 0; i < 4; i++)
+	{
+		float px = cx[i] * scaleX, py = cy[i] * scaleY;
+		float rx = x + px * c - py * s, ry = y + px * s + py * c;
+		if (rx < minX) minX = rx;
+		if (rx > maxX) maxX = rx;
+		if (ry < minY) minY = ry;
+		if (ry > maxY) maxY = ry;
+	}
+	int x0 = (int) floorf(minX), x1 = (int) ceilf(maxX), y0 = (int) floorf(minY), y1 = (int) ceilf(maxY);
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 > SCREEN_W) x1 = SCREEN_W;
+	if (y1 > SCREEN_H) y1 = SCREEN_H;
+	int tinted = colour != 0xFFFFFFFFu;
+	for (int py = y0; py < y1; py++)
+	{
+		uint32_t *dst = fb + (size_t) py * SCREEN_W;
+		for (int px = x0; px < x1; px++)
+		{
+			/* Inverse transform of the pixel centre into the source rectangle */
+			float dx = px + 0.5f - x, dy = py + 0.5f - y;
+			float u = (dx * c + dy * s) / scaleX + originX;
+			float v = (-dx * s + dy * c) / scaleY + originY;
+			if (u < 0 || v < 0 || u >= sw || v >= sh) continue;
+			int tx = flip ? sx + sw - 1 - (int) u : sx + (int) u;
+			int ty = sy + (int) v;
+			if (tx < 0 || ty < 0 || tx >= t->w || ty >= t->h) continue;
+			uint32_t p = t->px[(size_t) ty * t->w + tx];
+			dst[px] = Blend(tinted ? Tint(p, colour) : p, dst[px]);
+		}
+	}
+}
+

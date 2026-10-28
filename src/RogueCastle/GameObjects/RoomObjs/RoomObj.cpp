@@ -13,6 +13,7 @@
 #include "../EnemyObjs/EnemyObj_Spark.h"
 #include "../EnemyObjs/EnemyObj_Zombie.h"
 #include "../EnemyObjs/EnemyObj_Wolf.h"
+#include "../EnemyObjs/EnemyObj_Ninja.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -78,6 +79,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Zombie(player, diff);
 	case EnemyType::Wolf:
 		return new EnemyObj_Wolf(player, diff);
+	case EnemyType::Ninja:
+		return new EnemyObj_Ninja(player, diff);
 	default:
 		return nullptr;
 	}
@@ -245,13 +248,16 @@ uint32_t RoomObj::DoorColour() const
 	}
 }
 
+bool RoomObj::PlainWalls = false;
+
 void RoomObj::Draw(Camera2D *camera)
 {
 	if (!Bounds().Intersects(camera->Bounds()))
 		return;
 
-	/* Walls: plain coloured rectangles (AGENTS.md), via the camera
-	 * transform. */
+	/* Walls and doorways are drawn by RoomRenderer (original look); the
+	 * plain rectangles below are only a fallback when PlainWalls is set. */
+	if (PlainWalls)
 	for (const TerrainObj *terrain : m_terrainList)
 	{
 		Rectangle b = terrain->TerrainBounds();
@@ -261,6 +267,7 @@ void RoomObj::Draw(Camera2D *camera)
 	}
 
 	/* Door openings: a brighter strip so the passages read visually. */
+	if (PlainWalls)
 	for (const DoorInfo &door : m_doorList)
 		camera->DrawRectangle(Vector2(door.x, door.y), door.width, door.height, DoorColour());
 

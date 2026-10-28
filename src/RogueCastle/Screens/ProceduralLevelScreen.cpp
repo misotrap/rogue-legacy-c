@@ -23,6 +23,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed)
 		return;
 	/* The area decorations and breakables (asset-swap objects). */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "castleTerrainSpritesheet");
+	/* Area art (castle, tower, dungeon, garden) and the sky (RoomRenderer) */
+	m_roomRenderer.LoadContent(assets);
 	/* The enemies and their projectiles (the ported ones live in these). */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinalSpritesheetBig");
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "enemyFinal2Spritesheet");
@@ -269,11 +271,16 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 	if (!m_valid)
 		return;
 
-	/* Background: one colour per area (AGENTS.md). */
-	uint32_t bg = m_currentRoom != nullptr ? m_currentRoom->BackgroundColour() : 0xFF241C28u;
-	gfx_fill(0, 60, SCREEN_W, 360, bg);
-
-	/* Rooms: walls and doorways, culled by the camera bounds. */
+	/* The original look (sky, background, textured walls, borders,
+	 * decorations) of the rooms in view, then their objects on top.
+	 * m_roomList is built in the order of m_castle.rooms. */
+	Rectangle view = camera->Bounds();
+	for (size_t i = 0; i < m_castle.rooms.size() && i < m_roomList.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
+			m_roomRenderer.Draw(camera, r);
+	}
 	for (RoomObj *room : m_roomList)
 		room->Draw(camera);
 
