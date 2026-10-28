@@ -219,13 +219,7 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	/* ProceduralLevelScreen.cs line 1536: room, player, then physics.
 	 * The time stop spell freezes the enemies (their logic, not the
 	 * physics of the projectiles). */
-	if (m_timeStopTimer > 0)
-	{
-		m_timeStopTimer -= (float) gameTime->ElapsedGameTime;
-		if (m_timeStopTimer < 0)
-			m_timeStopTimer = 0;
-	}
-	if (m_currentRoom != nullptr && m_timeStopTimer <= 0)
+	if (m_currentRoom != nullptr && !m_timeStopped)
 		m_currentRoom->Update(gameTime);
 	if (m_player != nullptr)
 		m_player->Update(gameTime);
@@ -698,14 +692,15 @@ void ProceduralLevelScreen::DamageAllEnemies(int damage)
 
 void ProceduralLevelScreen::CastTimeStop()
 {
-	/* The stop watch: the enemies freeze for TIMESTOP_XVal seconds. */
-	m_timeStopTimer = SpellEV::TIMESTOP_XVal;
+	/* The stop watch: the enemies freeze while the spell is up (the
+	 * hero's mana pays TIMESTOP_ACTIVE_MANA_DRAIN per tick). */
+	m_timeStopped = true;
 	Audio::PlaySound("Cast_TimeStop");
 }
 
 void ProceduralLevelScreen::StopTimeStop()
 {
-	m_timeStopTimer = 0;
+	m_timeStopped = false;
 }
 
 } // namespace RogueCastle

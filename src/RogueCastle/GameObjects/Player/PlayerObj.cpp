@@ -170,29 +170,69 @@ void PlayerObj::Update(GameTime *gameTime)
 {
 	float elapsedSeconds = (float) gameTime->ElapsedGameTime;
 
-	/* The spell counters (PlayerObj.cs lines 995-1020, 1458). */
+	/* The spell counters (PlayerObj.cs lines 995-1020, 1405-1480): the
+	 * abilities drain mana per MANA_OVER_TIME_TIC_RATE tick. */
 	if (m_spellCastDelay > 0)
 		m_spellCastDelay -= elapsedSeconds;
+	if (m_ninjaTeleportDelay > 0)
+		m_ninjaTeleportDelay -= elapsedSeconds;
+	if (m_blockInvincibleCounter > 0)
+		m_blockInvincibleCounter -= elapsedSeconds;
 	if (m_damageShieldCast)
 	{
-		/* The leaf shield drains mana while it spins. */
-		CurrentMana -= GameEV::DAMAGESHIELD_ACTIVE_MANA_DRAIN
-		               * GameEV::SPELLSWORD_MANACOST_MOD * elapsedSeconds;
-		if (CurrentMana <= 0)
+		m_damageShieldDrainCounter += elapsedSeconds;
+		if (m_damageShieldDrainCounter >= GameEV::MANA_OVER_TIME_TIC_RATE)
 		{
-			CurrentMana = 0;
-			m_damageShieldCast = false;
-			m_megaDamageShieldCast = false;
+			m_damageShieldDrainCounter = 0;
+			CurrentMana -= m_megaDamageShieldCast
+			                 ? GameEV::DAMAGESHIELD_ACTIVE_MANA_DRAIN * GameEV::SPELLSWORD_MANACOST_MOD
+			                 : GameEV::DAMAGESHIELD_ACTIVE_MANA_DRAIN;
+			if (CurrentMana <= 0)
+			{
+				CurrentMana = 0;
+				m_damageShieldCast = false;
+				m_megaDamageShieldCast = false;
+			}
 		}
 	}
-	/* The rapid daggers: one throw every 0.05s (ThrowDaggerProjectiles,
-	 * the Tween.RunFunction calls of PlayerObj.cs line 3321). */
+	if (m_assassinSpecialActive)
+	{
+		m_assassinDrainCounter += elapsedSeconds;
+		if (m_assassinDrainCounter >= GameEV::MANA_OVER_TIME_TIC_RATE)
+		{
+			m_assassinDrainCounter = 0;
+			CurrentMana -= GameEV::ASSASSIN_ACTIVE_MANA_DRAIN;
+			if (CurrentMana <= 0)
+				DisableAssassinAbility();
+		}
+	}
+	if (m_timeStopCast)
+	{
+		m_timeStopDrainCounter += elapsedSeconds;
+		if (m_timeStopDrainCounter >= GameEV::MANA_OVER_TIME_TIC_RATE)
+		{
+			m_timeStopDrainCounter = 0;
+			CurrentMana -= GameEV::TIMESTOP_ACTIVE_MANA_DRAIN;
+			if (CurrentMana <= 0)
+			{
+				CurrentMana = 0;
+				if (m_levelScreen != nullptr)
+					m_levelScreen->StopTimeStop();
+				m_timeStopCast = false;
+			}
+		}
+	}
+	/* The rapid daggers (and the Traitor's axes): one throw every 0.05s
+	 * (ThrowDaggerProjectiles, the Tween.RunFunction calls of
+	 * PlayerObj.cs line 3321). */
 	if (m_rapidDaggerQueue > 0)
 	{
 		m_rapidDaggerTimer -= elapsedSeconds;
 		if (m_rapidDaggerTimer <= 0)
 		{
 			m_rapidDaggerQueue--;
+			if (m_rapidDaggerQueue == 0)
+				m_throwingAxes = false;
 			m_rapidDaggerTimer = 0.05f;
 			CastDaggers(m_rapidDaggerQueue < 4);
 		}
@@ -300,6 +340,32 @@ void PlayerObj::Update(GameTime *gameTime)
 		/* Code for casting spells (PlayerObj.cs line 1004). */
 		if (Game::GlobalInput.JustPressed(PLAYER_SPELL) && m_spellCastDelay <= 0)
 			CastSpell(false);
+
+		/* Code for blocking (PlayerObj.cs line 756): the upgraded
+		 * knight, while the block button is held. */
+		if (Game::GlobalInput.Pressed(PLAYER_BLOCK) && CanBlock() && !IsLogicSetActive())
+		{
+			if (CurrentMana >= GameEV::KNIGHT_BLOCK_DRAIN)
+			{
+				if (m_isTouchingGround)
+					CurrentSpeed(0);
+				State = STATE_BLOCKING;
+				if (Game::GlobalInput.JustPressed(PLAYER_BLOCK))
+					Audio::PlaySound("Player_Block_Action");
+			}
+			else if (Game::GlobalInput.JustPressed(PLAYER_BLOCK))
+				Audio::PlaySound("Error_Spell");
+		}
+		else if (State == STATE_BLOCKING)
+		{
+			/* The block ends with the button (PlayerObj.cs line 780). */
+			State = m_isTouchingGround ? STATE_IDLE : STATE_JUMPING;
+		}
+
+		/* The class powers on the block button (PlayerObj.cs line 1011),
+		 * outside the bonus rooms (not ported yet, they are fine). */
+		if (Game::GlobalInput.JustPressed(PLAYER_BLOCK))
+			CastClassPower();
 
 		/* Code for dashing (PlayerObj.cs line 1109). */
 		if (m_dashCooldownCounter <= 0
@@ -652,9 +718,26 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 	{
 		IPhysicsObj *otherParent = otherBox->PhysicsParent();
 		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 3 /* enemy */
-		    && State != STATE_HURT && m_invincibleCounter <= 0)
+		    && State != STATE_HURT)
 		{
-			if (m_invincibleCounter <= 0)
+			/* PlayerObj.cs line 2065: the upgraded knight blocks
+			 * projectiles while he has mana. */
+			if (State == STATE_BLOCKING && (CurrentMana > 0 || m_blockInvincibleCounter > 0))
+			{
+				if (m_blockInvincibleCounter <= 0)
+				{
+					CurrentMana -= GameEV::KNIGHT_BLOCK_DRAIN;
+					m_blockInvincibleCounter = BlockInvincibleTime;
+					char buf[16];
+					snprintf(buf, sizeof(buf), "-%d mp", GameEV::KNIGHT_BLOCK_DRAIN);
+					if (m_levelScreen != nullptr)
+						m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top(),
+						                        0xFF87CEEBu);
+				}
+				Audio::PlaySound("Player_Block");
+				return;
+			}
+			if (m_invincibleCounter <= 0 && !ForceInvincible)
 				HitPlayer(otherParent->DealsDamage(),
 				          Vector2((float) otherBox->AbsRect().X, (float) otherBox->AbsRect().Y));
 			return;
@@ -1011,29 +1094,13 @@ void PlayerObj::CastSpell(bool activateSecondary, bool megaSpell)
 	case SpellType::Displacer:
 		if (CurrentMana >= manaCost)
 		{
-			/* The displacer teleports the player to the first wall
-			 * in the facing direction (RunDisplacerEffect,
+			/* The displacer teleports the player to the first wall in
+			 * the facing direction (RunDisplacerEffect,
 			 * ProjectileObj.cs line 365; the port uses a straight
 			 * ray, the rotated-terrain cases are not ported). */
 			CurrentMana -= manaCost;
 			float dir = Flip() == SpriteEffects::FlipHorizontally ? -1.0f : 1.0f;
-			float closest = 6600;
-			Rectangle pb = Bounds();
-			if (m_levelScreen->CurrentRoom() != nullptr)
-			{
-				for (const TerrainObj *terrain : m_levelScreen->CurrentRoom()->TerrainObjList())
-				{
-					Rectangle tb = terrain->TerrainBounds();
-					if (tb.Top() < pb.Bottom() && tb.Bottom() > pb.Top())
-					{
-						float distance = dir > 0 ? tb.Left() - pb.Right()
-						                 : pb.Left() - tb.Right();
-						if (distance >= 0 && distance < closest)
-							closest = distance;
-					}
-				}
-			}
-			Translocate(Vector2(X() + dir * (closest - 20), Y()));
+			Translocate(Vector2(X() + dir * (ClosestWallDistance() - 20), Y()));
 		}
 		break;
 	case SpellType::RapidDagger:
@@ -1052,21 +1119,28 @@ void PlayerObj::CastSpell(bool activateSecondary, bool megaSpell)
 
 void PlayerObj::CastDaggers(bool randomize)
 {
-	/* PlayerObj.cs line 3331 (CastDaggers): one rapid dagger. */
-	ProjectileData projData = SpellEV::GetProjData(SpellType::RapidDagger, this);
-	projData.spriteName = "SpellDagger_Sprite";
-	projData.angle = Vector2(0, 0);
-	projData.sourceAnchor = Vector2(50, 0);
-	projData.speed = 1750;
-	projData.collidesWithTerrain = true;
-	projData.destroysWithTerrain = true;
-	projData.isCollidable = true;
-	projData.scale = Vector2(2.5f, 2.5f);
-	projData.damage = (int) (TotalMagicDamage()
-	                         * SpellEV::RAPIDDAGGER_Damage);
+	/* PlayerObj.cs line 3331 (CastDaggers): one rapid dagger, or one of
+	 * the Traitor's queued axes (ThrowAxeProjectiles). */
+	uint8_t spell = m_throwingAxes ? SpellType::Axe : SpellType::RapidDagger;
+	ProjectileData projData = SpellEV::GetProjData(spell, this);
+	if (m_throwingAxes)
+		projData.damage = (int) (TotalMagicDamage()
+		                         * PlayerEV::TRAITOR_AXE_DAMAGEMOD);
+	else
+	{
+		projData.spriteName = "SpellDagger_Sprite";
+		projData.angle = Vector2(0, 0);
+		projData.sourceAnchor = Vector2(50, 0);
+		projData.speed = 1750;
+		projData.collidesWithTerrain = true;
+		projData.destroysWithTerrain = true;
+		projData.isCollidable = true;
+		projData.scale = Vector2(2.5f, 2.5f);
+		projData.damage = (int) (TotalMagicDamage() * SpellEV::RAPIDDAGGER_Damage);
+	}
 	if (randomize)
 		projData.angleOffset = (float) (rand() % 17 - 8);
-	m_levelScreen->FireSpellProjectile(projData, SpellType::RapidDagger);
+	m_levelScreen->FireSpellProjectile(projData, spell);
 	Audio::PlaySound("Cast_Dagger");
 }
 
@@ -1076,6 +1150,186 @@ void PlayerObj::Translocate(Vector2 position)
 	 * becomes an instant move (the camera snaps with UpdateCamera). */
 	Position(position);
 	Acceleration(Vector2(0, 0));
+}
+
+float PlayerObj::ClosestWallDistance() const
+{
+	/* ProjectileObj.cs line 365 (RunDisplacerEffect): the first wall in
+	 * the facing direction (a straight ray; the rotated-terrain cases
+	 * of the C# are not ported). */
+	if (m_levelScreen == nullptr || m_levelScreen->CurrentRoom() == nullptr)
+		return 6600;
+	float dir = Flip() == SpriteEffects::FlipHorizontally ? -1.0f : 1.0f;
+	float closest = 6600;
+	Rectangle pb = Bounds();
+	for (const TerrainObj *terrain : m_levelScreen->CurrentRoom()->TerrainObjList())
+	{
+		Rectangle tb = terrain->TerrainBounds();
+		if (tb.Top() < pb.Bottom() && tb.Bottom() > pb.Top())
+		{
+			float distance = dir > 0 ? tb.Left() - pb.Right()
+			                 : pb.Left() - tb.Right();
+			if (distance >= 0 && distance < closest)
+				closest = distance;
+		}
+	}
+	return closest;
+}
+
+void PlayerObj::CastClassPower()
+{
+	/* PlayerObj.cs lines 1011-1050: the special of the upgraded classes
+	 * and the Traitor on the block button. */
+	if (m_stats == nullptr || m_levelScreen == nullptr)
+		return;
+	uint8_t classType = m_stats->hero.classType;
+	if (classType == ClassType::SpellSword2)
+	{
+		if (m_spellCastDelay <= 0)
+			CastSpell(false, true);
+	}
+	else if (classType == ClassType::Lich2)
+		ConvertHPtoMP();
+	else if (classType == ClassType::Assassin2 && CurrentMana > 0)
+	{
+		if (!m_assassinSpecialActive)
+			ActivateAssassinAbility();
+		else
+			DisableAssassinAbility();
+	}
+	else if (classType == ClassType::Wizard2)
+		SwapSpells();
+	else if (classType == ClassType::Ninja2)
+		NinjaTeleport();
+	else if (classType == ClassType::Barbarian2)
+		CastFuhRohDah();
+	else if (classType == ClassType::Traitor)
+	{
+		if (CurrentMana >= PlayerEV::TRAITOR_AXE_MANACOST && m_spellCastDelay <= 0)
+		{
+			CurrentMana -= PlayerEV::TRAITOR_AXE_MANACOST;
+			m_spellCastDelay = 0.5f;
+			ThrowAxeProjectiles();
+		}
+	}
+}
+
+void PlayerObj::ConvertHPtoMP()
+{
+	/* PlayerObj.cs line 3000: half the health becomes max mana. */
+	if (m_stats == nullptr || MaxHealth() <= 1)
+		return;
+	int baseHealthLost = (int) ((MaxHealth() - m_stats->LichHealth)
+	                             * GameEV::LICH_HEALTH_CONVERSION_PERCENT);
+	int lichHealthLost = (int) (m_stats->LichHealth
+	                             * GameEV::LICH_HEALTH_CONVERSION_PERCENT);
+	if (MaxMana() + baseHealthLost + lichHealthLost < m_stats->LichMana)
+	{
+		Audio::PlaySound("Lich_Swap");
+		m_stats->LichHealthMod *= GameEV::LICH_HEALTH_CONVERSION_PERCENT;
+		m_stats->LichHealth -= lichHealthLost;
+		m_stats->LichMana += baseHealthLost + lichHealthLost;
+		CurrentMana += baseHealthLost + lichHealthLost;
+		if (CurrentHealth > MaxHealth())
+			CurrentHealth = MaxHealth();
+		char buf[32];
+		snprintf(buf, sizeof(buf), "-%d hp", baseHealthLost + lichHealthLost);
+		m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top() - 60, 0xFFFF0000u);
+		snprintf(buf, sizeof(buf), "+%d mp", baseHealthLost + lichHealthLost);
+		m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top() - 30, 0xFF4169E1u);
+	}
+	else
+		Audio::PlaySound("Error_Spell");
+}
+
+void PlayerObj::ActivateAssassinAbility()
+{
+	/* PlayerObj.cs line 3035: the stealth costs 5 mp and drains while
+	 * up; the hero cannot be hit (ForceInvincible). */
+	if (CurrentMana >= GameEV::ASSASSIN_ACTIVE_INITIAL_COST)
+	{
+		Audio::PlaySound("Assassin_Stealth_Enter");
+		CurrentMana -= GameEV::ASSASSIN_ACTIVE_INITIAL_COST;
+		Opacity(0.05f);   /* the C# tweens it */
+		m_assassinSpecialActive = true;
+		ForceInvincible = true;
+	}
+}
+
+void PlayerObj::DisableAssassinAbility()
+{
+	/* PlayerObj.cs line 3048. */
+	Audio::PlaySound("Assassin_Stealth_Exit");
+	Opacity(1);
+	m_assassinSpecialActive = false;
+	ForceInvincible = false;
+}
+
+void PlayerObj::SwapSpells()
+{
+	/* PlayerObj.cs line 3056: the upgraded Wizard cycles his spell list. */
+	if (m_stats == nullptr)
+		return;
+	Audio::PlaySound("Spell_Switch");
+	std::vector<uint8_t> spells = Lineage::Generator::GetSpellList(ClassType::Wizard2);
+	for (size_t i = 0; i < spells.size(); i++)
+	{
+		if (spells[i] == m_stats->hero.spell)
+		{
+			m_stats->hero.spell = spells[(i + 1) % spells.size()];
+			return;
+		}
+	}
+	if (!spells.empty())
+		m_stats->hero.spell = spells[0];
+}
+
+void PlayerObj::NinjaTeleport()
+{
+	/* PlayerObj.cs line 3086: a short teleport toward the facing wall. */
+	if (CurrentMana < GameEV::NINJA_TELEPORT_COST || m_ninjaTeleportDelay > 0)
+		return;
+	CurrentMana -= GameEV::NINJA_TELEPORT_COST;
+	m_ninjaTeleportDelay = 0.5f;
+	Audio::PlaySound("Ninja_Teleport");
+	float distance = ClosestWallDistance();
+	float move = GameEV::NINJA_TELEPORT_DISTANCE;
+	if (distance < move)
+		move = distance - TerrainBounds().Width * 0.5f;
+	float dir = Flip() == SpriteEffects::FlipHorizontally ? -1.0f : 1.0f;
+	X(X() + dir * move);
+}
+
+void PlayerObj::CastFuhRohDah()
+{
+	/* PlayerObj.cs line 3229 (CastFuhRohDah): the Barbarian shout, a
+	 * wide projectile that knocks the enemies back without damage. */
+	if (CurrentMana < GameEV::BARBARIAN_SHOUT_INITIAL_COST)
+		return;
+	CurrentMana -= GameEV::BARBARIAN_SHOUT_INITIAL_COST;
+	Audio::PlaySound("Cast_FasRoDus");
+	ProjectileData projData;
+	projData.spriteName = "SpellShout_Sprite";
+	projData.source = this;
+	projData.angle = Vector2(0, 0);
+	projData.sourceAnchor = Vector2(60, -20);
+	projData.isWeighted = false;
+	projData.lifespan = 2;
+	projData.scale = Vector2(1, 1);
+	projData.damage = 0;
+	projData.speed = 0;
+	projData.lockPosition = true;
+	ProjectileObj *proj = m_levelScreen->FireSpellProjectile(projData, SpellType::Shout);
+	proj->IgnoreBoundsCheck = true;
+}
+
+void PlayerObj::ThrowAxeProjectiles()
+{
+	/* The Traitor's axes: three axe throws like the rapid daggers
+	 * (ThrowAxeProjectiles, the C# Tweener calls). */
+	m_throwingAxes = true;
+	m_rapidDaggerQueue = 3;
+	m_rapidDaggerTimer = 0;
 }
 
 } // namespace RogueCastle

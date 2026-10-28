@@ -350,6 +350,18 @@ namespace RogueCastle
 				m_save.hero.spell = (uint8_t) atoi(debugSpell);
 				m_level->Player()->CastSpell(false);
 			}
+			/* Dev/test: RL_DEBUG_CLASS=<ClassType> + RL_DEBUG_POWER=1
+			 * fires that class power once. */
+			static const char *debugClass = getenv("RL_DEBUG_CLASS");
+			static const char *debugPower = getenv("RL_DEBUG_POWER");
+			static bool powerCast = false;
+			if (debugClass != nullptr && !powerCast && m_level->Player() != nullptr)
+			{
+				powerCast = true;
+				m_save.hero.classType = (uint8_t) atoi(debugClass);
+				if (debugPower != nullptr)
+					m_level->Player()->CastClassPower();
+			}
 			/* The real death: PlayerObj hides the hero when the health
 			 * runs out; give it a short pause before the lineage flow
 			 * (the original waits for the death animation). */

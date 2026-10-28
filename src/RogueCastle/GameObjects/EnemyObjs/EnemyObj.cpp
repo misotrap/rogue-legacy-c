@@ -7,6 +7,7 @@
 #include "../ItemDropObj.h"
 #include "../../EVs/GameEV.h"
 #include "../../Types/EnemyType.h"
+#include "../../Types/SpellType.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include "../../../Audio/Audio.h"
@@ -391,16 +392,36 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 			                                : m_invincibleCounter;
 			if (invincible <= 0)
 			{
-				/* EnemyObj.cs line 815. */
-				Audio::PlaySound("EnemyHit1", "EnemyHit2", "EnemyHit3");
-				int damage = otherParent->DealsDamage();
-				if (isProjectile)
-					m_invincibleCounterProjectile = InvincibilityTime;
-				else
-					m_invincibleCounter = InvincibilityTime;
 				Vector2 impact((float) thisBox->AbsRect().X, (float) thisBox->AbsRect().Y);
-				HitEnemy(damage, impact, true);
-				otherParent->OnEnemyHit();
+				if (isProjectile && otherParent->ProjectileSpell() == SpellType::Shout)
+				{
+					/* The Barbarian shout: knockback only (EnemyObj.cs
+					 * line 707), with the shout's knockback mod. */
+					if (CanBeKnockedBack && !IsPaused && m_target != nullptr)
+					{
+						CurrentSpeed(0);
+						float mod = GameEV::BARBARIAN_SHOUT_KNOCKBACK_MOD;
+						Vector2 kb = KnockBack != Vector2(0, 0)
+						                 ? KnockBack : m_target->EnemyKnockBack;
+						if (X() < m_target->X())
+							AccelerationX(-kb.X * mod);
+						else
+							AccelerationX(kb.X * mod);
+						AccelerationY(-kb.Y * mod);
+					}
+				}
+				else
+				{
+					/* EnemyObj.cs line 815. */
+					Audio::PlaySound("EnemyHit1", "EnemyHit2", "EnemyHit3");
+					int damage = otherParent->DealsDamage();
+					if (isProjectile)
+						m_invincibleCounterProjectile = InvincibilityTime;
+					else
+						m_invincibleCounter = InvincibilityTime;
+					HitEnemy(damage, impact, true);
+					otherParent->OnEnemyHit();
+				}
 			}
 		}
 		/* Enemy weapons do nothing to other enemies. */

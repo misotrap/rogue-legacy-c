@@ -26,6 +26,7 @@ public:
 
 	int DealsDamage() const override { return Damage; }
 	bool IsSpellProjectile() const override { return true; }
+	uint8_t ProjectileSpell() const override { return Spell; }
 	/* ProjectileObj.cs line 697: DestroysWithEnemy. */
 	void OnEnemyHit() override
 	{

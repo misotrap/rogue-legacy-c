@@ -52,6 +52,9 @@ public:
 	 * spell projectiles (which use the projectile invincibility counter
 	 * and their own damage) from the sword. */
 	virtual bool IsSpellProjectile() const { return false; }
+	/* The SpellType of a spell projectile (0 otherwise), read by the
+	 * enemies for the Barbarian shout knockback. */
+	virtual uint8_t ProjectileSpell() const { return 0; }
 	/* The enemy was damaged by this object: the projectiles that die
 	 * with their enemy destroy themselves here. */
 	virtual void OnEnemyHit() {}

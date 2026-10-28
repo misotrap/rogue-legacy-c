@@ -43,7 +43,7 @@ public:
 	/* The time stop spell: the enemies freeze for TIMESTOP_XVal seconds. */
 	void CastTimeStop();
 	void StopTimeStop();
-	bool IsTimeStopped() const { return m_timeStopTimer > 0; }
+	bool IsTimeStopped() const { return m_timeStopped; }
 	/* The ItemDropManager subset (ItemDropManager.cs): the loot. */
 	void DropItem(Vector2 position, int dropType, float amount);
 	void DropItemWide(Vector2 position, int dropType, float amount);
@@ -82,7 +82,8 @@ private:
 	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */
 	std::vector<DS2DEngine::IPhysicsObj *> m_allTerrain;
 	RoomObj *m_currentRoom = nullptr;
-	float m_timeStopTimer = 0;   /* the time stop spell */
+	bool m_timeStopped = false;  /* the time stop spell (a flag: it lasts
+	                              while the hero's mana pays the drain) */
 	PlayerObj *m_player = nullptr;
 	DS2DEngine::PhysicsManager m_physicsManager;
 	DS2DEngine::Camera2D m_camera;     /* C#: ScreenManager.Camera */

@@ -10,6 +10,7 @@
 #include "../../../DS2DEngine/Physics/PhysicsManager.h"
 #include "../../Types/InputMapType.h"
 #include "../../Types/PlayerPart.h"
+#include "../../Types/ClassType.h"
 
 namespace RogueCastle
 {
@@ -47,6 +48,21 @@ public:
 	void CastSpell(bool activateSecondary, bool megaSpell = false);
 	/* PlayerObj.cs line 3331 (CastDaggers): one rapid dagger throw. */
 	void CastDaggers(bool randomize);
+	/* The class powers (PlayerObj.cs lines 1005-1050): the block of the
+	 * upgraded knight, the SpellSword mega spell, the Lich conversion,
+	 * the assassin stealth, the Wizard spell swap, the Ninja teleport,
+	 * the Barbarian shout, the Traitor axes. */
+	void CastClassPower();            /* PLAYER_BLOCK just pressed */
+	void ConvertHPtoMP();             /* PlayerObj.cs line 3000 */
+	void ActivateAssassinAbility();   /* PlayerObj.cs line 3035 */
+	void DisableAssassinAbility();    /* PlayerObj.cs line 3048 */
+	void SwapSpells();                /* PlayerObj.cs line 3056 */
+	void NinjaTeleport();             /* PlayerObj.cs line 3086 */
+	void CastFuhRohDah();             /* PlayerObj.cs line 3229 */
+	void ThrowAxeProjectiles();       /* PlayerObj.cs line ~3320 */
+	/* The wall ahead in the facing direction (NinjaTeleport and the
+	 * displacer, ProjectileObj.cs RunDisplacerEffect). */
+	float ClosestWallDistance() const;
 	/* PlayerObj.cs line 2978 (Translocate): the teleport of the quantum
 	 * translocater and the displacer. */
 	void Translocate(Vector2 position);
@@ -101,6 +117,16 @@ public:
 	/* The rapid daggers: the queued throws (Tween.RunFunction calls). */
 	int m_rapidDaggerQueue = 0;
 	float m_rapidDaggerTimer = 0;
+	bool m_throwingAxes = false;   /* the Traitor's queued axes */
+	/* The class powers (PlayerObj.cs fields). */
+	bool m_assassinSpecialActive = false;
+	float m_assassinDrainCounter = 0;
+	float m_timeStopDrainCounter = 0;
+	float m_damageShieldDrainCounter = 0;
+	float m_ninjaTeleportDelay = 0;
+	float m_blockInvincibleCounter = 0;
+	float BlockInvincibleTime = 1.0f;   /* PlayerObj.cs line 268 */
+	bool ForceInvincible = false;        /* the assassin special */
 	bool m_isTouchingGround = false;
 	bool m_isJumping = false;
 
@@ -141,7 +167,11 @@ public:
 	float AttackDelay = 0;
 	float ComboDelay = 1.5f;          /* PlayerObj.cs line 229 */
 	bool CanAirDash() const { return TotalAirDashes > 0; }
-	bool CanBlock() const { return false; }   /* Knight2 class only */
+	bool CanBlock() const
+	{
+		/* The upgraded knight only (PlayerObj.cs CanBlock property). */
+		return m_stats != nullptr && m_stats->hero.classType == ClassType::Knight2;
+	}
 
 	void LockControls() { ControlsLocked = true; }
 	void UnlockControls() { ControlsLocked = false; }
