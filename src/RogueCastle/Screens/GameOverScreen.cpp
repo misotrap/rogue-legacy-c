@@ -1,5 +1,6 @@
 #include "GameOverScreen.h"
 
+#include "../../Audio/Audio.h"
 #include "../../SpriteSystem/SpriteLibrary.h"
 #include "../../Text/Loc.h"
 #include "../../platform.h"
@@ -88,6 +89,9 @@ namespace RogueCastle
 	bool GameOverScreen::Update(uint32_t pressed, double dt)
 	{
 		if (!m_open) return true;
+		// GameOverScreen.OnEnter: the music stops, the stinger plays at 1.2 s
+		if (m_time == 0) { Audio::StopMusic(); Audio::PlaySound("Player_Death_FadeToBlack"); }
+		if (m_time < 1.2 && m_time + dt >= 1.2) Audio::PlayMusic("GameOverStinger", false);
 		m_time += dt;
 		// The ghost: 0.4 opacity at 3 s, rises 150 over 2 s, gone at 4.5 s
 		double g = m_time - 3;

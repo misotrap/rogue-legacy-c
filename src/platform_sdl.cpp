@@ -147,3 +147,39 @@ void plat_sleep(double seconds)
 {
 	if (seconds > 0) SDL_Delay((Uint32) (seconds * 1000.0));
 }
+
+/* Sound through SDL2: mono int16 */
+static SDL_AudioDeviceID audioDev;
+static plat_audio_fn audioFn;
+
+static void AudioCallback(void *, Uint8 *stream, int len)
+{
+	audioFn((int16_t *) stream, len / 2);
+}
+
+int plat_audio_open(int rate, plat_audio_fn fn)
+{
+	if (getenv("RL_NO_AUDIO") != NULL || SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) return 0;
+	SDL_AudioSpec want, have;
+	SDL_zero(want);
+	want.freq = rate;
+	want.format = AUDIO_S16SYS;
+	want.channels = 1;
+	want.samples = 1024;
+	want.callback = AudioCallback;
+	audioFn = fn;
+	audioDev = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
+	if (audioDev == 0) return 0;
+	SDL_PauseAudioDevice(audioDev, 0);
+	return 1;
+}
+
+void plat_audio_lock(void)
+{
+	if (audioDev != 0) SDL_LockAudioDevice(audioDev);
+}
+
+void plat_audio_unlock(void)
+{
+	if (audioDev != 0) SDL_UnlockAudioDevice(audioDev);
+}

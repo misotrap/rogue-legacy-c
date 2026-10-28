@@ -132,3 +132,93 @@ void plat_sleep(double seconds)
 {
 	if (seconds > 0) usleep((useconds_t) (seconds * 1e6));
 }
+
+/* Sound through the console's own SDL 1.2 (/customer/lib, which drives
+ * the MI_AO audio block), loaded at run time so the binary still starts
+ * without it. dlopen/dlsym are weak: the toolchain's glibc 2.28 keeps them
+ * in libdl, the shipped glibc 2.36 has them in libc (no libdl needed). */
+#include <dlfcn.h>
+#include <stdio.h>
+#pragma weak dlopen
+#pragma weak dlsym
+#pragma weak dlerror
+
+struct SDL12_AudioSpec
+{
+	int freq;
+	uint16_t format;
+	uint8_t channels, silence;
+	uint16_t samples, padding;
+	uint32_t size;
+	void (*callback)(void *userdata, uint8_t *stream, int len);
+	void *userdata;
+};
+
+static plat_audio_fn audioFn;
+static void (*sdlLockAudio)(void), (*sdlUnlockAudio)(void);
+
+static void AudioCallback(void *, uint8_t *stream, int len)
+{
+	audioFn((int16_t *) stream, len / 2);
+}
+
+int plat_audio_open(int rate, plat_audio_fn fn)
+{
+	if (dlopen == NULL || dlsym == NULL)
+	{
+		fprintf(stderr, "audio: no dlopen\n");
+		return 0;
+	}
+	void *sdl = dlopen("/customer/lib/libSDL-1.2.so.0", RTLD_NOW | RTLD_GLOBAL);
+	if (sdl == NULL) sdl = dlopen("libSDL-1.2.so.0", RTLD_NOW | RTLD_GLOBAL);
+	if (sdl == NULL)
+	{
+		fprintf(stderr, "audio: %s\n", dlerror != NULL ? dlerror() : "no SDL 1.2");
+		return 0;
+	}
+	int (*init)(uint32_t) = (int (*)(uint32_t)) dlsym(sdl, "SDL_Init");
+	int (*openAudio)(SDL12_AudioSpec *, SDL12_AudioSpec *) = (int (*)(SDL12_AudioSpec *, SDL12_AudioSpec *)) dlsym(sdl, "SDL_OpenAudio");
+	void (*pauseAudio)(int) = (void (*)(int)) dlsym(sdl, "SDL_PauseAudio");
+	sdlLockAudio = (void (*)(void)) dlsym(sdl, "SDL_LockAudio");
+	sdlUnlockAudio = (void (*)(void)) dlsym(sdl, "SDL_UnlockAudio");
+	if (init == NULL || openAudio == NULL || pauseAudio == NULL || sdlLockAudio == NULL || sdlUnlockAudio == NULL)
+	{
+		fprintf(stderr, "audio: SDL 1.2 symbols missing\n");
+		sdlLockAudio = sdlUnlockAudio = NULL;
+		return 0;
+	}
+	if (init(0x10 /* SDL_INIT_AUDIO */) != 0)
+	{
+		fprintf(stderr, "audio: SDL_Init failed\n");
+		sdlLockAudio = sdlUnlockAudio = NULL;
+		return 0;
+	}
+	SDL12_AudioSpec want;
+	memset(&want, 0, sizeof(want));
+	want.freq = rate;
+	want.format = 0x8010;   /* AUDIO_S16LSB */
+	want.channels = 1;
+	want.samples = 1024;
+	want.callback = AudioCallback;
+	audioFn = fn;
+	/* obtained = NULL: SDL converts to what the device wants */
+	if (openAudio(&want, NULL) != 0)
+	{
+		fprintf(stderr, "audio: SDL_OpenAudio failed\n");
+		sdlLockAudio = sdlUnlockAudio = NULL;
+		return 0;
+	}
+	pauseAudio(0);
+	fprintf(stderr, "audio: SDL 1.2 at %d Hz\n", rate);
+	return 1;
+}
+
+void plat_audio_lock(void)
+{
+	if (sdlLockAudio != NULL) sdlLockAudio();
+}
+
+void plat_audio_unlock(void)
+{
+	if (sdlUnlockAudio != NULL) sdlUnlockAudio();
+}

@@ -1,5 +1,6 @@
 #include "GameFlow.h"
 
+#include "../Audio/Audio.h"
 #include "../Text/Loc.h"
 #include "../Text/LocIDs.h"
 #include "../platform.h"
@@ -15,6 +16,7 @@ namespace RogueCastle
 		m_assets = assetsDir;
 		m_savePath = savePath;
 		Text::Loc::Load(assetsDir, "fr");
+		Audio::Init(assetsDir);
 		m_generator = Lineage::Generator((uint32_t) time(nullptr));
 		std::string names = m_assets + "/HeroNames.txt", female = m_assets + "/HeroineNames.txt";
 		m_generator.LoadNames(names.c_str(), female.c_str());
@@ -118,6 +120,7 @@ namespace RogueCastle
 	{
 		uint32_t pressed = buttons & ~m_previous;
 		m_previous = buttons;
+		UpdateMusic();
 		switch (m_state)
 		{
 		case State::Lineage:
@@ -125,7 +128,11 @@ namespace RogueCastle
 			if (m_lineage.Update(buttons, pressed, dt)) StartCastle();
 			break;
 		case State::Title:
-			if (m_title.Update(pressed, dt)) LeaveTitle();
+			if (m_title.Update(pressed, dt))
+			{
+				Audio::PlaySound("Game_Start");
+				LeaveTitle();
+			}
 			break;
 		case State::Shop:
 			if (m_shop == nullptr || m_shop->Update(buttons, pressed, dt))
@@ -160,23 +167,27 @@ namespace RogueCastle
 			if (m_paused)
 			{
 				m_paused = m_pause.Update(pressed);
+				if (!m_paused) Audio::PlaySound("Resume_Toggle");
 				break;
 			}
 			if (m_mapOpen)
 			{
 				m_mapOpen = m_map.Update(buttons, pressed, dt);
+				if (!m_mapOpen) Audio::PlaySound("Map_Off");
 				break;
 			}
 			PlayerObj *player = m_level->Player();
 			if (player != nullptr && !player->IsKilled && (pressed & BTN_START) && !(buttons & BTN_SELECT))
 			{
 				m_paused = true;
+				Audio::PlaySound("Pause_Toggle");
 				break;
 			}
 			if (player != nullptr && (pressed & BTN_SELECT) && !(buttons & BTN_START))
 			{
 				m_map.Open(player->X(), player->Y());
 				m_mapOpen = true;
+				Audio::PlaySound("Map_On");
 				break;
 			}
 			if (player != nullptr && InCourtyard())
@@ -186,6 +197,7 @@ namespace RogueCastle
 				{
 					m_shop = action == StartingRoom::Action::Blacksmith ? &m_smith : &m_enchant;
 					m_shop->Open(m_save, MaxWeight());
+					Audio::PlaySound("ShopMenuOpen");
 					m_state = State::Shop;
 					break;
 				}
@@ -292,5 +304,43 @@ namespace RogueCastle
 	{
 		return Equipment::EquipmentSystem::MaxWeight(50, m_save.skills.ModifierAmount(Skills::SkillType::Equip_Up),
 			m_save.skills.ModifierAmount(Skills::SkillType::Equip_Up_Final), m_save.BonusWeight, 5);
+	}
+}
+
+namespace RogueCastle
+{
+	// The song for the current screen (TitleScreen, LineageScreen and
+	// SkillScreen PlayMusic; ProceduralLevelScreen.UpdateLevelSong: the
+	// area of the hero's room, nothing in the courtyard). The death screen
+	// plays its own stinger.
+	void GameFlow::UpdateMusic()
+	{
+		switch (m_state)
+		{
+		case State::Title: Audio::PlayMusic("TitleScreenSong"); break;
+		case State::Lineage:
+		case State::Manor: Audio::PlayMusic("SkillTreeSong"); break;
+		case State::Shop: break;
+		case State::GameOver: break;
+		case State::Castle:
+		{
+			if (m_level == nullptr || m_level->Player() == nullptr) break;
+			float x = m_level->Player()->X(), y = m_level->Player()->Y();
+			for (const Levels::PlacedRoom &r : m_level->Castle().rooms)
+			{
+				if (x < r.x || x >= r.Right() || y < r.y || y >= r.Bottom()) continue;
+				switch (r.levelType)
+				{
+				case Levels::LevelType::NONE: Audio::StopMusic(); break;
+				case Levels::LevelType::GARDEN: Audio::PlayMusic("GardenSong"); break;
+				case Levels::LevelType::TOWER: Audio::PlayMusic("TowerSong"); break;
+				case Levels::LevelType::DUNGEON: Audio::PlayMusic("DungeonSong"); break;
+				default: Audio::PlayMusic("CastleSong"); break;
+				}
+				break;
+			}
+			break;
+		}
+		}
 	}
 }

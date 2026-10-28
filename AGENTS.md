@@ -266,3 +266,18 @@ Miyoo buttons are mapped in `platform_miyoo.cpp` (evdev key codes). MENU quits.
   source file (and line) in a comment. Use the generated *EV headers
   (make ev) instead of retyping constants.
 - Never add game assets or the `ref/` source to the repository.
+
+## Sound (done by Claude)
+
+- `tools/convert_audio.cpp` turns Content/Audio (XACT banks) into
+  assets/audio/sfx/<Cue>.snd and assets/audio/music/<Cue>.snd (mono int16
+  22050 Hz). Run it once: see the comment at the top of the file.
+- `src/Audio/Audio.h`: `Audio::PlaySound("Cue")` (2 or 3 names = one at
+  random, like SoundManager.PlaySound), `Audio::PlayMusic`, `StopMusic`.
+  The cue names are the C#'s: port every `SoundManager.PlaySound(...)` you
+  meet in PlayerObj, the enemies and the projectiles as `Audio::PlaySound`
+  with the same names (3D/positional variants: plain PlaySound).
+- GameFlow already plays the music (title, lineage, manor, castle areas,
+  death stinger) and the menu sounds of the screens Claude wrote.
+- Mac: SDL2 audio. Console: the console's own SDL 1.2 (/customer/lib),
+  loaded with dlopen; launch.sh puts /customer/lib after ./lib.

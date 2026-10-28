@@ -11,11 +11,11 @@ OUT=build/RogueLegacyC
 rm -rf "$OUT"
 mkdir -p "$OUT/lib" "$OUT/assets/fonts" "$OUT/assets/lang"
 cp build/miyoo/rlc "$OUT/"
-cp tools/miyoo-runtime/ld-linux-armhf.so.3 tools/miyoo-runtime/libc.so.6 tools/miyoo-runtime/libm.so.6 "$OUT/lib/"
+# glibc 2.36 (+ the libpthread/libdl/librt stubs the console's SDL 1.2 asks for)
+cp tools/miyoo-runtime/*.so* "$OUT/lib/"
 
-# Sprite sheets used so far (add new ones here as the game loads them)
-for sheet in playerSpritesheetBig startingRoomSpritesheet traitsCastleSpritesheet blacksmithUISpritesheet \
-	castleTerrainSpritesheet enemyFinal2Spritesheet enemyFinalSpritesheetBig miscSpritesheet; do
+# Every sprite sheet the code names
+for sheet in $(grep -rhoE '"[a-zA-Z0-9]+Spritesheet[a-zA-Z0-9]*"' src | tr -d '"' | sort -u); do
 	for ext in tex spr; do
 		[ -f "assets/$sheet.$ext" ] && cp "assets/$sheet.$ext" "$OUT/assets/"
 	done
@@ -25,6 +25,8 @@ for font in Junicode JunicodeLarge GoldFont; do
 	cp "assets/fonts/$font.tex" "assets/fonts/$font.fnt" "$OUT/assets/fonts/"
 done
 cp assets/lang/fr.txt assets/lang/en.txt "$OUT/assets/lang/"
+# Sound (tools/convert_audio.cpp), when converted
+[ -d assets/audio ] && cp -R assets/audio "$OUT/assets/"
 
 cat > "$OUT/launch.sh" <<'LAUNCH'
 #!/bin/sh
@@ -33,7 +35,8 @@ unset LD_PRELOAD   # OnionOS preloads libmi_*.so, which the bundled glibc cannot
 echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null
 echo "Rogue Legacy C, $(date)" > log.txt
 export LIBC_FATAL_STDERR_=1   # glibc fatal errors go to log.txt, not the tty
-./lib/ld-linux-armhf.so.3 --library-path ./lib ./rlc assets >> log.txt 2>&1
+# /customer/lib after ./lib: the console's SDL 1.2 for the sound (dlopen)
+./lib/ld-linux-armhf.so.3 --library-path ./lib:/customer/lib ./rlc assets >> log.txt 2>&1
 echo "exited with status $?" >> log.txt
 echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null
 LAUNCH

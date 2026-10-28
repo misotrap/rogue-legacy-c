@@ -67,6 +67,7 @@ namespace RogueCastle
 		void StartCastle();
 		void LeaveTitle();
 		bool InCourtyard() const;
+		void UpdateMusic();
 		int MaxWeight() const;
 		void Save();
 	};

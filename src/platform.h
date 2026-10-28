@@ -39,5 +39,12 @@ int plat_poll(uint32_t *buttons);
 /* Seconds since start */
 double plat_time(void);
 void plat_sleep(double seconds);
+/* Sound: fn is called from the platform's audio thread to fill 'frames'
+ * mono int16 samples at 'rate'. Returns 0 when there is no sound device.
+ * lock/unlock keep fn out while the game changes what it plays. */
+typedef void (*plat_audio_fn)(int16_t *out, int frames);
+int plat_audio_open(int rate, plat_audio_fn fn);
+void plat_audio_lock(void);
+void plat_audio_unlock(void);
 
 #endif
