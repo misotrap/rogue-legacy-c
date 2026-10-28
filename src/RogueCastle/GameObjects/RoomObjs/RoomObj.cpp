@@ -11,6 +11,7 @@
 #include "../EnemyObjs/EnemyObj_SwordKnight.h"
 #include "../EnemyObjs/EnemyObj_Plant.h"
 #include "../EnemyObjs/EnemyObj_Spark.h"
+#include "../EnemyObjs/EnemyObj_Zombie.h"
 #include "../Player/PlayerObj.h"
 #include "../../Types/EnemyType.h"
 #include <cstdlib>
@@ -72,6 +73,8 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		return new EnemyObj_Plant(player, diff);
 	case EnemyType::Spark:
 		return new EnemyObj_Spark(player, diff);
+	case EnemyType::Zombie:
+		return new EnemyObj_Zombie(player, diff);
 	default:
 		return nullptr;
 	}
