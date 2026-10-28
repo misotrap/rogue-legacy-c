@@ -47,6 +47,9 @@ namespace RogueCastle
 		Decorations &DecorationsFor(const Levels::PlacedRoom &room);
 		// Draws a sprite's first image repeated over a world rectangle
 		static void Tile(DS2DEngine::Camera2D *camera, const std::string &sprite, float x, float y, float w, float h, float scale);
+		// The same tiling inside a rectangle turned around its top-left
+		// corner (the 45 degree ramps), scanline by scanline
+		static void TileRotated(DS2DEngine::Camera2D *camera, const std::string &sprite, float x, float y, float w, float h, float degrees, float scale);
 		// Draws a sprite's first image repeated along a line of 'length'
 		// world units starting at (x, y), turned by 'degrees'
 		static void Strip(DS2DEngine::Camera2D *camera, const std::string &sprite, float x, float y, float length, float degrees, float scale);

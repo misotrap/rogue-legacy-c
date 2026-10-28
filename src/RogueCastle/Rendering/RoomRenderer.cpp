@@ -113,6 +113,56 @@ namespace RogueCastle
 		}
 	}
 
+	void RoomRenderer::TileRotated(Camera2D *camera, const std::string &sprite, float x, float y, float w, float h, float degrees, float scale)
+	{
+		const Texture *tex;
+		Rectangle src;
+		if (w <= 0 || h <= 0 || !ImageOf(sprite, tex, src)) return;
+		float rad = degrees * PI / 180.0f, c = cosf(rad), s = sinf(rad);
+		// the corners in the world: P0, P0 + w(c, s), + h(-s, c)
+		float px[4] = { x, x + w * c, x + w * c - h * s, x - h * s };
+		float py[4] = { y, y + w * s, y + w * s + h * c, y + h * c };
+		const float zoom = camera->Zoom(), cx = SCREEN_W * 0.5f, cy = 240.0f;   // Camera2D VIEW_CX/CY
+		float minY = py[0], maxY = py[0];
+		for (int i = 1; i < 4; i++) { minY = fminf(minY, py[i]); maxY = fmaxf(maxY, py[i]); }
+		int sy0 = (int) floorf((minY - camera->Y()) * zoom + cy), sy1 = (int) ceilf((maxY - camera->Y()) * zoom + cy);
+		if (sy0 < 60) sy0 = 60;      // the view: rows 60-419
+		if (sy1 > 420) sy1 = 420;
+		uint32_t *frame = gfx_frame();
+		const float tw = src.Width * scale, th = src.Height * scale;
+		for (int sy = sy0; sy < sy1; sy++)
+		{
+			float wy = (sy + 0.5f - cy) / zoom + camera->Y();
+			// where the four edges cross this row
+			float xl = 1e9f, xr = -1e9f;
+			for (int i = 0; i < 4; i++)
+			{
+				int j = (i + 1) & 3;
+				if ((py[i] <= wy && py[j] > wy) || (py[j] <= wy && py[i] > wy))
+				{
+					float xi = px[i] + (wy - py[i]) * (px[j] - px[i]) / (py[j] - py[i]);
+					xl = fminf(xl, xi);
+					xr = fmaxf(xr, xi);
+				}
+			}
+			if (xl > xr) continue;
+			int sx0 = (int) ceilf((xl - camera->X()) * zoom + cx - 0.5f), sx1 = (int) floorf((xr - camera->X()) * zoom + cx - 0.5f);
+			if (sx0 < 0) sx0 = 0;
+			if (sx1 >= SCREEN_W) sx1 = SCREEN_W - 1;
+			float fy = fmodf(wy, th);
+			if (fy < 0) fy += th;
+			const uint32_t *row = tex->px + (src.Y + (int) (fy / scale)) * tex->w + src.X;
+			for (int sx = sx0; sx <= sx1; sx++)
+			{
+				float wx = (sx + 0.5f - cx) / zoom + camera->X();
+				float fx = fmodf(wx, tw);
+				if (fx < 0) fx += tw;
+				uint32_t p = row[(int) (fx / scale)];
+				if (p >> 24) frame[sy * SCREEN_W + sx] = p;
+			}
+		}
+	}
+
 	void RoomRenderer::Strip(Camera2D *camera, const std::string &sprite, float x, float y, float length, float degrees, float scale)
 	{
 		const Texture *tex;
@@ -244,6 +294,9 @@ namespace RogueCastle
 		if (bgObjs != nullptr)
 			for (GameObj *o : *bgObjs) o->Draw(camera);
 		// 3. walls: the foreground tile inside every solid block taller than 40
+		for (const Levels::ObjData &o : room.objs)
+			if (o.type == "CollHullObj" && o.rotation != 0 && o.height > 40)   // the ramps: no steps showing under them
+				TileRotated(camera, art.foreground, o.x, o.y, o.width, o.height, o.rotation, 2);
 		for (const Levels::ObjData &o : room.objs)
 			if (o.type == "CollHullObj" && o.rotation == 0 && o.height > 40
 			    && o.name != "bridge" && o.name.find("Block") == std::string::npos)   // ShowTerrain / the stands' roofs
