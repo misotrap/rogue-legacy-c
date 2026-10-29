@@ -70,13 +70,16 @@ namespace RogueCastle
 		static void Strip(DS2DEngine::Camera2D *camera, const std::string &sprite, float x, float y, float length, float degrees, float scale);
 		static void DrawBorder(DS2DEngine::Camera2D *camera, const Levels::ObjData &b, const Art &art);
 		std::map<int, bool> m_skyThrough;
-		uint32_t *m_cache = nullptr;
+		uint32_t *m_cache = nullptr;        // the background layer
+		uint32_t *m_cacheFront = nullptr;   // walls, borders, spikes, front decorations (with holes)
+		std::vector<int> m_frontSpan;       // per cache row: the first and last+1 visible column of the front layer
 		int m_cacheW = 0, m_cacheH = 0;
+		int m_cachePass = 0;                // Draw: 0 everything, 1 the background layer, 2 the front layer
 		size_t m_cacheCapacity = 0;
 		const Levels::PlacedRoom *m_cacheRoom = nullptr;
 		bool m_cacheOpaque = false;
 		bool m_buildingCache = false;   // Draw leaves out the animated decorations
-		static bool Animated(const DS2DEngine::GameObj *o) { return o->TotalFrames() > 1; }
+		static bool Animated(const DS2DEngine::GameObj *o) { return o->TotalFrames() > 1 && o->IsAnimating(); }   // a still variant picked at random is not
 		// The two cloud layers, tinted once (blue night tints)
 		Texture m_clouds[2] = {};
 		int m_cloudsW = 0, m_cloudsH = 0;

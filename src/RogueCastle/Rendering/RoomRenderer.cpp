@@ -37,6 +37,7 @@ namespace RogueCastle
 		Clear();
 		for (Texture &t : m_clouds) free(t.px);
 		free(m_cache);
+		free(m_cacheFront);
 	}
 
 	void RoomRenderer::Clear()
@@ -339,13 +340,18 @@ namespace RogueCastle
 		const Art art = ArtFor(room.levelType);
 		Decorations &d = DecorationsFor(room);
 		// 0. the sky is drawn once by the level, before the rooms
+		const bool back = m_cachePass != 2, front = m_cachePass != 1;
 		// 1. background over the whole room (not in the courtyard: DisplayBG=False)
-		if (room.name != "Start")
+		if (back && room.name != "Start")
 			Tile(camera, art.background, room.x, room.y, (float) room.width, (float) room.height, 2);
 		// 2. background-layer decorations
-		for (GameObj *o : d.back) if (!m_buildingCache || !Animated(o)) o->Draw(camera);
-		if (bgObjs != nullptr)
-			for (GameObj *o : *bgObjs) if (!m_buildingCache || !Animated(o)) o->Draw(camera);
+		if (back)
+		{
+			for (GameObj *o : d.back) if (!m_buildingCache || !Animated(o)) o->Draw(camera);
+			if (bgObjs != nullptr)
+				for (GameObj *o : *bgObjs) if (!m_buildingCache || !Animated(o)) o->Draw(camera);
+		}
+		if (!front) return;
 		// 3. walls: the foreground tile inside every solid block taller than 40
 		for (const Levels::ObjData &o : room.objs)
 			if (o.type == "CollHullObj" && o.rotation != 0 && o.height > 40)   // the ramps: no steps showing under them
@@ -378,25 +384,45 @@ namespace RogueCastle
 		}
 		m_cacheW = w;
 		m_cacheH = h;
+		free(m_cacheFront);
+		m_cacheFront = (uint32_t *) malloc((size_t) w * h * 4);
+		if (m_cacheFront == nullptr) { m_cacheRoom = nullptr; return; }
 		static std::vector<uint32_t> screen;
 		screen.assign((size_t) SCREEN_W * SCREEN_H, 0);
 		const Vector2 keep = camera->Position();
 		camera->ViewHeight(SCREEN_H);
 		m_buildingCache = true;
-		for (int cy = 0; cy < h; cy += SCREEN_H)
-			for (int cx = 0; cx < w; cx += SCREEN_W)
-			{
-				// The camera that puts this piece of the room at the screen's top-left
-				camera->Position(Vector2(room.x + (cx + SCREEN_W * 0.5f) / zoom, room.y + (cy + 240) / zoom));
-				std::fill(screen.begin(), screen.end(), 0u);
-				gfx_begin(screen.data());
-				Draw(camera, room, bgObjs);
-				for (int y = 0; y < SCREEN_H && cy + y < h; y++)
+		for (int pass = 1; pass <= 2; pass++)
+		{
+			m_cachePass = pass;
+			uint32_t *layer = pass == 1 ? m_cache : m_cacheFront;
+			for (int cy = 0; cy < h; cy += SCREEN_H)
+				for (int cx = 0; cx < w; cx += SCREEN_W)
 				{
-					int n = w - cx < SCREEN_W ? w - cx : SCREEN_W;
-					memcpy(m_cache + (size_t) (cy + y) * w + cx, screen.data() + (size_t) y * SCREEN_W, (size_t) n * 4);
+					// The camera that puts this piece of the room at the screen's top-left
+					camera->Position(Vector2(room.x + (cx + SCREEN_W * 0.5f) / zoom, room.y + (cy + 240) / zoom));
+					std::fill(screen.begin(), screen.end(), 0u);
+					gfx_begin(screen.data());
+					Draw(camera, room, bgObjs);
+					for (int y = 0; y < SCREEN_H && cy + y < h; y++)
+					{
+						int n = w - cx < SCREEN_W ? w - cx : SCREEN_W;
+						memcpy(layer + (size_t) (cy + y) * w + cx, screen.data() + (size_t) y * SCREEN_W, (size_t) n * 4);
+					}
 				}
-			}
+		}
+		m_cachePass = 0;
+		// The front layer's visible span on each row
+		m_frontSpan.assign((size_t) h * 2, 0);
+		for (int y = 0; y < h; y++)
+		{
+			const uint32_t *row = m_cacheFront + (size_t) y * w;
+			int a = 0, b = w;
+			while (a < w && (row[a] >> 24) == 0) a++;
+			while (b > a && (row[b - 1] >> 24) == 0) b--;
+			m_frontSpan[2 * y] = a;
+			m_frontSpan[2 * y + 1] = b;
+		}
 		m_buildingCache = false;
 		camera->ViewHeight(360);
 		camera->Position(keep);
@@ -412,6 +438,17 @@ namespace RogueCastle
 		m_cacheOpaque = holes == 0;   // the screen ignores alpha: no hole, no sky behind
 		if (rl_trace())
 			fprintf(stderr, "room cache %s: %dx%d, %zu holes, %zu partial\n", room.name.c_str(), w, h, holes, partial);
+		if (const char *dump = getenv("RL_DUMP_CACHE"))
+			if (FILE *out = fopen(dump, "wb"))
+			{
+				fprintf(out, "P6\n%d %d\n255\n", w, h);
+				for (size_t i = 0; i < (size_t) w * h; i++)
+				{
+					unsigned char rgb[3] = { (unsigned char) (m_cache[i] >> 16), (unsigned char) (m_cache[i] >> 8), (unsigned char) m_cache[i] };
+					fwrite(rgb, 1, 3, out);
+				}
+				fclose(out);
+			}
 	}
 
 	void RoomRenderer::DrawCached(Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<GameObj *> *bgObjs)
@@ -445,11 +482,32 @@ namespace RogueCastle
 				}
 		}
 		gfx_pixels += (uint64_t) (x1 > x0 ? x1 - x0 : 0) * SCREEN_H;
-		// The animated decorations, live (behind ones end up over the walls)
+		// The animated background decorations, then the front layer over them
 		Decorations &d = DecorationsFor(room);
 		for (GameObj *o : d.back) if (Animated(o)) o->Draw(camera);
 		if (bgObjs != nullptr)
 			for (GameObj *o : *bgObjs) if (Animated(o)) o->Draw(camera);
+		for (int sy = 0; sy < SCREEN_H && x0 < x1; sy++)
+		{
+			int cy = sy + oy;
+			if (cy < 0 || cy >= m_cacheH) continue;
+			int a = m_frontSpan[2 * cy] - ox, b = m_frontSpan[2 * cy + 1] - ox;
+			if (a < x0) a = x0;
+			if (b > x1) b = x1;
+			const uint32_t *src = m_cacheFront + (size_t) cy * m_cacheW + ox;
+			uint32_t *dst = frame + (size_t) sy * SCREEN_W;
+			for (int x = a; x < b; x++)
+			{
+				uint32_t p = src[x], al = p >> 24;
+				if (al == 0) continue;
+				if (al == 255) { dst[x] = p; continue; }
+				uint32_t dd = dst[x], ia = 255 - al;
+				uint32_t rb = ((dd & 0x00FF00FFu) * ia + 0x00800080u) >> 8 & 0x00FF00FFu;
+				uint32_t g = (((dd >> 8) & 0x00FF00FFu) * ia + 0x00800080u) & 0xFF00FF00u;
+				dst[x] = p + rb + g;
+			}
+		}
+		// The animated front decorations
 		for (GameObj *o : d.front) if (Animated(o)) o->Draw(camera);
 	}
 }
