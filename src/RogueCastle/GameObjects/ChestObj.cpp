@@ -74,6 +74,8 @@ void ChestObj::OpenChest(ProceduralLevelScreen *level, PlayerObj *player)
 		return;
 	Audio::PlaySound("Chest_Open_Large");
 	GoToFrame(2);
+	if (rl_trace())
+		fprintf(stderr, "chest open: frame %d of %d, speed %d, sprite %s\n", CurrentFrame(), TotalFrames(), AnimationSpeed(), SpriteName().c_str());
 	if (IsEmpty)
 		return;
 

@@ -129,6 +129,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			enemy->SetLevelScreen(this);
 			enemy->SetTerrain(&m_allTerrain);
 			m_physicsManager.AddObject(enemy);
+			if (enemy->Type == EnemyType::Platform)
+				m_allTerrain.push_back(enemy);   /* the folding platforms are floors once out */
 		}
 		for (ChestObj *chest : room->ChestList())
 		{

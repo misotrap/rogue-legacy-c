@@ -183,13 +183,13 @@ namespace Text
 		{
 			int ty = sy + (int) ((y - y0 + 0.5f) * inv);
 			if (ty < 0 || ty >= t.h) continue;
-			const uint32_t *src = t.px + (size_t) ty * t.w;
+			const uint32_t *src = t.px + (size_t) (ty >> t.shift) * t.stride;
 			uint32_t *dst = fb + (size_t) y * SCREEN_W;
 			for (int x = std::max(x0, 0); x < x1 && x < SCREEN_W; x++)
 			{
 				int tx = sx + (int) ((x - x0 + 0.5f) * inv);
 				if (tx < 0 || tx >= t.w) continue;
-				uint32_t p = src[tx];
+				uint32_t p = src[tx >> t.shift];
 				// premultiplied texel * tint (also premultiplied by its alpha)
 				uint32_t a = ((p >> 24) * ca + 127) / 255;
 				if (a == 0) continue;

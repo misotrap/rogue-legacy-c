@@ -444,9 +444,11 @@ namespace RogueCastle
 		{
 			float tw = m_bg->Width() - 2, th = m_bg->Height() - 2;   // overlap: no seams
 			Rectangle view = m_camera.Bounds();
-			float x0 = floorf(view.X / tw) * tw, y0 = floorf(view.Y / th) * th;
-			for (float y = y0; y < view.Y + view.Height; y += th)
-				for (float x = x0; x < view.X + view.Width; x += tw)
+			// One tile of margin on each side: the camera eases between the
+			// heirs, and the tiles may be anchored at their centre
+			float x0 = floorf(view.X / tw) * tw - tw, y0 = floorf(view.Y / th) * th - th;
+			for (float y = y0; y < view.Y + view.Height + th; y += th)
+				for (float x = x0; x < view.X + view.Width + tw; x += tw)
 				{
 					m_bg->Position(Vector2(x, y));
 					m_bg->Draw(&m_camera);

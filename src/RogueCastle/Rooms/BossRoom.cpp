@@ -408,7 +408,8 @@ namespace RogueCastle
 			debugNear = nullptr;
 			bool breakable = arg[0] == 'b', hazard = arg[0] == 'h';   // h<n>: beside the n-th spikes
 			bool slope = arg[0] == 's';                                 // s<n>: beside the n-th ramp's top
-			int want = atoi(breakable || hazard || slope ? arg + 1 : arg), seen = 0;
+			bool chest = arg[0] == 'c';                                 // c<n>: beside the n-th chest
+			int want = atoi(breakable || hazard || slope || chest ? arg + 1 : arg), seen = 0;
 			const char *comma = strchr(arg, ',');
 			float dx = comma != nullptr ? (float) atof(comma + 1) : -150;
 			const char *comma2 = comma != nullptr ? strchr(comma + 1, ',') : nullptr;
@@ -441,7 +442,12 @@ namespace RogueCastle
 						}
 					continue;
 				}
-				if (breakable)
+				if (chest)
+				{
+					for (ChestObj *ch : r->ChestList())
+						if (seen++ == want) { target = ch; fprintf(stderr, "near: chest type %d locked %d open %d in %s\n", (int) ch->ChestType(), (int) ch->IsLocked, (int) ch->IsOpen(), r->Name().c_str()); break; }
+				}
+				else if (breakable)
 				{
 					for (BreakableObj *b : r->BreakableObjList())
 						if (seen++ == want) { target = b; break; }

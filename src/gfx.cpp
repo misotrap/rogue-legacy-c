@@ -37,6 +37,26 @@ int gfx_load_texture(Texture *t, const char *path)
 			t->px[i] = 0xFF041D56u;
 	t->w = (int) wh[0];
 	t->h = (int) wh[1];
+	t->shift = 0;
+	t->stride = t->w;
+	/* The world is always drawn at half size or less: keep one texel in
+	 * four (the odd ones, those the 0.5 blits sample). Four times less
+	 * memory and memory traffic on the console. */
+	if (getenv("RL_FULLRES") == NULL && t->w >= 2 && t->h >= 2)
+	{
+		int hw = t->w / 2, hh = t->h / 2;
+		uint32_t *half = (uint32_t *) malloc((size_t) hw * hh * 4);
+		if (half != NULL)
+		{
+			for (int y = 0; y < hh; y++)
+				for (int x = 0; x < hw; x++)
+					half[(size_t) y * hw + x] = t->px[(size_t) (2 * y + 1) * t->w + 2 * x + 1];
+			free(t->px);
+			t->px = half;
+			t->shift = 1;
+			t->stride = hw;
+		}
+	}
 	return 1;
 }
 
@@ -129,11 +149,19 @@ static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, flo
 	/* The texels this blit may read: [sx, sx + sw) inside the texture */
 	int lo = sx < 0 ? 0 : sx, hi = sx + sw < t->w ? sx + sw : t->w;
 	int32_t u0 = (int32_t) ((xs - x0 + 0.5f) * inv * 65536.0f);
+	/* At half size, the stored texel of a frame's edge may be the one
+	 * just outside it: the stored rows and columns are kept inside */
+	const int shift = t->shift;
+	const int loIdx = lo >> shift, hiIdx = (hi - 1 - shift) >> shift;
+	const int loRow = sy >> shift, hiRow = (sy + sh - 1 - shift) >> shift;
 	for (int y = ys; y < ye; y++)
 	{
 		int ty = sy + (int) ((y - y0 + 0.5f) * inv);
 		if (ty < sy || ty >= sy + sh || ty < 0 || ty >= t->h) continue;
-		const uint32_t *src = t->px + (size_t) ty * t->w;
+		int iy = ty >> shift;
+		if (iy > hiRow) iy = hiRow;
+		if (iy < loRow) iy = loRow;
+		const uint32_t *src = t->px + (size_t) iy * t->stride;
 		uint32_t *dst = fb + (size_t) y * SCREEN_W;
 		int32_t u = u0;
 		for (int x = xs; x < xe; x++, u += step)
@@ -141,7 +169,10 @@ static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, flo
 			int iu = u >> 16;
 			int tx = flip ? sx + sw - 1 - iu : sx + iu;
 			if (tx < lo || tx >= hi) continue;
-			uint32_t p = src[tx];
+			int ix = tx >> shift;
+			if (ix > hiIdx) ix = hiIdx;
+			if (ix < loIdx) ix = loIdx;
+			uint32_t p = src[ix];
 			if (tint != NULL) p = ApplyTint(p, *tint);
 			uint32_t a = p >> 24;
 			if (a == 255) dst[x] = p;
@@ -229,7 +260,7 @@ void gfx_blit_ex(const Texture *t, int sx, int sy, int sw, int sh, float x, floa
 			int tx = flip ? sx + sw - 1 - (int) u : sx + (int) u;
 			int ty = sy + (int) v;
 			if (tx < 0 || ty < 0 || tx >= t->w || ty >= t->h) continue;
-			uint32_t p = t->px[(size_t) ty * t->w + tx];
+			uint32_t p = gfx_texel(t, tx, ty);
 			dst[px] = Blend(tinted ? Tint(p, colour) : p, dst[px]);
 		}
 	}

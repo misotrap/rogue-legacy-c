@@ -57,7 +57,7 @@ namespace RogueCastle
 				// ParallaxFX shader): those texels become transparent, once
 				Texture *tex = const_cast<Texture *>(SpriteSystem::SpriteLibrary::GetSprite(s[0]));
 				if (tex != nullptr && tex->px != nullptr)
-					for (int i = 0; i < tex->w * tex->h; i++)
+					for (int i = 0; i < gfx_texel_count(tex); i++)
 					{
 						uint32_t p = tex->px[i];
 						if (((p >> 16) & 255) >= 230 && ((p >> 8) & 255) <= 25 && (p & 255) >= 230) tex->px[i] = 0;
@@ -151,13 +151,13 @@ namespace RogueCastle
 			if (sx1 >= SCREEN_W) sx1 = SCREEN_W - 1;
 			float fy = fmodf(wy, th);
 			if (fy < 0) fy += th;
-			const uint32_t *row = tex->px + (src.Y + (int) (fy / scale)) * tex->w + src.X;
+			const int ty = src.Y + (int) (fy / scale);
 			for (int sx = sx0; sx <= sx1; sx++)
 			{
 				float wx = (sx + 0.5f - cx) / zoom + camera->X();
 				float fx = fmodf(wx, tw);
 				if (fx < 0) fx += tw;
-				uint32_t p = row[(int) (fx / scale)];
+				uint32_t p = gfx_texel_in(tex, src.X + (int) (fx / scale), ty, src.X, src.Y, src.X + src.Width, src.Y + src.Height);
 				if (p >> 24) frame[sy * SCREEN_W + sx] = p;
 			}
 		}

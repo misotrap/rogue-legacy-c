@@ -4,13 +4,38 @@
 #ifndef GFX_H
 #define GFX_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct Texture
 {
-	int w, h;
-	uint32_t *px;
+	int w, h;          /* the size the sprite sheets describe */
+	uint32_t *px;      /* the stored texels: half size unless RL_FULLRES */
+	int shift, stride; /* texel (x, y) is px[(y >> shift) * stride + (x >> shift)] */
 } Texture;
+
+/* The texel at full-size coordinates (x, y) */
+static inline uint32_t gfx_texel(const Texture *t, int x, int y)
+{
+	return t->px[(size_t) (y >> t->shift) * t->stride + (x >> t->shift)];
+}
+/* The same, kept inside the source rectangle [x0, x1) x [y0, y1): at half
+ * size the stored texel of an edge may be the one just outside it */
+static inline uint32_t gfx_texel_in(const Texture *t, int x, int y, int x0, int y0, int x1, int y1)
+{
+	int s = t->shift, ix = x >> s, iy = y >> s;
+	int lx = x0 >> s, hx = (x1 - 1 - s) >> s, ly = y0 >> s, hy = (y1 - 1 - s) >> s;
+	if (ix > hx) ix = hx;
+	if (ix < lx) ix = lx;
+	if (iy > hy) iy = hy;
+	if (iy < ly) iy = ly;
+	return t->px[(size_t) iy * t->stride + ix];
+}
+/* The number of stored texels */
+static inline int gfx_texel_count(const Texture *t)
+{
+	return t->stride * (t->h >> t->shift);
+}
 
 /* Loads a .tex file written by tools/convert_assets.py; 0 on failure */
 int gfx_load_texture(Texture *t, const char *path);
