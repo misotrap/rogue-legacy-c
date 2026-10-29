@@ -1,4 +1,5 @@
 #include "PauseScreen.h"
+#include "../EVs/LevelEV.h"
 
 #include "EnemyNames.h"
 #include "../GameObjects/EnemyObjs/EnemyObj.h"
@@ -115,11 +116,11 @@ namespace RogueCastle
 			Rectangle view = camera->Bounds();
 			for (EnemyObj *e : room->EnemyList())
 			{
-				if (e == nullptr || e->IsKilled || !e->Visible()) continue;
+				if (e == nullptr || e->IsKilled || !e->Visible() || e->NonKillable) continue;   // no traps (line 124)
 				Rectangle b = e->Bounds();
 				if (!b.Intersects(view)) continue;
 				Plate(frame, sx(b.X + b.Width / 2.0f), sy((float) b.Top()) - 6, EnemyName(e->Name), {
-					{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_5"), std::to_string(e->Level) },
+					{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_5"), std::to_string((int) (e->Level * LevelEV::ENEMY_LEVEL_FAKE_MULTIPLIER)) },   // the retail x2.75
 					{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_2"), std::to_string((int) e->Damage) },
 					{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_6"), std::to_string((int) e->CurrentHealth) + "/" + std::to_string((int) e->MaxHealth) },
 				});
@@ -131,6 +132,8 @@ namespace RogueCastle
 			Plate(frame, sx(b.X + b.Width / 2.0f), sy((float) b.Top()) - 6, heroName, {
 				{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_1"), className },
 				{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_2"), std::to_string((int) player->TotalDamage()) },
+				{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_3"), std::to_string((int) player->TotalMagicDamage()) },
+				{ Text::Loc::Get("LOC_ID_PAUSE_SCREEN_4"), std::to_string((int) player->TotalArmor()) },
 			});
 		}
 

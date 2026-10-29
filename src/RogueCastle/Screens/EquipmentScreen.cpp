@@ -171,7 +171,11 @@ namespace RogueCastle
 		if (m_mode == Mode::Blacksmith)
 		{
 			if (state == EquipmentState::FoundAndSeen || state == EquipmentState::FoundButNotSeen)
+			{
+				/* BlacksmithScreen.cs line 638: buying falls through to equipping */
 				ok = eq.BuyBlueprint(m_category, m_index, m_state->Gold);
+				if (ok && !eq.Equip(m_category, m_index, m_maxWeight)) m_heavy = true;
+			}
 			else if (state == EquipmentState::Purchased)
 			{
 				ok = eq.Equip(m_category, m_index, m_maxWeight);
@@ -181,7 +185,10 @@ namespace RogueCastle
 		else
 		{
 			if (state == EquipmentState::FoundAndSeen || state == EquipmentState::FoundButNotSeen)
+			{
 				ok = eq.BuyRune(m_category, m_index, m_state->Gold);
+				if (ok) eq.EquipRune(m_category, m_index);   // EnchantressScreen.cs line 563
+			}
 			else if (state == EquipmentState::Purchased)
 				ok = eq.EquipRune(m_category, m_index);
 		}

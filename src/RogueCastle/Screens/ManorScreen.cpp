@@ -1,4 +1,6 @@
 #include "ManorScreen.h"
+#include "../Types/ClassType.h"
+#include <utility>
 
 #include "../../SpriteSystem/SpriteLibrary.h"
 #include "../../Text/Loc.h"
@@ -189,7 +191,20 @@ namespace RogueCastle
 
 		if (pressed & (BTN_B | BTN_A))
 		{
-			if (m_state->skills.Buy(Selected(), m_state->Gold)) Refresh();
+			if (m_state->skills.Buy(Selected(), m_state->Gold))
+			{
+				/* SkillScreen.CheckForSkillUnlock (line 586): a class upgrade
+				 * also upgrades the hero of that class right away */
+				static const std::pair<Skills::SkillType, uint8_t> ups[] = {
+					{ Skills::SkillType::Knight_Up, ClassType::Knight }, { Skills::SkillType::Mage_Up, ClassType::Wizard },
+					{ Skills::SkillType::Barbarian_Up, ClassType::Barbarian }, { Skills::SkillType::Assassin_Up, ClassType::Assassin },
+					{ Skills::SkillType::Ninja_Up, ClassType::Ninja }, { Skills::SkillType::Banker_Up, ClassType::Banker },
+					{ Skills::SkillType::SpellSword_Up, ClassType::SpellSword }, { Skills::SkillType::Lich_Up, ClassType::Lich } };
+				for (const auto &u : ups)
+					if (Selected() == u.first && m_state->hero.classType == u.second)
+						m_state->hero.classType = (uint8_t) (u.second + 8);   // the "2" class
+				Refresh();
+			}
 			else m_flash = 0.6; // too expensive or maxed
 		}
 		return (pressed & BTN_START) != 0;

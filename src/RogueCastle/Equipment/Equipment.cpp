@@ -17,6 +17,13 @@ namespace Equipment
 		memset(equipped, -1, sizeof(equipped));
 		memset(equippedRune, -1, sizeof(equippedRune));
 		totalRunesPurchased = 0;
+		/* PlayerStats.cs line 213: a new legacy starts with the bronze helm,
+		 * limbs and sword blueprints and two runes found */
+		blueprint[EquipmentCategoryType::Helm][EquipmentBaseType::Bronze] = EquipmentState::FoundButNotSeen;
+		blueprint[EquipmentCategoryType::Limbs][EquipmentBaseType::Bronze] = EquipmentState::FoundButNotSeen;
+		blueprint[EquipmentCategoryType::Sword][EquipmentBaseType::Bronze] = EquipmentState::FoundButNotSeen;
+		rune[EquipmentCategoryType::Helm][EquipmentAbilityType::DoubleJump] = EquipmentState::FoundButNotSeen;
+		rune[EquipmentCategoryType::Sword][EquipmentAbilityType::Dash] = EquipmentState::FoundButNotSeen;
 	}
 
 	const ItemData *EquipmentSystem::Item(int category, int index)

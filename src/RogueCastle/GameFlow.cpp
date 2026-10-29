@@ -296,7 +296,15 @@ namespace RogueCastle
 		{
 		case State::Lineage:
 			/* The new heir starts in the courtyard (the castle's first room) */
-			if (m_lineage.Update(buttons, pressed, dt)) StartCastle();
+			if (m_lineage.Update(buttons, pressed, dt))
+			{
+				/* LoadingScreen.cs line 345: the new heir starts in the manor
+				 * (the skill screen), then walks into the courtyard */
+				StartCastle();
+				Save();
+				m_state = State::Manor;
+				m_manor.Open(m_save);
+			}
 			break;
 		case State::Title:
 			if (pressed & BTN_SELECT)
@@ -355,7 +363,13 @@ namespace RogueCastle
 				/* Back to the courtyard, walking in from the left */
 				if (m_level != nullptr && m_level->Player() != nullptr)
 				{
-					StartingRoom::PlaceAtLeftEdge(m_level->Player());
+					/* StartingRoomObj.OnEnter (line 252): full health and mana,
+					 * with what was just bought */
+					PlayerObj *p = m_level->Player();
+					p->CurrentHealth = p->MaxHealth();
+					p->CurrentMana = p->MaxMana();
+					p->SetPlayerStats(&m_save);   // the class pieces, colours and runes
+					StartingRoom::PlaceAtLeftEdge(p);
 					m_state = State::Castle;
 				}
 				else StartCastle();
