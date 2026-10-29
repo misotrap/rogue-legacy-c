@@ -133,8 +133,8 @@ namespace RogueCastle
 		float minY = py[0], maxY = py[0];
 		for (int i = 1; i < 4; i++) { minY = fminf(minY, py[i]); maxY = fmaxf(maxY, py[i]); }
 		int sy0 = (int) floorf((minY - camera->Y()) * zoom + cy), sy1 = (int) ceilf((maxY - camera->Y()) * zoom + cy);
-		if (sy0 < 60) sy0 = 60;      // the view: rows 60-419
-		if (sy1 > 420) sy1 = 420;
+		if (sy0 < 0) sy0 = 0;      // the whole frame: the room shows behind the HUD bands too
+		if (sy1 > SCREEN_H) sy1 = SCREEN_H;
 		uint32_t *frame = gfx_frame();
 		const float tw = src.Width * scale, th = src.Height * scale;
 		for (int sy = sy0; sy < sy1; sy++)
@@ -422,7 +422,7 @@ namespace RogueCastle
 		int oy = (int) lroundf((camera->Y() - room.y) * zoom - 240);
 		uint32_t *frame = gfx_frame();
 		int x0 = ox < 0 ? -ox : 0, x1 = m_cacheW - ox < SCREEN_W ? m_cacheW - ox : SCREEN_W;
-		for (int sy = 60; sy < 420 && x0 < x1; sy++)
+		for (int sy = 0; sy < SCREEN_H && x0 < x1; sy++)   // the room fills the HUD bands too
 		{
 			int cy = sy + oy;
 			if (cy < 0 || cy >= m_cacheH) continue;
@@ -444,7 +444,7 @@ namespace RogueCastle
 					}
 				}
 		}
-		gfx_pixels += (uint64_t) (x1 > x0 ? x1 - x0 : 0) * 360;
+		gfx_pixels += (uint64_t) (x1 > x0 ? x1 - x0 : 0) * SCREEN_H;
 		// The animated decorations, live (behind ones end up over the walls)
 		Decorations &d = DecorationsFor(room);
 		for (GameObj *o : d.back) if (Animated(o)) o->Draw(camera);

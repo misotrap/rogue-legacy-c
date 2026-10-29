@@ -80,6 +80,7 @@ void EnemyObj_Platform::UpdateEnemy(GameTime *gameTime)
 		UpdateFloor(dt);
 		return;
 	}
+	if (m_foldTimer > 0) m_foldTimer -= dt;
 	if (m_warningBlinks > 0 && (m_warningTimer -= dt) <= 0)
 	{
 		Blink(Color(255, 0, 0), 0.05f);
@@ -98,6 +99,7 @@ void EnemyObj_Platform::UpdateEnemy(GameTime *gameTime)
 		if (m_retractCounter <= 0)
 		{
 			m_isExtended = false;
+			m_foldTimer = 0.35f;   // the folding animation
 			PlayAnimation("StartExtract", "EndExtract");   // the names are flipped in the sheet
 			Audio::PlaySound("Platform_Activate_03", "Platform_Activate_04");
 		}
@@ -114,7 +116,7 @@ void EnemyObj_Platform::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
 	// Only a down strike unfolds it, from fully folded
 	if (m_target == nullptr || !m_target->IsAirAttacking)
 		return;
-	if (m_isExtended || (CurrentFrame() != 1 && CurrentFrame() != TotalFrames()))
+	if (m_isExtended || m_foldTimer > 0)   // folded back completely first
 		return;
 	Audio::PlaySound("EnemyHit1", "EnemyHit2", "EnemyHit3");
 	Blink(Color(255, 0, 0), 0.1f);
@@ -138,6 +140,7 @@ void EnemyObj_Platform::ResetState()
 	m_blinkedWarning = false;
 	m_retractCounter = 0;
 	m_warningBlinks = 0;
+	m_foldTimer = 0;
 	m_floor->Enabled = false;
 	EnemyObj::ResetState();
 	StopAnimation();

@@ -3,6 +3,7 @@
  * frame list (the XML 'frame' attribute is a label), 'R' hitboxes attach to
  * the last frame added, containers become CharacterData lists.
  */
+#include <vector>
 #include "SpriteLibrary.h"
 #include <cstdio>
 
@@ -45,7 +46,7 @@ bool SpriteLibrary::LoadSheet(const char *dir, const char *sheet)
 
 	tex = new Texture();
 	snprintf(path, sizeof(path), "%s/%s.tex", dir, sheet);
-	if (!gfx_load_texture(tex, path))
+	if (!gfx_load_texture_full(tex, path))
 	{
 		fprintf(stderr, "cannot load %s\n", path);
 		delete tex;
@@ -60,6 +61,7 @@ bool SpriteLibrary::LoadSheet(const char *dir, const char *sheet)
 		fprintf(stderr, "cannot load %s\n", path);
 		return false;
 	}
+	std::vector<int> frameRects;   /* x, y, w, h of each image, to halve the sheet */
 	while (fgets(line, sizeof(line), f))
 	{
 		char name[128], other[128];
@@ -71,6 +73,7 @@ bool SpriteLibrary::LoadSheet(const char *dir, const char *sheet)
 		if (line[0] == 'I' && sscanf(line, "I\t%127s\t%d\t%d\t%d\t%d\t%d\t%f\t%f",
 		                            name, &a, &b, &c, &d, &e, &anchorX, &anchorY) == 8)
 		{
+			frameRects.insert(frameRects.end(), { b, c, d, e });
 			SpritesheetObj *sheetObj = GetOrAdd(name, sheetName);
 			sheetObj->AddImageData(a, Vector2((float) b, (float) c),
 			                       Vector2(anchorX, anchorY), d, e);
@@ -120,6 +123,7 @@ bool SpriteLibrary::LoadSheet(const char *dir, const char *sheet)
 		}
 	}
 	fclose(f);
+	gfx_halve_texture(tex, frameRects.data(), (int) (frameRects.size() / 4), sheet);
 	return true;
 }
 

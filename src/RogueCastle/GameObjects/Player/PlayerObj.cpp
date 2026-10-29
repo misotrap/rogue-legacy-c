@@ -882,6 +882,7 @@ int PlayerObj::MaxWeight() const
 
 void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 {
+	if (rl_trace()) fprintf(stderr, "hero hit: %d (kind %d %s)\n", damage, KillerKind, KillerName.c_str());
 	/* PlayerObj.cs line 2245 (HitPlayer), subset: no demented/projectile
 	 * special cases, no damage reduction (no equipment yet). */
 	Blink(Color(255, 0, 0), 0.1f);

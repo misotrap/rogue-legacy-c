@@ -49,7 +49,8 @@ private:
 	void UpdateFloor(float dt);
 	bool m_blinkedWarning = false;
 	float m_retractCounter = 0;
-	float m_warningTimer = 0;   // the 10 red blinks, 0.1 s apart
+	float m_warningTimer = 0;
+	float m_foldTimer = 0;      // folding back: no new hit until it is done   // the 10 red blinks, 0.1 s apart
 	int m_warningBlinks = 0;
 	bool PlatformsOpen() const;
 };

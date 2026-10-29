@@ -377,6 +377,16 @@ namespace RogueCastle
 		RoomObj *room = level->CurrentRoom();
 		if (player == nullptr || room == nullptr || player->IsKilled) return false;
 
+		/* Dev/test: RL_DEBUG_SHOOT fires an enemy shot at the hero every second */
+		static bool debugShoot = getenv("RL_DEBUG_SHOOT") != nullptr;
+		static double shootTimer = 2;
+		if (debugShoot && (shootTimer -= dt) <= 0)
+		{
+			shootTimer = 1;
+			EnemyObj *shooter = room->EnemyList().empty() ? nullptr : room->EnemyList()[0];
+			level->FireProjectile("TurretProjectile_Sprite", player->Position() + Vector2(-200, -20), Vector2(1, 0),
+			                      500, 10, Vector2(1, 1), false, shooter, 3, false);
+		}
 		/* Dev/test: RL_DEBUG_KILL=<s> kills the room's enemies after s seconds */
 		static double debugKill = getenv("RL_DEBUG_KILL") != nullptr ? atof(getenv("RL_DEBUG_KILL")) : -1;
 		if (debugKill > 0 && (debugKill -= dt) <= 0)

@@ -8,7 +8,7 @@
 static uint32_t *fb;
 uint64_t gfx_pixels = 0;
 
-int gfx_load_texture(Texture *t, const char *path)
+int gfx_load_texture_full(Texture *t, const char *path)
 {
 	FILE *f = fopen(path, "rb");
 	char magic[4];
@@ -40,27 +40,52 @@ int gfx_load_texture(Texture *t, const char *path)
 	t->h = (int) wh[1];
 	t->shift = 0;
 	t->stride = t->w;
+	return 1;
+}
+
+void gfx_halve_texture(Texture *t, const int *rects, int count, const char *name)
+{
 	/* The world is always drawn at half size or less: keep one texel in
-	 * four (the odd ones, those the 0.5 blits sample). Four times less
-	 * memory and memory traffic on the console. */
-	/* The courtyard's sheet keeps its full size: its trees show at 1:1 and
-	 * lose their leaves at half size */
-	int fullSize = getenv("RL_FULLRES") != NULL || strstr(path, "startingRoomSpritesheet") != NULL;
-	if (!fullSize && t->w >= 2 && t->h >= 2)
+	 * four, those the 0.5 blits sample (the odd ones from each frame's own
+	 * corner). Four times less memory and memory traffic on the console.
+	 * The courtyard's sheet keeps its full size: its trees show at 1:1. */
+	if (t->px == NULL || t->shift != 0 || t->w < 2 || t->h < 2) return;
+	if (getenv("RL_FULLRES") != NULL || (name != NULL && strstr(name, "startingRoomSpritesheet") != NULL)) return;
+	int hw = t->w / 2, hh = t->h / 2;
+	uint32_t *half = (uint32_t *) malloc((size_t) hw * hh * 4);
+	if (half == NULL) return;
+	for (int y = 0; y < hh; y++)
+		for (int x = 0; x < hw; x++)
+			half[(size_t) y * hw + x] = t->px[(size_t) (2 * y + 1) * t->w + 2 * x + 1];
+	/* A frame starting on an odd column (row) is sampled on its even full
+	 * texels: otherwise its picture moves a pixel against the frames on
+	 * even ones and the animations wobble */
+	for (int i = 0; i < count; i++)
 	{
-		int hw = t->w / 2, hh = t->h / 2;
-		uint32_t *half = (uint32_t *) malloc((size_t) hw * hh * 4);
-		if (half != NULL)
-		{
-			for (int y = 0; y < hh; y++)
-				for (int x = 0; x < hw; x++)
-					half[(size_t) y * hw + x] = t->px[(size_t) (2 * y + 1) * t->w + 2 * x + 1];
-			free(t->px);
-			t->px = half;
-			t->shift = 1;
-			t->stride = hw;
-		}
+		int fx = rects[4 * i], fy = rects[4 * i + 1], fw = rects[4 * i + 2], fh = rects[4 * i + 3];
+		if (((fx | fy) & 1) == 0 || fw <= 0 || fh <= 0) continue;
+		int px = (fx & 1) ? 0 : 1, py = (fy & 1) ? 0 : 1;
+		for (int iy = fy >> 1; iy <= (fy + fh - 1) >> 1 && iy < hh; iy++)
+			for (int ix = fx >> 1; ix <= (fx + fw - 1) >> 1 && ix < hw; ix++)
+			{
+				int sx = 2 * ix + px, sy = 2 * iy + py;
+				if (sx < fx) sx = fx;
+				if (sx > fx + fw - 1) sx = fx + fw - 1;
+				if (sy < fy) sy = fy;
+				if (sy > fy + fh - 1) sy = fy + fh - 1;
+				half[(size_t) iy * hw + ix] = t->px[(size_t) sy * t->w + sx];
+			}
 	}
+	free(t->px);
+	t->px = half;
+	t->shift = 1;
+	t->stride = hw;
+}
+
+int gfx_load_texture(Texture *t, const char *path)
+{
+	if (!gfx_load_texture_full(t, path)) return 0;
+	gfx_halve_texture(t, NULL, 0, path);
 	return 1;
 }
 

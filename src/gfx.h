@@ -39,6 +39,11 @@ static inline int gfx_texel_count(const Texture *t)
 
 /* Loads a .tex file written by tools/convert_assets.py; 0 on failure */
 int gfx_load_texture(Texture *t, const char *path);
+/* The same at full size, to halve later with the sheet's frames */
+int gfx_load_texture_full(Texture *t, const char *path);
+/* Keeps one texel in four; rects: count frames (x, y, w, h), each
+ * sampled from its own corner. name: the sheet (some stay full size). */
+void gfx_halve_texture(Texture *t, const int *rects, int count, const char *name);
 void gfx_free_texture(Texture *t);
 
 void gfx_begin(uint32_t *frame);
