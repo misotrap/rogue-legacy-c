@@ -30,7 +30,13 @@ Tout ce bloc est corrigé, sauf le vol (point 11), qui n'est toujours pas porté
 14. **L'architecte verrouille le mauvais château** : la taxe est payée sur un château neuf, et l'héritier suivant profite du château verrouillé gratuitement (StartingRoomObj.cs:733, LoadingScreen.cs:234).
 15. **Lecture hors limites (plantage possible)** : le squelette Advanced appelle `PickAction(w, 7, acts)` alors que `acts` n'a que 6 entrées (EnemyObj_Skeleton.cpp:326).
 
-## B. Important
+## B. Important — EN COURS (29/10)
+
+Corrigés : 16, 17, 18, 20, 21, 22, 23, 24, 31. Corrigés en partie :
+- 26 : Blob, Mimic, Ninja et mages sont faits. Restent le bouclier de l'Énergon et les boules rebondissantes.
+- 34 : manoir, amélioration de classe, plans et runes de départ, Prosopagnosie.
+- 35 : pause, et l'achat qui équipe.
+Le reste est à faire.
 
 16. **Les attaques vers le bas font le double des dégâts.** Il manque le facteur 0,5, le bonus Down_Strike_Up et le compteur NumAirBounces, ainsi que le rebond sur les objets cassables (PlayerObj.cs:3568, 1949).
 17. **L'épée repousse peu** : le C# utilise StrongEnemyKnockBack (300,360) au sol, le portage (90,90) partout (PlayerObj.cs:3609).
