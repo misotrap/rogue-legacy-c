@@ -24,6 +24,7 @@ class TerrainObj : public DS2DEngine::GameObj, public DS2DEngine::IPhysicsObj
 {
 public:
 	TerrainObj(int width, int height);
+	bool IsStatic() const override { return true; }
 
 	/* TerrainObj.cs PopulateFromXMLReader. */
 	void Populate(int x, int y, int width, int height,

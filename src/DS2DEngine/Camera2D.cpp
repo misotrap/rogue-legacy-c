@@ -25,7 +25,7 @@ Rectangle Camera2D::Bounds() const
 {
 	/* C# Camera2D.Bounds: centered on the position, world units. */
 	int w = (int) (SCREEN_W / m_zoom);
-	int h = (int) (360.0f / m_zoom);
+	int h = (int) (m_viewHeight / m_zoom);
 	return Rectangle((int) (m_position.X - w * 0.5f), (int) (m_position.Y - h * 0.5f), w, h);
 }
 

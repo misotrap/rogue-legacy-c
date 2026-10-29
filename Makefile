@@ -6,7 +6,7 @@
 CXXFLAGS = -O2 -Wall -Wextra -std=c++17 -fno-exceptions -fno-rtti -D_DEFAULT_SOURCE
 SRC = $(shell find src -name '*.cpp' ! -name 'platform_*.cpp')
 MIYOO_CXX ?= $(HOME)/toolchains/armv7-unknown-linux-gnueabihf/bin/armv7-unknown-linux-gnueabihf-g++
-MIYOO_FLAGS = -O3 -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+MIYOO_FLAGS = -O3 -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -flto
 
 rlc: $(SRC) $(shell find src -name '*.h')
 	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ $(SRC) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm

@@ -2,6 +2,9 @@
  * down, two pages flipped with FBIOPAN_DISPLAY) and /dev/input/event0.
  * No SDL: the binary is linked statically and runs on stock OnionOS.
  */
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 #include "platform.h"
 #include <fcntl.h>
 #include <linux/fb.h>
@@ -77,7 +80,18 @@ void plat_present(void)
 	{
 		const uint32_t *src = frame + (size_t) (SCREEN_H - 1 - y) * SCREEN_W + (SCREEN_W - 1);
 		uint32_t *dst = (uint32_t*) (base + (size_t) y * finfo.line_length);
+#if defined(__ARM_NEON)
+		/* Four pixels at a time: load, reverse, set the alpha, store */
+		const uint32x4_t alpha = vdupq_n_u32(0xFF000000u);
+		for (x = 0; x < SCREEN_W; x += 4, src -= 4)
+		{
+			uint32x4_t v = vrev64q_u32(vld1q_u32(src - 3));
+			v = vcombine_u32(vget_high_u32(v), vget_low_u32(v));
+			vst1q_u32(dst + x, vorrq_u32(v, alpha));
+		}
+#else
 		for (x = 0; x < SCREEN_W; x += 1) dst[x] = *src-- | 0xFF000000u;
+#endif
 	}
 	if (pages > 1)
 	{

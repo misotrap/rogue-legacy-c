@@ -35,6 +35,11 @@ public:
 
 private:
 	std::vector<IPhysicsObj *> m_poList;
+	/* The moving objects, and the static ones inside the active bounds
+	 * (rebuilt only when the bounds or the static objects change) */
+	std::vector<IPhysicsObj *> m_dynamicList, m_staticActive;
+	Rectangle m_staticBounds;
+	bool m_staticDirty = true;
 	std::vector<IPhysicsObj *> m_active;
 	/* Per active object, the rectangle around all its boxes (rebuilt each
 	 * step): pairs whose rectangles do not meet skip the box tests */

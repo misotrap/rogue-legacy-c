@@ -16,14 +16,27 @@ PhysicsManager::PhysicsManager()
 
 void PhysicsManager::AddObject(IPhysicsObj *obj)
 {
-	for (IPhysicsObj *o : m_poList)
+	std::vector<IPhysicsObj *> &list = obj->IsStatic() ? m_poList : m_dynamicList;
+	for (IPhysicsObj *o : list)
 		if (o == obj)
 			return;
+	if (obj->IsStatic())
+		m_staticDirty = true;
+	else
+		m_dynamicList.push_back(obj);
 	m_poList.push_back(obj);
 }
 
 void PhysicsManager::RemoveObject(IPhysicsObj *obj)
 {
+	if (obj->IsStatic())
+		m_staticDirty = true;
+	for (size_t i = 0; i < m_dynamicList.size(); i++)
+		if (m_dynamicList[i] == obj)
+		{
+			m_dynamicList.erase(m_dynamicList.begin() + i);
+			break;
+		}
 	for (size_t i = 0; i < m_poList.size(); i++)
 	{
 		if (m_poList[i] == obj)
@@ -49,7 +62,18 @@ void PhysicsManager::Update(GameTime *gameTime)
 	 * (killed projectiles) must not survive in the list. */
 	m_active.clear();
 	bool hasBounds = m_activeBounds.Width > 0;
-	for (IPhysicsObj *obj : m_poList)
+	if (m_staticDirty || m_staticBounds.X != m_activeBounds.X || m_staticBounds.Y != m_activeBounds.Y
+	    || m_staticBounds.Width != m_activeBounds.Width || m_staticBounds.Height != m_activeBounds.Height)
+	{
+		m_staticActive.clear();
+		for (IPhysicsObj *obj : m_poList)
+			if (obj->IsStatic() && (!hasBounds || CollisionMath::Intersects(obj->TerrainBounds(), m_activeBounds)))
+				m_staticActive.push_back(obj);
+		m_staticBounds = m_activeBounds;
+		m_staticDirty = false;
+	}
+	m_active = m_staticActive;
+	for (IPhysicsObj *obj : m_dynamicList)
 	{
 		if (hasBounds && !CollisionMath::Intersects(obj->TerrainBounds(), m_activeBounds))
 			continue;

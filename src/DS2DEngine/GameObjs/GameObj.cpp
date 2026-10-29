@@ -1,4 +1,5 @@
 /* Port of DS2DEngine/src/GameObjs/GameObj.cs. */
+#include <cmath>
 #include "GameObj.h"
 
 namespace DS2DEngine
@@ -97,8 +98,13 @@ Vector2 GameObj::AbsPosition() const
 
 Vector2 GameObj::RotatedPoint() const
 {
-	/* Parent rotation is not applied anywhere in the ported game yet. */
-	return Position();
+	/* GameObj.cs: the parent's rotation turns the child's offset around
+	 * the parent (a whole character turned upside down, Vertigo) */
+	if (_parent == nullptr || _parent->Rotation() == 0)
+		return Position();
+	float rad = _parent->Rotation() * 3.14159265f / 180.0f, c = cosf(rad), s = sinf(rad);
+	Vector2 p = Position();
+	return Vector2(p.X * c - p.Y * s, p.X * s + p.Y * c);
 }
 
 /* Anchor with flip: the anchor becomes the mirrored point (GameObj.cs). */

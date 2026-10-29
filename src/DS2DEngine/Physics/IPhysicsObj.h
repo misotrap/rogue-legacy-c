@@ -37,6 +37,8 @@ public:
 	virtual bool IsCollidable() const = 0;
 	virtual int CollisionTypeTag() const = 0;
 	virtual bool SameTypesCollide() const { return false; }
+	/* Never moves (the walls): culled once per room, not every step */
+	virtual bool IsStatic() const { return false; }
 	virtual const std::vector<CollisionBox *> &CollisionBoxes() const = 0;
 	virtual void CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType) = 0;
 

@@ -46,6 +46,9 @@ public:
 	void Zoom(float value);
 	/* World rectangle currently visible (C# Camera2D.Bounds). */
 	Rectangle Bounds() const;
+	/* The screen rows it shows: 360 for the castle view (between the HUD
+	 * bands), the full 480 for the menus that use the whole screen */
+	void ViewHeight(float rows) { m_viewHeight = rows; }
 
 	/* The C# animation code reads the elapsed time off the camera. */
 	double ElapsedTotalSeconds() const { return m_elapsedTotalSeconds; }
@@ -57,6 +60,7 @@ public:
 private:
 	Vector2 m_position;
 	float m_zoom;
+	float m_viewHeight = 360;
 	double m_elapsedTotalSeconds;
 	GameTime m_gameTime;
 };

@@ -1,5 +1,6 @@
 #include "LineageScreen.h"
 
+#include <cstdlib>
 #include <cmath>
 
 #include "../../Audio/Audio.h"
@@ -77,6 +78,7 @@ namespace RogueCastle
 	LineageScreen::LineageScreen()
 	{
 		m_camera.Zoom(0.5f);
+		m_camera.ViewHeight(SCREEN_H);   // the whole screen: the heirs above and below stay drawn
 		m_screen.Position(Vector2(660, 360));
 		m_screen.Zoom(0.5f);
 	}
@@ -278,6 +280,9 @@ namespace RogueCastle
 		SpriteSystem::SpriteLibrary::LoadSheet(m_assetsDir.c_str(), "getItemScreenSpritesheet");
 		if (state.currentBranches.empty())
 			state.currentBranches = generator.CreateBranches(state.skills.ClassUnlocks(state.ChallengeLastBossBeaten), state.FamilyTreeNames());
+		// Dev/test: RL_DEBUG_HEIR_TRAIT=<TraitType> gives it to every heir
+		if (const char *t = getenv("RL_DEBUG_HEIR_TRAIT"))
+			for (Lineage::Heir &heir : state.currentBranches) heir.trait1 = (uint8_t) atoi(t);
 		m_selected = state.currentBranches.size() > 1 ? 1 : 0;   // the middle one
 		m_time = 0;
 		Build();

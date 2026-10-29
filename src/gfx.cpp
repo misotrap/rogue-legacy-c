@@ -136,12 +136,12 @@ static inline uint32_t ApplyTint(uint32_t p, const TintK &k)
 	return (a << 24) | (r << 16) | (g << 8) | b;
 }
 
-static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip, const TintK *tint)
+static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, float scaleY, int flip, const TintK *tint)
 {
-	if (t == NULL || t->px == NULL || scale <= 0.0f || sw <= 0 || sh <= 0) return;
+	if (t == NULL || t->px == NULL || scale <= 0.0f || scaleY <= 0.0f || sw <= 0 || sh <= 0) return;
 	int x0 = (int) floorf(dx + 0.5f), y0 = (int) floorf(dy + 0.5f);
-	int x1 = x0 + (int) floorf(sw * scale + 0.5f), y1 = y0 + (int) floorf(sh * scale + 0.5f);
-	float inv = 1.0f / scale;
+	int x1 = x0 + (int) floorf(sw * scale + 0.5f), y1 = y0 + (int) floorf(sh * scaleY + 0.5f);
+	float inv = 1.0f / scale, invY = 1.0f / scaleY;
 	int32_t step = (int32_t) (inv * 65536.0f);
 	int xs = x0 < 0 ? 0 : x0, xe = x1 < SCREEN_W ? x1 : SCREEN_W;
 	int ys = y0 < 0 ? 0 : y0, ye = y1 < SCREEN_H ? y1 : SCREEN_H;
@@ -156,7 +156,7 @@ static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, flo
 	const int loRow = sy >> shift, hiRow = (sy + sh - 1 - shift) >> shift;
 	for (int y = ys; y < ye; y++)
 	{
-		int ty = sy + (int) ((y - y0 + 0.5f) * inv);
+		int ty = sy + (int) ((y - y0 + 0.5f) * invY);
 		if (ty < sy || ty >= sy + sh || ty < 0 || ty >= t->h) continue;
 		int iy = ty >> shift;
 		if (iy > hiRow) iy = hiRow;
@@ -183,14 +183,14 @@ static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, flo
 
 void gfx_blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip)
 {
-	Blit(t, sx, sy, sw, sh, dx, dy, scale, flip, NULL);
+	Blit(t, sx, sy, sw, sh, dx, dy, scale, scale, flip, NULL);
 }
 
 void gfx_blit_tinted(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip, uint32_t colour)
 {
 	if (colour == 0xFFFFFFFFu)
 	{
-		Blit(t, sx, sy, sw, sh, dx, dy, scale, flip, NULL);
+		Blit(t, sx, sy, sw, sh, dx, dy, scale, scale, flip, NULL);
 		return;
 	}
 	uint32_t ca = colour >> 24;
@@ -202,7 +202,7 @@ void gfx_blit_tinted(const Texture *t, int sx, int sy, int sw, int sh, float dx,
 	k.r = (((colour >> 16) & 255) * ca * 65536u + 32512) / 65025;
 	k.g = (((colour >> 8) & 255) * ca * 65536u + 32512) / 65025;
 	k.b = ((colour & 255) * ca * 65536u + 32512) / 65025;
-	Blit(t, sx, sy, sw, sh, dx, dy, scale, flip, &k);
+	Blit(t, sx, sy, sw, sh, dx, dy, scale, scale, flip, &k);
 }
 
 /* Premultiplied texel times a colour (whose alpha scales everything) */
@@ -220,11 +220,28 @@ void gfx_blit_ex(const Texture *t, int sx, int sy, int sw, int sh, float x, floa
 	float scaleX, float scaleY, float rotation, int flip, uint32_t colour)
 {
 	if (t == NULL || t->px == NULL || sw <= 0 || sh <= 0 || scaleX <= 0 || scaleY <= 0 || (colour >> 24) == 0) return;
-	if (rotation == 0.0f && scaleX == scaleY)
+	if (rotation == 0.0f)
 	{
 		/* XNA: the origin is a point of the destination quad; flipping
-		 * mirrors the texels inside it (as Camera2D always did) */
-		gfx_blit_tinted(t, sx, sy, sw, sh, x - originX * scaleX, y - originY * scaleY, scaleX, flip, colour);
+		 * mirrors the texels inside it (as Camera2D always did). Any
+		 * axis-aligned scale takes the fixed-point path. */
+		if (scaleX == scaleY)
+		{
+			gfx_blit_tinted(t, sx, sy, sw, sh, x - originX * scaleX, y - originY * scaleY, scaleX, flip, colour);
+			return;
+		}
+		if (colour == 0xFFFFFFFFu)
+		{
+			Blit(t, sx, sy, sw, sh, x - originX * scaleX, y - originY * scaleY, scaleX, scaleY, flip, NULL);
+			return;
+		}
+		uint32_t ca = colour >> 24;
+		TintK k;
+		k.a = (ca * 65536u + 127) / 255;
+		k.r = (((colour >> 16) & 255) * ca * 65536u + 32512) / 65025;
+		k.g = (((colour >> 8) & 255) * ca * 65536u + 32512) / 65025;
+		k.b = ((colour & 255) * ca * 65536u + 32512) / 65025;
+		Blit(t, sx, sy, sw, sh, x - originX * scaleX, y - originY * scaleY, scaleX, scaleY, flip, &k);
 		return;
 	}
 	float c = cosf(rotation), s = sinf(rotation);
