@@ -40,6 +40,7 @@ namespace RogueCastle
 		// A new castle run: Charon is back when the family has died before
 		void ResetToll(bool available) { m_tollVisible = available; }
 		void HideToll() { m_tollVisible = false; }
+		bool TollVisible() const { return m_tollVisible; }
 
 	private:
 		DS2DEngine::ObjContainer *m_blacksmith = nullptr, *m_enchantress = nullptr, *m_architect = nullptr, *m_toll = nullptr;

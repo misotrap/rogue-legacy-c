@@ -39,6 +39,8 @@ namespace RogueCastle
 		void DrawWorld(DS2DEngine::Camera2D *camera);
 		// FinalBossTalk01: the dialogue to open now (once), or nullptr
 		const char *TakeDialogue() { const char *d = m_dialogue; m_dialogue = nullptr; return d; }
+		// CastleEntranceRoomObj.ForceGateClosed: a run resumed at the entrance
+		void ForceGateClosed() { m_gateClosed = true; m_gateTime = 2; }
 		// m_cutsceneRunning: the room (boss included) waits
 		bool Cutscene() const { return m_phase == Phase::Intro || m_phase == Phase::Leaving; }
 		// The last boss is dead: time for the ending (once)
@@ -66,6 +68,13 @@ namespace RogueCastle
 		std::unique_ptr<DS2DEngine::ObjContainer> m_shadow;
 		const char *m_dialogue = nullptr;
 		int m_heroClass = 0;
+		// The castle entrance gate (CastleEntranceRoomObj): it drops behind
+		// the hero the first time he comes in, then keeps him from going back
+		DS2DEngine::SpriteObj *m_gate = nullptr;
+		bool m_gateClosed = false;
+		double m_gateTime = 0;
+		float m_gateX = 0, m_gateY = 0;
+		void UpdateGate(ProceduralLevelScreen *level, RoomObj *room, double dt);
 
 		void StartIntro(ProceduralLevelScreen *level, Save::GameState &save);
 		void UpdateIntro(ProceduralLevelScreen *level, double before);

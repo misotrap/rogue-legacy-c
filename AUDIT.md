@@ -2,7 +2,9 @@
 
 Quatre audits en lecture seule (héros, ennemis, château et physique, écrans et progression), classés du plus important au moins important. Les doublons entre audits sont fusionnés. Chemins C# sous `ref/RogueLegacy1/RogueCastle/src/`, chemins C++ sous `src/RogueCastle/`.
 
-## A. Critique (le jeu ne se joue pas comme l'original)
+## A. Critique (le jeu ne se joue pas comme l'original) — CORRIGÉ le 29/10
+
+Tout ce bloc est corrigé, sauf le vol (point 11), qui n'est toujours pas porté.
 
 1. **Les ennemis tués réapparaissent** à chaque retour dans une salle. `EnemyObj::ResetState` remet `IsKilled = false` alors que la version C# ne le fait jamais (EnemyObj.cs:1113). De plus, le portage réinitialise aussi la salle d'arrivée.
 2. **Pas de niveau d'ennemi.**

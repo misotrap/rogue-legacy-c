@@ -161,6 +161,8 @@ namespace Save
 				}
 				else if (strcmp(key, "visited") == 0) st.roomsVisited = ParseFlags(value);
 				else if (strcmp(key, "chests") == 0) st.chestsOpened = ParseFlags(value);
+				else if (strcmp(key, "lastCastle") == 0) st.lastCastleSeed = (uint32_t) strtoul(value, nullptr, 10);
+				else if (strcmp(key, "lastChests") == 0) st.lastChestsOpened = ParseFlags(value);
 				else if (strcmp(key, "skill") == 0)
 				{
 					// skill <SkillType value> <level> <visible>
@@ -220,6 +222,11 @@ namespace Save
 			fprintf(f, "castle %u\n", st.castleSeed);
 			fprintf(f, "visited %s\n", Flags(st.roomsVisited).c_str());
 			fprintf(f, "chests %s\n", Flags(st.chestsOpened).c_str());
+		}
+		if (st.lastCastleSeed != 0)
+		{
+			fprintf(f, "lastCastle %u\n", st.lastCastleSeed);
+			fprintf(f, "lastChests %s\n", Flags(st.lastChestsOpened).c_str());
 		}
 		for (int i = 0; i < Skills::SKILL_COUNT; i++)
 			fprintf(f, "skill %d %d %d\n", (int) Skills::SKILLS[i].type, st.skills.levels[i], st.skills.visible[i]);

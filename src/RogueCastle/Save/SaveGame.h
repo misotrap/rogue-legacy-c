@@ -114,6 +114,9 @@ namespace Save
 		uint32_t castleSeed = 0;
 		std::vector<uint8_t> roomsVisited;  // one flag per room of the castle
 		std::vector<uint8_t> chestsOpened;  // up to the game: one flag per chest
+		// The castle the last heir died in (the architect can bring it back)
+		uint32_t lastCastleSeed = 0;
+		std::vector<uint8_t> lastChestsOpened;
 
 		Skills::SkillTree skills;
 		Equipment::EquipmentSystem equipment;

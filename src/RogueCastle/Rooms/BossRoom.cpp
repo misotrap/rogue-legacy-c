@@ -1,4 +1,5 @@
 #include "BossRoom.h"
+#include "../../SpriteSystem/SpriteLibrary.h"
 
 #include "../../Audio/Audio.h"
 #include "../../Text/Loc.h"
@@ -66,7 +67,7 @@ namespace RogueCastle
 	}
 
 	BossRoom::BossRoom() = default;
-	BossRoom::~BossRoom() = default;
+	BossRoom::~BossRoom() { delete m_gate; }
 
 	bool BossRoom::LoadContent(const char *assetsDir)
 	{
@@ -78,6 +79,9 @@ namespace RogueCastle
 		m_phase = Phase::None;
 		m_room = nullptr;
 		m_fade = 0;
+		m_gateClosed = false;
+		m_gateTime = 0;
+		m_gateX = m_gateY = 0;
 		EndIntro();
 		m_dialogue = nullptr;
 	}
@@ -449,6 +453,12 @@ namespace RogueCastle
 			}
 		}
 
+		if (room->Name() == "CastleEntrance")
+		{
+			save.LoadStartingRoom = false;   /* CastleEntranceRoomObj.cs line 169 */
+			UpdateGate(level, room, dt);
+		}
+
 		if (room->Name() != "Boss")
 		{
 			if (m_room != nullptr && room != m_room) m_room = nullptr, m_phase = Phase::None;
@@ -619,9 +629,52 @@ namespace RogueCastle
 
 	void BossRoom::DrawWorld(DS2DEngine::Camera2D *camera)
 	{
+		if (m_gate != nullptr && m_gateX != 0)
+		{
+			m_gate->Position(Vector2(m_gateX, m_gateY + m_gate->Height() * QuadOut((float) (m_gateTime / 1.5))));
+			m_gate->Draw(camera);
+		}
 		if (m_phase != Phase::Intro) return;
 		if (m_shadow != nullptr) m_shadow->Draw(camera);
 		for (auto &orb : m_orbs) if (orb->Opacity() > 0) orb->Draw(camera);
 		for (auto &blob : m_blobs) if (blob->Visible()) blob->Draw(camera);
+	}
+
+	void BossRoom::UpdateGate(ProceduralLevelScreen *level, RoomObj *room, double dt)
+	{
+		if (m_gate == nullptr)
+		{
+			if (!SpriteSystem::SpriteLibrary::ContainsSprite("CastleEntranceGate_Sprite")) return;
+			m_gate = new DS2DEngine::SpriteObj("CastleEntranceGate_Sprite");
+			m_gate->ForceDraw(true);
+			m_gate->Anchor(Vector2(0, 0));
+		}
+		if (m_gateX == 0)
+		{
+			// above the left door, flush with its right edge (line 108)
+			for (const RoomObj::DoorInfo &d : room->DoorList())
+				if (d.pos == Levels::DoorPos::Left)
+				{
+					m_gateX = d.x + d.width - m_gate->Width();
+					m_gateY = d.y - m_gate->Height();
+					break;
+				}
+			if (m_gateX == 0) return;
+		}
+		PlayerObj *player = level->Player();
+		if (!m_gateClosed)
+		{
+			// CloseGate(true): it drops over 1.5 s (Quad.EaseOut)
+			m_gateClosed = true;
+			m_gateTime = 0;
+		}
+		if (m_gateTime < 1.5) m_gateTime += dt;
+		// Update: no going back to the courtyard
+		float right = m_gateX + m_gate->Width();
+		if (player != nullptr && player->X() < right)
+		{
+			player->X(right + 20);
+			level->UpdateCamera();
+		}
 	}
 }

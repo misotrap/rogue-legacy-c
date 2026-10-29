@@ -151,6 +151,17 @@ namespace RogueCastle
 		m_getItemOpen = false;
 		m_bossRoom.Reset();
 		m_map.Reset(m_level->Castle().rooms.size());
+		/* LoadingScreen.cs line 256: a hero who already went in resumes at
+		 * the castle entrance, gate closed, not in the courtyard */
+		if (!m_save.LoadStartingRoom && m_level->Player() != nullptr)
+			for (RoomObj *r : m_level->RoomList())
+				if (r->Name() == "CastleEntrance")
+				{
+					m_level->Player()->X(r->X() + 300);
+					m_level->Player()->Y(r->Y() + r->Height() - 300);
+					m_bossRoom.ForceGateClosed();
+					break;
+				}
 		Save();
 	}
 
@@ -181,6 +192,7 @@ namespace RogueCastle
 	void GameFlow::OnCastleBeaten()
 	{
 		AddFamilyNode(true);
+		m_save.LoadStartingRoom = true;   /* EnemyObj_LastBoss.cs line 1698 */
 		m_save.NewBossBeaten = false;
 		m_save.NumEnemiesBeaten = 0;
 		m_save.LastbossBeaten = true;
@@ -189,6 +201,7 @@ namespace RogueCastle
 		m_save.EyeballBossBeaten = m_save.FairyBossBeaten = false;
 		m_save.BlobBossBeaten = m_save.FireballBossBeaten = false;
 		m_save.castleExists = false;
+		m_save.lastCastleSeed = 0;
 		m_save.LockCastle = false;
 		m_save.HasArchitectFee = false;
 		Save(false);
@@ -201,14 +214,17 @@ namespace RogueCastle
 	void GameFlow::OnPlayerDeath()
 	{
 		AddFamilyNode(m_save.NewBossBeaten);
+		m_save.LoadStartingRoom = true;   /* GameOverScreen.cs line 182 */
 		const Lineage::Heir &h = m_save.hero;
 		m_save.IsDead = true;
 		m_save.TimesDead++;
 		m_save.NumEnemiesBeaten = 0;
 		m_save.NewBossBeaten = false;
-		/* A new castle for the next heir, unless the architect locked this
-		 * one (LoadingScreen: the lock is used up by the next load) */
-		m_save.castleExists = m_save.LockCastle;
+		/* A new castle for the next heir; the architect may bring this one
+		 * back from the courtyard (StartingRoomObj.ActivateArchitect) */
+		m_save.lastCastleSeed = m_save.castleSeed;
+		m_save.lastChestsOpened = m_save.chestsOpened;
+		m_save.castleExists = false;
 		m_save.LockCastle = false;
 		m_save.HasArchitectFee = false;
 		Save(false);
@@ -365,9 +381,20 @@ namespace RogueCastle
 					{
 						/* ActivateArchitect / StopArchitectActivation: this castle
 						 * stays for the next heir; the gold fee applies until then */
+						/* the castle the last heir died in, rebuilt around the
+						 * hero, who stays where he is in the courtyard; this run
+						 * pays the fee (LoadingScreen.cs line 234) */
 						m_save.LockCastle = true;
 						m_save.HasArchitectFee = true;
 						m_save.ArchitectUsed = true;
+						m_save.castleSeed = m_save.lastCastleSeed;
+						m_save.chestsOpened = m_save.lastChestsOpened;
+						m_save.castleExists = true;
+						Vector2 at = m_level->Player()->Position();
+						bool tollVisible = m_court.TollVisible();
+						StartCastle();
+						m_court.ResetToll(tollVisible);
+						m_level->Player()->Position(at);
 						Save();
 						Audio::PlaySound("Architect_Lever");
 						m_dialogue.Open("Castle Lock Complete Architect", m_save.hero.isFemale);
@@ -457,7 +484,9 @@ namespace RogueCastle
 				if (action == StartingRoom::Action::Architect)
 				{
 					// StartingRoomObj: the lock offer, or "already locked"
-					if (m_save.LockCastle)
+					if (m_save.lastCastleSeed == 0)
+						m_dialogue.Open("No Castle Architect", m_save.hero.isFemale);   // no castle to keep yet
+					else if (m_save.LockCastle)
 						m_dialogue.Open("Castle Already Locked Architect", m_save.hero.isFemale);
 					else
 					{
