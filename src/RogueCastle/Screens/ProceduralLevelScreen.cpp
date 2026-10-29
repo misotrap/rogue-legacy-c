@@ -108,7 +108,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		for (TerrainObj *terrain : room->TerrainObjList())
 		{
 			m_physicsManager.AddObject(terrain);
-			m_allTerrain.push_back(terrain);
+			m_castleTerrain.push_back(terrain);
 		}
 		for (const Slope &slope : room->SlopeList())
 			m_allSlopes.push_back(slope);
@@ -121,7 +121,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		for (BreakableObj *breakable : room->BreakableObjList())
 		{
 			breakable->SetLevelScreen(this);
-			m_allTerrain.push_back(breakable);   /* tables and chairs are floors too */
+			m_castleTerrain.push_back(breakable);   /* tables and chairs are floors too */
 		}
 		for (EnemyObj *enemy : room->EnemyList())
 		{
@@ -130,7 +130,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			enemy->SetTerrain(&m_allTerrain);
 			m_physicsManager.AddObject(enemy);
 			if (enemy->Type == EnemyType::Platform)
-				m_allTerrain.push_back(enemy);   /* the folding platforms are floors once out */
+				m_castleTerrain.push_back(enemy);   /* the folding platforms are floors once out */
 		}
 		for (ChestObj *chest : room->ChestList())
 		{
@@ -180,6 +180,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	}
 
 	m_currentRoom = m_roomList[0];
+	RefreshLocalTerrain();
 	RoomObj *start = m_roomList[0];
 	m_player->X(start->X() + start->Width() * 0.5f);
 	m_player->Y(start->Y() + start->Height() * 0.5f);
@@ -327,8 +328,10 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	if (m_currentRoom != nullptr)
 	{
 		Rectangle b = m_currentRoom->Bounds();
-		m_physicsManager.SetActiveBounds(Rectangle(b.X - 1320, b.Y - 720,
-		                                          b.Width + 2 * 1320, b.Height + 2 * 720));
+		/* The current room and a margin for the doorways: the rooms
+		 * around wait until the hero walks in */
+		m_physicsManager.SetActiveBounds(Rectangle(b.X - 300, b.Y - 300,
+		                                          b.Width + 2 * 300, b.Height + 2 * 300));
 	}
 
 	/* The loot (PlayerObj.cs line 2110: the pickup on contact). */
@@ -557,6 +560,7 @@ void ProceduralLevelScreen::CheckForRoomTransition()
 					enemy->ResetState();
 			}
 			m_currentRoom = roomObj;
+			RefreshLocalTerrain();
 			for (EnemyObj *enemy : roomObj->EnemyList())
 				enemy->ResetState();
 			SpawnDementiaEnemy();
@@ -670,6 +674,26 @@ void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
 	if (rl_trace())
 		fprintf(stderr, "proj: %s (%.0f,%.0f) [add]\n",
 		        proj->SpriteName().c_str(), proj->X(), proj->Y());
+}
+
+void ProceduralLevelScreen::RefreshLocalTerrain()
+{
+	m_allTerrain.clear();
+	if (m_currentRoom == nullptr)
+	{
+		m_allTerrain = m_castleTerrain;
+		return;
+	}
+	/* The room and the doorway margin of the physics' active bounds */
+	Rectangle b = m_currentRoom->Bounds();
+	Rectangle around(b.X - 300, b.Y - 300, b.Width + 600, b.Height + 600);
+	for (DS2DEngine::IPhysicsObj *obj : m_castleTerrain)
+	{
+		Rectangle t = obj->TerrainBounds();
+		if (t.X < around.X + around.Width && t.X + t.Width > around.X
+		    && t.Y < around.Y + around.Height && t.Y + t.Height > around.Y)
+			m_allTerrain.push_back(obj);
+	}
 }
 
 void ProceduralLevelScreen::KillProjectilesFrom(EnemyObj *source)

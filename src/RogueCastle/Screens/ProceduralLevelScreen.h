@@ -86,7 +86,12 @@ private:
 	std::vector<RoomObj *> m_roomList;
 	std::vector<class ChestObj *> m_chestList;   /* the rooms own them */
 	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */
+	/* Every floor and wall of the castle; m_allTerrain holds those around
+	 * the current room (the ground probes of the hero and the enemies),
+	 * refilled on each room change */
+	std::vector<DS2DEngine::IPhysicsObj *> m_castleTerrain;
 	std::vector<DS2DEngine::IPhysicsObj *> m_allTerrain;
+	void RefreshLocalTerrain();
 	std::vector<Slope> m_allSlopes;
 	std::vector<Hazard> m_allHazards;
 	RoomObj *m_currentRoom = nullptr;

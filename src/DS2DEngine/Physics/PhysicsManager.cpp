@@ -1,6 +1,7 @@
 /* Port of DS2DEngine/src/Physics/PhysicsManager.cs. */
 #include "PhysicsManager.h"
 #include "../../debugflags.h"
+#include <cstdio>
 #include "../CollisionMath.h"
 #include "../Consts.h"
 
@@ -55,6 +56,11 @@ void PhysicsManager::Update(GameTime *gameTime)
 		m_active.push_back(obj);
 	}
 
+	if (rl_trace())
+	{
+		static int frames = 0;
+		if (++frames % 120 == 0) fprintf(stderr, "physics: %zu objects, %zu active\n", m_poList.size(), m_active.size());
+	}
 	/* Gravity + physics step (PhysicsManager.cs line 76). */
 	for (IPhysicsObj *weightedObj : m_active)
 	{
@@ -79,9 +85,29 @@ void PhysicsManager::Update(GameTime *gameTime)
 			weightedObj->UpdateCollisionBoxes();
 	}
 
+	/* The rectangle around each object's boxes, a little larger: the
+	 * pair pass moves objects (the MTD pushes) after it is built */
+	m_activeRects.resize(m_active.size());
+	for (size_t i = 0; i < m_active.size(); i++)
+	{
+		int x0 = INT32_MAX, y0 = INT32_MAX, x1 = INT32_MIN, y1 = INT32_MIN;
+		for (CollisionBox *box : m_active[i]->CollisionBoxes())
+		{
+			if (box->Type() == Consts::NULL_HITBOX) continue;
+			Rectangle r = box->AbsRect();
+			if (r.X < x0) x0 = r.X;
+			if (r.Y < y0) y0 = r.Y;
+			if (r.X + r.Width > x1) x1 = r.X + r.Width;
+			if (r.Y + r.Height > y1) y1 = r.Y + r.Height;
+		}
+		m_activeRects[i] = x0 > x1 ? Rectangle(0, 0, 0, 0) : Rectangle(x0 - 16, y0 - 16, x1 - x0 + 32, y1 - y0 + 32);
+	}
+
 	/* Pair collision pass (PhysicsManager.cs line 128). */
 	for (size_t i = 0; i < m_active.size(); i++)
 	{
+		if (m_activeRects[i].Width == 0)
+			continue;
 		IPhysicsObj *firstObj = m_active[i];
 		if (!firstObj->IsCollidable() || !firstObj->Visible())
 			continue;
@@ -95,6 +121,8 @@ void PhysicsManager::Update(GameTime *gameTime)
 			    !firstObj->SameTypesCollide() && !secondObj->SameTypesCollide())
 				continue;
 			if (!secondObj->IsCollidable() || !secondObj->Visible())
+				continue;
+			if (!CollisionMath::Intersects(m_activeRects[i], m_activeRects[j]))
 				continue;
 
 			for (CollisionBox *firstBox : firstObj->CollisionBoxes())

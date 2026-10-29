@@ -36,6 +36,9 @@ public:
 private:
 	std::vector<IPhysicsObj *> m_poList;
 	std::vector<IPhysicsObj *> m_active;
+	/* Per active object, the rectangle around all its boxes (rebuilt each
+	 * step): pairs whose rectangles do not meet skip the box tests */
+	std::vector<Rectangle> m_activeRects;
 	Rectangle m_activeBounds;
 	Vector2 m_gravity;
 };
