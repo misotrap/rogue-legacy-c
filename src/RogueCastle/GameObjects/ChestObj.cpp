@@ -260,6 +260,17 @@ void ChestObj::GivePrint(ProceduralLevelScreen *level, PlayerObj *player)
 	if (player == nullptr || player->Stats() == nullptr)
 		return;
 	Save::GameState *stats = player->Stats();
+	/* ChestObj.cs line 262: with every blueprint found, a gold chest
+	 * gives a stat drop and the others give gold. */
+	if (stats->equipment.TotalBlueprintsFound()
+	    >= Equipment::CATEGORIES * Equipment::BASE_TYPES)
+	{
+		if (ChestType() == CT::Gold)
+			GiveStatDrop(level, player, 1, 0);
+		else
+			GiveGold(level);
+		return;
+	}
 	std::mt19937 rng((unsigned) rand());
 	int category = 0, index = 0;
 	if (stats->equipment.GiveRandomBlueprint(Level, (int) ChestType(), rng, category, index))
