@@ -1,5 +1,8 @@
 /* Port of RogueCastle/src/Game Objects/Player/PlayerObj.cs. */
 #include "PlayerObj.h"
+#include "../../Equipment/EquipmentData.h"
+#include "../../../Text/Loc.h"
+#include "../../EVs/LevelEV.h"
 #include "../../../DS2DEngine/GameObjs/SpriteObj.h"
 #include "../../Equipment/Equipment.h"
 #include "../../Types/PlayerPart.h"
@@ -318,7 +321,8 @@ void PlayerObj::Update(GameTime *gameTime)
 	for (int i = 0; i < NumChildren(); i++)
 		GetChildAt(i)->TextureColor(m_blinkCounter > 0 ? m_blinkColour : i <= PlayerPart::Light ? m_partColour[i] : Color(255, 255, 255));
 
-	if (!ControlsLocked)
+	/* PlayerObj.cs line 575: no input while hurt (until landing) */
+	if (!ControlsLocked && State != STATE_HURT)
 	{
 		/* Code for moving left and right (PlayerObj.cs line 798). */
 		if (State != STATE_BLOCKING && State != STATE_TANOOKI)
@@ -488,8 +492,7 @@ void PlayerObj::Update(GameTime *gameTime)
 		if (m_dashCounter <= 0 && State != STATE_HURT)
 		{
 			UnlockControls();
-			AccelerationYFlag = true;
-			m_airDashCount = 0;   /* reset by touching ground in the original */
+			AccelerationYFlag = true;   /* m_airDashCount: only reset by landing */
 		}
 	}
 
@@ -575,6 +578,18 @@ void PlayerObj::UpdatePlayerCollision()
 		/* Player just landed (PlayerObj.cs line 1795). */
 		if (!m_isTouchingGround)
 		{
+			/* PlayerObj.cs line 1774: a hurt hero turns invincible as he
+			 * lands, an air attack is cancelled, the knockback stops */
+			if (State == STATE_HURT)
+				m_invincibleCounter = BaseInvincibilityTime;
+			if (IsAirAttacking)
+			{
+				IsAirAttacking = false;
+				m_activeLS = LS_NONE;
+				m_lsStep = 0;
+				AnimationDelay(1 / 10.0f);
+			}
+			AccelerationX(0);
 			/* Reset any jumping states, i.e. air jump, air dash, etc. */
 			m_isJumping = false;
 			m_doubleJumpCount = 0;
@@ -813,11 +828,16 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 {
 	/* PlayerObj.cs line 2245 (HitPlayer), subset: no demented/projectile
 	 * special cases, no damage reduction (no equipment yet). */
-	(void) attackPosition;
 	Blink(Color(255, 0, 0), 0.1f);
 	AccelerationYFlag = true;   /* in case the acceleration was disabled (dash) */
 	UnlockControls();
 
+	/* PlayerObj.cs line 2296: the armour (TotalDamageReduc = armour /
+	 * (ARMOR_DIVIDER + armour)); ClassDamageTakenMultiplier is always 1 */
+	float armor = TotalArmor();
+	if (armor > 0)
+		damage = (int) (damage - damage * armor / (GameEV::ARMOR_DIVIDER + armor));
+	if (damage < 0) damage = 0;
 	CurrentHealth -= damage;
 	m_isJumping = false;
 
@@ -826,6 +846,11 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 		/* Knockback: away from the attack (HitPlayer continues at line
 		 * 2335), with the Ectomorph/Endomorph trait mods (line 2353). */
 		State = STATE_HURT;
+		/* PlayerObj.cs line 2345: the attack in progress stops */
+		m_activeLS = LS_NONE;
+		m_lsStep = 0;
+		IsAirAttacking = false;
+		AnimationDelay(1 / 10.0f);
 		/* Tourettes (PlayerObj.cs line 2335): a swearing bubble for 1 s */
 		if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::Tourettes))
 		{
@@ -842,8 +867,7 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 			Audio::PlaySound("Player_Female_Damage_03", "Player_Female_Damage_04", "Player_Female_Damage_05");
 		else
 			Audio::PlaySound("Player_Male_Injury_01", "Player_Male_Injury_02", "Player_Male_Injury_03");
-		m_invincibleCounter = BaseInvincibilityTime;
-		CurrentSpeed(0);
+		CurrentSpeed(0);   /* the invincibility starts on landing (line 1774) */
 		float knockbackMod = 1;
 		if (m_stats != nullptr && m_stats->hero.HasTrait(TraitType::Ectomorph))
 			knockbackMod = GameEV::TRAIT_ECTOMORPH;
@@ -865,7 +889,8 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 				m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top(), 0xFFFF0000u);
 			}
 		}
-		if (AccelerationX() > 0 || HeadingX() > 0)
+		/* away from the attacker's centre (line 2360) */
+		if (attackPosition.X > X())
 			AccelerationX(-KnockBack.X * knockbackMod);
 		else
 			AccelerationX(KnockBack.X * knockbackMod);
@@ -913,11 +938,16 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 						                        0xFF87CEEBu);
 				}
 				Audio::PlaySound("Player_Block");
+				otherParent->OnEnemyHit();   /* a blocked shot is spent */
 				return;
 			}
 			if (m_invincibleCounter <= 0 && !ForceInvincible)
+			{
+				Rectangle hit = otherBox->AbsRect();
 				HitPlayer(otherParent->DealsDamage(),
-				          Vector2((float) otherBox->AbsRect().X, (float) otherBox->AbsRect().Y));
+				          Vector2(hit.X + hit.Width * 0.5f, hit.Y + hit.Height * 0.5f));
+				otherParent->OnEnemyHit();   /* the shot that hit dies (DestroysWithEnemy) */
+			}
 			return;
 		}
 	}
@@ -1535,6 +1565,96 @@ void PlayerObj::DrawSwearBubble(Camera2D *camera)
 	m_swearBubble->Scale(Vector2(ScaleX() * 1.2f, ScaleY() * 1.2f));
 	m_swearBubble->Position(Vector2(X() - 30 * ScaleX(), Y() - 35 * ScaleX()));
 	m_swearBubble->Draw(camera);
+}
+
+float PlayerObj::TotalCritChance() const
+{
+	if (m_stats == nullptr) return 0;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	float chance = 0 /* BaseCriticalChance */ + m_stats->skills.ModifierAmount(Skills::SkillType::Crit_Chance_Up)
+		+ equip.secondary[EquipmentSecondaryDataType::CritChance];
+	switch (m_stats->hero.classType)
+	{
+	case ClassType::Assassin: case ClassType::Assassin2: return chance + PlayerEV::ASSASSIN_CRITCHANCE_MOD;
+	case ClassType::Ninja: case ClassType::Ninja2: return 0;   /* ninjas never crit */
+	default: return chance;
+	}
+}
+
+float PlayerObj::TotalCriticalDamage() const
+{
+	if (m_stats == nullptr) return 1.5f;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	float bonus = 1.5f /* BaseCriticalDamageMod */ + m_stats->skills.ModifierAmount(Skills::SkillType::Crit_Damage_Up)
+		+ equip.secondary[EquipmentSecondaryDataType::CritDamage];
+	if (m_stats->hero.classType == ClassType::Assassin || m_stats->hero.classType == ClassType::Assassin2)
+		bonus += PlayerEV::ASSASSIN_CRITDAMAGE_MOD;
+	return bonus;
+}
+
+int PlayerObj::TotalVampBonus() const
+{
+	if (m_stats == nullptr) return 0;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	return (int) ((equip.runes[EquipmentAbilityType::Vampirism] * GameEV::RUNE_VAMPIRISM_HEALTH_GAIN
+		+ (int) equip.secondary[EquipmentSecondaryDataType::Vampirism] * GameEV::RUNE_VAMPIRISM_HEALTH_GAIN
+		+ equip.runes[EquipmentAbilityType::ManaHPGain] * GameEV::RUNE_MANAHPGAIN) * (1 + m_stats->TimesCastleBeaten * 0.5f));
+}
+
+int PlayerObj::ManaGain() const
+{
+	if (m_stats == nullptr) return 0;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	int classGain = m_stats->hero.classType == ClassType::Wizard || m_stats->hero.classType == ClassType::Wizard2 ? GameEV::MAGE_MANA_GAIN : 0;
+	return (int) ((classGain + m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Regen_Up)
+		+ (equip.runes[EquipmentAbilityType::ManaGain] + (int) equip.secondary[EquipmentSecondaryDataType::ManaDrain]) * GameEV::RUNE_MANA_GAIN
+		+ equip.runes[EquipmentAbilityType::ManaHPGain] * GameEV::RUNE_MANAHPGAIN) * (1 + m_stats->TimesCastleBeaten * 0.5f));
+}
+
+void PlayerObj::RefreshAbilities()
+{
+	if (m_stats == nullptr) return;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	TotalDoubleJumps = equip.runes[EquipmentAbilityType::DoubleJump] + (int) equip.secondary[EquipmentSecondaryDataType::DoubleJump];
+	TotalAirDashes = equip.runes[EquipmentAbilityType::Dash] + (int) equip.secondary[EquipmentSecondaryDataType::AirDash];
+}
+
+void PlayerObj::OnEnemyKilled(int enemyLevel, bool givesLichHealth)
+{
+	if (m_stats == nullptr || IsKilled) return;
+	float top = (float) Bounds().Top();
+	char buf[48];
+	int vamp = TotalVampBonus();
+	if (vamp > 0)
+	{
+		CurrentHealth = fminf(CurrentHealth + vamp, MaxHealth());
+		snprintf(buf, sizeof(buf), "+%d %s", vamp, Text::Loc::Get("LOC_ID_SKILL_SCREEN_14"));
+		if (m_levelScreen) m_levelScreen->AddPopup(buf, X(), top - 60, 0xFF90EE90u);
+	}
+	int mana = ManaGain();
+	if (mana > 0)
+	{
+		CurrentMana = fminf(CurrentMana + mana, MaxMana());
+		snprintf(buf, sizeof(buf), "+%d %s", mana, Text::Loc::Get("LOC_ID_SKILL_SCREEN_15"));
+		if (m_levelScreen) m_levelScreen->AddPopup(buf, X(), top - 90, 0xFF4169E1u);
+	}
+	uint8_t cls = m_stats->hero.classType;
+	if ((cls == ClassType::Lich || cls == ClassType::Lich2) && givesLichHealth)
+	{
+		int playerLevel = m_stats->skills.PlayerLevel();
+		int gain = playerLevel < (int) (enemyLevel * LevelEV::ENEMY_LEVEL_FAKE_MULTIPLIER)
+			? GameEV::LICH_HEALTH_GAIN_PER_KILL : GameEV::LICH_HEALTH_GAIN_PER_KILL_LESSER;
+		/* the cap: the max hp before the class multiplier and the Lich's own */
+		float base = (MaxHealth() - m_stats->LichHealth) / ClassTotalHPMultiplier(cls);
+		int cap = (int) lroundf(base * GameEV::LICH_MAX_HP_OFF_BASE);
+		if (MaxHealth() + gain < cap)
+		{
+			m_stats->LichHealth += gain;
+			CurrentHealth += gain;
+			snprintf(buf, sizeof(buf), "+%d %s", gain, Text::Loc::Get("LOC_ID_PLAYER_OBJ_3"));
+			if (m_levelScreen) m_levelScreen->AddPopup(buf, X(), top - 30, 0xFF90EE90u);
+		}
+	}
 }
 
 } // namespace RogueCastle

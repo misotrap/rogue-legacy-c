@@ -30,7 +30,7 @@ namespace RogueCastle
 using namespace DS2DEngine;
 
 ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
-                                             std::vector<uint8_t> *chestFlags)
+                                             std::vector<uint8_t> *chestFlags, int timesCastleBeaten)
 	: m_chestFlags(chestFlags)
 {
 	/* LoadContent: the sheets this level needs (AGENTS.md: only the
@@ -151,6 +151,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			break;
 		}
 		room->Level = roomLevel + roomLevelMod;
+		if (timesCastleBeaten > 0)   /* New Game+ (ProceduralLevelScreen.cs line 885) */
+			room->Level += LevelEV::NEWGAMEPLUS_LEVEL_BASE + (timesCastleBeaten - 1) * LevelEV::NEWGAMEPLUS_LEVEL_APPRECIATION;
 		roomLevel++;
 		/* ChestObj.Level (ProceduralLevelScreen.cs line 759); the
 		 * RoomLevelDown rune grace is TODO with the runes. */
@@ -158,6 +160,18 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			chest->Level = room->Level / LevelEV::ROOM_LEVEL_MOD;
 	}
 	InitializeChests();
+
+	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
+	 * level from its room (a boss room: the entrance it is linked to) */
+	for (RoomObj *room : m_roomList)
+	{
+		bool boss = room->Name() == "Boss";
+		int roomLevel = room->Level;
+		if (boss && room->LinkedRoom() >= 0 && room->LinkedRoom() < (int) m_roomList.size())
+			roomLevel = m_roomList[room->LinkedRoom()]->Level;
+		for (EnemyObj *enemy : room->EnemyList())
+			enemy->ApplyLevel(roomLevel / LevelEV::ROOM_LEVEL_MOD, boss);
+	}
 
 	m_currentRoom = m_roomList[0];
 	RoomObj *start = m_roomList[0];
@@ -626,7 +640,8 @@ void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 posit
 	                                        damage, scale, weighted);
 	proj->Source = source;
 	proj->Demented = source != nullptr && source->Demented;
-	proj->LifeSpan = lifeSpan;
+	proj->LifeSpan = lifeSpan > 0 ? lifeSpan : 10;   /* ProjectileData.Lifespan = 10 */
+	proj->DestroysWithEnemy = true;                 /* the C# default: dies on the hero */
 	/* ProjectileManager.cs line 109: the sprite points along the shot */
 	proj->Rotation(atan2f(heading.Y, heading.X) * 180.0f / (float) M_PI);
 	/* CollidesWithTerrain: a terrain box, destroyed by the walls */

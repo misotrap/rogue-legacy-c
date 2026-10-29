@@ -235,7 +235,7 @@ void EnemyObj_Knight::FireSpear(int count, float angleCentre)
 		m_levelScreen->FireProjectile("EnemySpearKnightWave_Sprite",
 		                              Position() + Vector2(30.0f * facing, 0),
 		                              heading, ProjectileSpeed, (int) ProjectileDamage,
-		                              ProjectileScale, false, this);
+		                              ProjectileScale, false, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 	}
 }
 

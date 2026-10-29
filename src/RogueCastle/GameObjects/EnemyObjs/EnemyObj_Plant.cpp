@@ -151,7 +151,7 @@ void EnemyObj_Plant::Spit(float angleDeg)
 	Vector2 heading(cosf(rad), sinf(rad));
 	m_levelScreen->FireProjectile("PlantProjectile_Sprite", Position(), heading,
 	                              ProjectileSpeed, (int) ProjectileDamage,
-	                              ProjectileScale, true, this);
+	                              ProjectileScale, true, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 }
 
 void EnemyObj_Plant::StartAction(Action action)

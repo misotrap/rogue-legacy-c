@@ -1,5 +1,7 @@
 /* Port of RogueCastle/src/Game Objects/EnemyObjs/EnemyObj.cs (subset). */
 #include "EnemyObj.h"
+#include "../../../Text/Loc.h"
+#include "../../EVs/LevelEV.h"
 #include "../../EVs/GameEV.h"
 #include "../../Types/TraitType.h"
 #include "../../../DS2DEngine/CollisionMath.h"
@@ -319,6 +321,9 @@ void EnemyObj::Kill(bool giveXP)
 	(void) giveXP;
 	if (IsKilled)
 		return;
+	/* EnemyObj.cs line 884: the hero's kill rewards */
+	if (giveXP && m_target != nullptr)
+		m_target->OnEnemyKilled(Level, GivesLichHealth);
 	IsKilled = true;
 	Visible(false);
 	IsCollidableFlag = false;
@@ -428,11 +433,19 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 					/* EnemyObj.cs line 815. */
 					Audio::PlaySound("EnemyHit1", "EnemyHit2", "EnemyHit3");
 					int damage = otherParent->DealsDamage();
+					/* EnemyObj.cs line 675: the hero's sword may crit */
+					bool byHero = !isProjectile && m_target != nullptr && otherParent == (IPhysicsObj *) m_target;
+					if (byHero && !NonKillable && (float) rand() / RAND_MAX <= m_target->TotalCritChance())
+					{
+						damage = (int) (damage * m_target->TotalCriticalDamage());
+						if (m_levelScreen != nullptr)
+							m_levelScreen->AddPopup("Critique !", X(), (float) Bounds().Top() - 20, 0xFFFFFF00u);
+					}
 					if (isProjectile)
 						m_invincibleCounterProjectile = InvincibilityTime;
 					else
 						m_invincibleCounter = InvincibilityTime;
-					HitEnemy(damage, impact, true);
+					HitEnemy(damage, impact, byHero);   /* spells are not sword hits */
 					otherParent->OnEnemyHit();
 				}
 			}
@@ -453,9 +466,9 @@ void EnemyObj::ResetState()
 	Acceleration(Vector2(0, 0));
 	CurrentSpeed(0);
 	Heading(Vector2(0, 0));
-	IsKilled = false;
-	Visible(true);
-	IsCollidableFlag = true;
+	/* The dead stay dead (EnemyObj.cs: ResetState never clears IsKilled) */
+	if (IsKilled)
+		return;
 	CurrentHealth = MaxHealth;
 	m_invincibleCounter = 0;
 	m_invincibleCounterProjectile = 0;
@@ -465,6 +478,34 @@ void EnemyObj::ResetState()
 	m_actionTimer = 0;
 	ChangeSprite(m_resetSpriteName);
 	PlayAnimation(true);
+}
+
+void EnemyObj::ApplyLevel(int level, bool bossRoom)
+{
+	Level = level < 1 && !bossRoom ? 1 : level;
+	int difficulty = Level / LevelEV::ENEMY_LEVEL_DIFFICULTY_MOD;
+	if (difficulty > EXPERT) difficulty = EXPERT;
+	if (Procedural)
+	{
+		if (DifficultyType == EXPERT)
+			Level += LevelEV::ENEMY_EXPERT_LEVEL_MOD;
+		if ((int) DifficultyType < difficulty)
+		{
+			DifficultyType = (EnemyDifficulty) difficulty;   /* SetDifficulty */
+			Initialize();
+		}
+	}
+	else if (DifficultyType == MINIBOSS)
+		Level += LevelEV::ENEMY_MINIBOSS_LEVEL_MOD;
+
+	/* StatLevelHPMod 0.16, StatLevelDMGMod 0.091, StatLevelXPMod 0.025 */
+	int hpGain = (int) (MaxHealth * 0.160f), dmgGain = (int) (Damage * 0.0910f), xpGain = (int) (XPValue * 0.025f);
+	bool projectileIsDamage = ProjectileDamage == Damage;
+	MaxHealth += hpGain * (Level - 1);
+	Damage += dmgGain * (Level - 1);
+	XPValue += xpGain * (Level - 1);
+	if (projectileIsDamage) ProjectileDamage = Damage;   /* ProjectileDamage = Damage in the EVs */
+	CurrentHealth = MaxHealth;
 }
 
 } // namespace RogueCastle

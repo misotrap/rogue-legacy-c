@@ -103,17 +103,13 @@ void ProjectileObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *other
 {
 	IPhysicsObj *other = otherBox->PhysicsParent();
 
-	/* Enemy projectiles (and the spells that became damage walls) die
-	 * when they touch the player (RunDestroyAnimation in the C#). */
+	/* Enemy projectiles die only when they really hurt the hero: the
+	 * player calls OnPlayerHit (PlayerObj.cs line 2050); his sword and
+	 * spells do not destroy them */
 	if ((collisionResponseType == Consts::COLLISIONRESPONSE_FIRSTBOXHIT
 	     || collisionResponseType == Consts::COLLISIONRESPONSE_SECONDBOXHIT)
 	    && other != nullptr && other->CollisionTypeTag() == 2)
-	{
-		IsKilled = true;
-		Visible(false);
-		IsCollidableFlag = false;
 		return;
-	}
 
 	/* Terrain hits (ProjectileObj.cs line 294): only the spells with
 	 * CollidesWithTerrain get a terrain box, so only they arrive here. */

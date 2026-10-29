@@ -80,7 +80,7 @@ public:
 	 * stats come from the save (Game.PlayerStats in the C#): the class,
 	 * the manor skills, the equipment and the bonus drops. Until
 	 * SetPlayerStats is called the base knight values apply. */
-	void SetPlayerStats(Save::GameState *stats) { m_stats = stats; UpdateEquipmentObjs(); UpdateEquipmentColours(); }
+	void SetPlayerStats(Save::GameState *stats) { m_stats = stats; UpdateEquipmentObjs(); UpdateEquipmentColours(); RefreshAbilities(); }
 	void UpdateEquipmentColours();   /* PlayerObj.cs line 2558 */
 	Save::GameState *Stats() const { return m_stats; }
 
@@ -95,7 +95,14 @@ public:
 	float MaxHealth() const;         /* PlayerObj.cs line 3670 */
 	float MaxMana() const;           /* PlayerObj.cs line 3631 */
 	int MaxWeight() const;           /* PlayerObj.cs line 3838 */
-	float TotalCritChance() const { return 0; }
+	float TotalCritChance() const;      /* PlayerObj.cs line 3951 */
+	float TotalCriticalDamage() const;  /* line 3968 */
+	int TotalVampBonus() const;         /* line 4014: hp per kill */
+	int ManaGain() const;               /* line 3920: mp per kill */
+	/* The double jump and air dash runes and equipment (line 4030) */
+	void RefreshAbilities();
+	/* EnemyObj.Kill (line 884): vampirism, mana, the Lich's max hp */
+	void OnEnemyKilled(int enemyLevel, bool givesLichHealth);
 	float BaseInvincibilityTime = 1.0f;
 	float AirAttackKnockBack = 1425;              /* PlayerEV */
 	int NumSequentialAttacks = 0;

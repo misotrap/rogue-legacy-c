@@ -159,7 +159,7 @@ void EnemyObj_SkeletonArcher::FireArrow(float angleDeg)
 	float rad = angleDeg * PI / 180.0f;
 	m_levelScreen->FireProjectile("ArrowProjectile_Sprite", Position(),
 	                              Vector2(cosf(rad), sinf(rad)), ProjectileSpeed,
-	                              (int) ProjectileDamage, ProjectileScale, true, this);
+	                              (int) ProjectileDamage, ProjectileScale, true, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 }
 
 /* The arrow fans per difficulty and shot (the C# sets projData.Angle

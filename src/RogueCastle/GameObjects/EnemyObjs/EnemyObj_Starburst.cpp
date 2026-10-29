@@ -203,7 +203,7 @@ void EnemyObj_Starburst::UpdateAction()
 				m_levelScreen->FireProjectile("TurretProjectile_Sprite", Position(),
 				                              Vector2(cosf(rad), sinf(rad)), ProjectileSpeed,
 				                              (int) ProjectileDamage, ProjectileScale,
-				                              false, this);
+				                              false, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 			}
 			ChangeSprite("EnemyStarburstIdle_Character");
 			PlayAnimation(true);

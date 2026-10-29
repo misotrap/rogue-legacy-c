@@ -92,7 +92,7 @@ namespace RogueCastle
 		}
 		m_save.IsDead = false;
 		m_level = new ProceduralLevelScreen(m_assets.c_str(), m_save.castleSeed,
-		                                     &m_save.chestsOpened);
+		                                     &m_save.chestsOpened, m_save.TimesCastleBeaten);
 		/* The hero's real stats (Game.PlayerStats) drive the player. */
 		m_level->Player()->SetPlayerStats(&m_save);
 		/* The trait scale and speed (ProceduralLevelScreen.cs OnEnter,

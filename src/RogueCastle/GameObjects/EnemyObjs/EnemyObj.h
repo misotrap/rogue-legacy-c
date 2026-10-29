@@ -82,7 +82,11 @@ public:
 	std::string Name;
 	std::string Tag;        /* the room object's Tag (delay:2.0, speed:600...) */
 	int Type = 0;           /* EnemyType.h value */
-	int Level = 0;          /* room level scaling (TODO with the castle) */
+	int Level = 0;          /* from the room level (ApplyLevel) */
+	bool Procedural = false;   /* placed by an orb: promoted with the level */
+	/* ProceduralLevelScreen.InitializeEnemies + the per-level gains
+	 * (EnemyObj.cs lines 200 and 1222): once, after Initialize */
+	void ApplyLevel(int level, bool bossRoom);
 	int State = STATE_WANDER;
 	float DistanceToPlayer = 0;
 	bool IsKilled = false;

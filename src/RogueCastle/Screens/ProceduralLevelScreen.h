@@ -26,7 +26,7 @@ public:
 	 * chestFlags (optional, owned by the caller, e.g. save.chestsOpened):
 	 * one flag per chest, in room order; opened chests stay open. */
 	ProceduralLevelScreen(const char *assets, uint32_t seed,
-	                      std::vector<uint8_t> *chestFlags = nullptr);
+	                      std::vector<uint8_t> *chestFlags = nullptr, int timesCastleBeaten = 0);
 
 	void Update(GameTime *gameTime);
 	void Draw(DS2DEngine::Camera2D *camera);

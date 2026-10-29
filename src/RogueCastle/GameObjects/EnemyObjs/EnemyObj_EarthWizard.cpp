@@ -189,7 +189,7 @@ void EnemyObj_EarthWizard::CastFireball()
 	float rad = angle * PI / 180.0f;
 	m_levelScreen->FireProjectile("WizardFireballProjectile_Sprite", origin,
 	                              Vector2(cosf(rad), sinf(rad)), ProjectileSpeed,
-	                              (int) ProjectileDamage, ProjectileScale, false, this);
+	                              (int) ProjectileDamage, ProjectileScale, false, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 }
 
 void EnemyObj_EarthWizard::PickAction(const int *weights, int count, const Action *actions)

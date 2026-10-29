@@ -330,14 +330,14 @@ void EnemyObj_Skeleton::RunAdvancedLogic()
 	case STATE_MELEE_ENGAGE:
 	case STATE_PROJECTILE_ENGAGE:
 	{
-		static const int w[] = { 10, 10, 0, 15, 15, 25, 25 };
-		PickAction(w, 7, acts);
+		static const int w[] = { 10, 10, 0, 15, 15, 50 };
+		PickAction(w, 6, acts);
 		break;
 	}
 	default:
 	{
-		static const int w[] = { 40, 40, 20, 0, 0, 0, 0 };
-		PickAction(w, 7, acts);
+		static const int w[] = { 40, 40, 20, 0, 0, 0 };
+		PickAction(w, 6, acts);
 		break;
 	}
 	}

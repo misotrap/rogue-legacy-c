@@ -171,7 +171,7 @@ void EnemyObj_Ninja::ThrowShuriken(float angleOffsetDeg)
 	m_levelScreen->FireProjectile("ShurikenProjectile1_Sprite",
 	                              Position() + Vector2(15, 0), Vector2(cosf(rad), sinf(rad)),
 	                              ProjectileSpeed, (int) ProjectileDamage,
-	                              ProjectileScale, false, this);
+	                              ProjectileScale, false, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 }
 
 TerrainObj *EnemyObj_Ninja::FindClosestCeiling()

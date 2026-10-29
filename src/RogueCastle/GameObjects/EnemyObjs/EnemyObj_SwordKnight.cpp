@@ -170,7 +170,7 @@ void EnemyObj_SwordKnight::FireWave()
 	m_levelScreen->FireProjectile("EnemySpearKnightWave_Sprite",
 	                              Position() + Vector2(60.0f * facing, 0), heading,
 	                              ProjectileSpeed, (int) ProjectileDamage,
-	                              ProjectileScale, false, this);
+	                              ProjectileScale, false, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 }
 
 void EnemyObj_SwordKnight::StartAction(Action action)

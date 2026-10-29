@@ -197,7 +197,7 @@ void EnemyObj_IceWizard::ShatterIceball()
 		Audio::PlaySound("Ice_Wizard_Attack_Glass");   /* EnemyObj_IceWizard.cs line 425 */
 		m_levelScreen->FireProjectile("WizardIceProjectile_Sprite", origin,
 		                              Vector2(cosf(rad), sinf(rad)), ProjectileSpeed,
-		                              (int) ProjectileDamage, ProjectileScale, false, this);
+		                              (int) ProjectileDamage, ProjectileScale, false, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 		angle += angleDiff;
 	}
 }

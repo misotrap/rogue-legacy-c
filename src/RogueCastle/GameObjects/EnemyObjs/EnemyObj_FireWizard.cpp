@@ -196,7 +196,7 @@ void EnemyObj_FireWizard::CastFireball()
 	Audio::PlaySound("FireWizard_Attack_01");   /* EnemyObj_FireWizard.cs line 429 */
 	m_levelScreen->FireProjectile(sprite, origin, Vector2(cosf(rad), sinf(rad)),
 	                              ProjectileSpeed, (int) ProjectileDamage,
-	                              ProjectileScale, false, this);
+	                              ProjectileScale, false, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
 }
 
 void EnemyObj_FireWizard::ResetFireball()
