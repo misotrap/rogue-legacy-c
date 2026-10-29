@@ -299,7 +299,10 @@ namespace RogueCastle
 				player->ChangeSprite("PlayerIdle_Character");
 				player->PlayAnimation(true);
 			}
-			if (at(3.1))
+			/* Dev/test: RL_DEBUG_BOSS_WIN skips the Traitor's talk: the
+			 * dialogue waits for a button, which a headless test cannot
+			 * press, and the intro would freeze on it. */
+			if (at(3.1) && getenv("RL_DEBUG_BOSS_WIN") == nullptr)
 				m_dialogue = m_heroClass == ClassType::Traitor ? "FinalBossTalk01_Special" : "FinalBossTalk01";
 			break;
 		default:
@@ -393,17 +396,30 @@ namespace RogueCastle
 			level->DamageAllEnemies(1000000);
 
 		/* Dev/test: RL_DEBUG_BOSS=<LevelType 1-4> puts the hero at that
-		 * area's boss door, 5 at the last boss's. */
+		 * area's boss door, 5 at the last boss's; with an "i" suffix
+		 * ("3i") he teleports straight INTO the boss room, so the intro
+		 * and the fight start without walking in (headless tests). */
 		static const char *debugBoss = getenv("RL_DEBUG_BOSS");
 		if (debugBoss != nullptr)
 		{
-			int type = atoi(debugBoss);
+			char *end = nullptr;
+			long type = strtol(debugBoss, &end, 10);
+			bool straightIn = end != nullptr && *end == 'i';
 			debugBoss = nullptr;
 			for (RoomObj *r : level->RoomList())
 				if (type == 5 ? r->Name() == "Tutorial" : r->Name() == "EntranceBoss" && (int) r->LevelType() == type)
 				{
-					Teleport(level, r, true);
-					fprintf(stderr, "boss: at the door of area %d, boss room %d\n", type, r->LinkedRoom());
+					RoomObj *boss = straightIn && r->LinkedRoom() >= 0
+					                && r->LinkedRoom() < (int) level->RoomList().size()
+					                    ? level->RoomList()[r->LinkedRoom()] : nullptr;
+					/* straight in: at the boss room's own door, just
+					 * inside - the room transition only triggers when
+					 * the hero crosses a door, and the fight only
+					 * starts once the level knows he is in the room. */
+					Teleport(level, boss != nullptr ? boss : r, true);
+					fprintf(stderr, "boss: %s area %ld, boss room %d\n",
+					        boss != nullptr ? "inside the door of" : "at the door of",
+					        type, r->LinkedRoom());
 					return true;
 				}
 		}
