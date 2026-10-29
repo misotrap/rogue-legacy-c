@@ -138,13 +138,16 @@ void ProjectileObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *other
 		return;
 
 	/* Terrain hits (ProjectileObj.cs line 294): only the spells with
-	 * CollidesWithTerrain get a terrain box, so only they arrive here. */
-	/* The furniture (breakables, CollisionType_WALL_FOR_PLAYER) is solid
-	 * only for the hero: the shots fly through it */
-	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN && other != nullptr && other->CollisionTypeTag() == 5)
-		return;
+	 * CollidesWithTerrain get a terrain box, so only they arrive here.
+	 * The C# requires the other parent to be a TerrainObj: the hero and
+	 * the enemies have terrain boxes of their own (the ground probe),
+	 * and a shot must not die on the hero's one frame before its weapon
+	 * box reaches his body (tag 1 = CollisionType_WALL, the port's
+	 * TerrainObj; the furniture is 5, the hero 2, the enemies 3). */
 	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN)
 	{
+		if (other == nullptr || other->CollisionTypeTag() != 1)
+			return;
 		Rectangle a = thisBox->AbsRect(), b = otherBox->AbsRect();
 		Vector2 mtd = CollisionMath::CalculateMTD(a, b);
 		switch (Spell)
