@@ -130,10 +130,13 @@ void EnemyObj::Update(GameTime *gameTime)
 			State = STATE_MELEE_ENGAGE;
 
 		/* Count down the cooldown timer. */
-		if (m_cooldownTimer > 0)
+		if (m_cooldownTimer > 0 && m_inCooldown)
 			m_cooldownTimer -= elapsedSeconds;
 		if (m_cooldownTimer <= 0 && m_runCooldown)
+		{
 			m_runCooldown = false;
+			m_inCooldown = false;
+		}
 
 		/* Facing (EnemyObj.cs line 312). */
 		if (LockFlip) {}
@@ -161,6 +164,18 @@ void EnemyObj::Update(GameTime *gameTime)
 			case ADVANCED: RunAdvancedLogic(); break;
 			case EXPERT: RunExpertLogic(); break;
 			case MINIBOSS: RunMinibossLogic(); break;
+			}
+		}
+		/* The cooldown block (EnemyObj.cs line 343) */
+		if (!m_actionActive && m_runCooldown && m_cooldownTimer > 0)
+		{
+			m_inCooldown = true;
+			int total = m_cooldownWeights[0] + m_cooldownWeights[1] + m_cooldownWeights[2];
+			if (total > 0)
+			{
+				int roll = rand() % total, move = 0;
+				while (roll >= m_cooldownWeights[move]) roll -= m_cooldownWeights[move++];
+				StartCooldownMove(move);
 			}
 		}
 		if (m_actionTimer > 0)
@@ -259,7 +274,7 @@ void EnemyObj::CheckGroundCollision()
 			}
 		}
 		if (!groundAhead)
-			HeadingX(-HeadingX());   /* turn around at the ledge */
+			CurrentSpeed(0);   /* stop at the ledge (EnemyObj.cs line 756) */
 	}
 }
 
@@ -474,6 +489,7 @@ void EnemyObj::ResetState()
 	m_invincibleCounter = 0;
 	m_invincibleCounterProjectile = 0;
 	m_runCooldown = false;
+	m_inCooldown = false;
 	m_cooldownTimer = 0;
 	m_actionActive = false;
 	m_actionTimer = 0;

@@ -32,7 +32,9 @@ Tout ce bloc est corrigé, sauf le vol (point 11), qui n'est toujours pas porté
 
 ## B. Important — EN COURS (29/10)
 
-Corrigés : 16, 17, 18, 20, 21, 22, 23, 24, 31. Corrigés en partie :
+Corrigés : 16, 17, 18, 20, 21, 22, 23, 24, 25, 29, 31, 32. Corrigés en partie :
+- 28 : l'ennemi s'arrête au bord (l'arrêt contre les murs reste à faire).
+- 30 : le butin est effacé au changement de salle.
 - 26 : Blob, Mimic, Ninja et mages sont faits. Restent le bouclier de l'Énergon et les boules rebondissantes.
 - 34 : manoir, amélioration de classe, plans et runes de départ, Prosopagnosie.
 - 35 : pause, et l'achat qui équipe.

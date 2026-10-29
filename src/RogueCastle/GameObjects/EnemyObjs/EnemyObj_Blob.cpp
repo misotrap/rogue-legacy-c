@@ -147,6 +147,7 @@ void EnemyObj_Blob::InitializeOne(EnemyDifficulty difficulty)
 
 void EnemyObj_Blob::InitializeEV()
 {
+	m_cooldownWeights[0] = 40; m_cooldownWeights[1] = 40; m_cooldownWeights[2] = 20;
 	InitializeOne(DifficultyType);
 	/* the splitting numbers per difficulty (lines 50-185, 900-920) */
 	switch (DifficultyType)
@@ -371,3 +372,9 @@ void EnemyObj_Blob::RunMinibossLogic()
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_Blob::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_WALK_TOWARDS, ACTION_WALK_AWAY, ACTION_WALK_STOP };
+	StartAction(moves[move]);
+}

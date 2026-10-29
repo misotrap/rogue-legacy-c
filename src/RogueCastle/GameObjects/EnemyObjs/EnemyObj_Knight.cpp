@@ -150,6 +150,7 @@ void EnemyObj_Knight::InitializeOne(EnemyDifficulty difficulty)
 
 void EnemyObj_Knight::InitializeEV()
 {
+	m_cooldownWeights[0] = 55; m_cooldownWeights[1] = 25; m_cooldownWeights[2] = 20;
 	InitializeOne(DifficultyType);
 }
 
@@ -383,3 +384,9 @@ void EnemyObj_Knight::RunMinibossLogic()
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_Knight::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_WALK_TOWARDS, ACTION_WALK_AWAY, ACTION_WALK_STOP };
+	StartAction(moves[move]);
+}

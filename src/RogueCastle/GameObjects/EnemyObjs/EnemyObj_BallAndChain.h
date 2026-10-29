@@ -40,6 +40,7 @@ private:
 
 	void PickAction(const int *weights, int count, const Action *actions);
 	void StartAction(Action action);
+	void StartCooldownMove(int move) override;
 	void InitializeOne(EnemyDifficulty difficulty);
 
 	Action m_action = ACTION_NONE;

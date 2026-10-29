@@ -40,6 +40,7 @@ private:
 	/* Picks an action from a weighted list (RunLogicBlock percentages). */
 	void PickAction(const int *weights, int count, const Action *actions);
 	void StartAction(Action action);
+	void StartCooldownMove(int move) override;
 	void ThrowBones(int count, float angleCentre);   /* FireProjectileLogicAction */
 	void UpdateAction();
 

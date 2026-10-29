@@ -78,6 +78,7 @@ namespace RogueCastle
 	{
 		m_phase = Phase::None;
 		m_room = nullptr;
+		m_bossChest.reset();
 		m_fade = 0;
 		m_gateClosed = false;
 		m_gateTime = 0;
@@ -542,24 +543,51 @@ namespace RogueCastle
 				*BeatenFlag(save, (int) room->LevelType()) = true;
 				save.NewBossBeaten = true;
 				m_phase = Phase::Won;
+				m_bossChest.reset();
 				if (getenv("RL_DEBUG_TRACE") != nullptr) fprintf(stderr, "boss: beaten\n");
 				m_time = 0;
 			}
 			return false;
 		}
 		case Phase::Won:
-			if (m_time >= 2.5)
+		{
+			if (m_bossChest == nullptr)
 			{
-				// The boss chest (ChestType.Boss: three stat drops)
-				ChestObj chest;
-				chest.SetChestType(ChestType::Boss);
-				chest.X(room->X() + room->Width() / 2.0f);
-				chest.Y(room->Y() + room->Height() - 120);
-				chest.OpenChest(level, player);
-				m_phase = Phase::Chest;
-				m_time = 0;
+				// ChestType.Boss: three stat drops
+				m_bossChest.reset(new ChestObj());
+				m_bossChest->SetChestType(ChestType::Boss);
+				m_bossChest->X(room->X() + room->Width() / 2.0f);
+				// m_roomFloor: the lowest terrain top under the chest
+				float cx = m_bossChest->X(), floor = room->Y() + room->Height() - 120;
+				int best = INT32_MIN;
+				for (TerrainObj *t : room->TerrainObjList())
+				{
+					Rectangle b = t->TerrainBounds();
+					if (cx >= b.Left() && cx <= b.Right() && b.Top() > best && b.Top() < room->Y() + room->Height())
+						best = b.Top();
+				}
+				m_bossChest->Y(0);
+				if (best != INT32_MIN) floor = best - (m_bossChest->Bounds().Bottom() - 0);
+				m_chestFloor = floor;
+			}
+			float t = (float) (m_time / 4 > 1 ? 1 : m_time / 4);
+			m_bossChest->Opacity(t);
+			m_bossChest->Y(m_chestFloor - 600 * (1 - t) * (1 - t));   // Quad.EaseOut
+			m_bossChest->ArrowVisible = false;
+			if (t >= 1 && player != nullptr && m_bossChest->Bounds().Intersects(player->Bounds())
+			    && player->IsTouchingGround() && !player->ControlsLocked)
+			{
+				m_bossChest->ArrowVisible = true;
+				if (pressed & BTN_UP)
+				{
+					m_bossChest->ArrowVisible = false;
+					m_bossChest->OpenChest(level, player);
+					m_phase = Phase::Chest;
+					m_time = 0;
+				}
 			}
 			return false;
+		}
 		case Phase::Chest:
 			if (!getItemOpen && m_time > 0.5)
 			{
@@ -634,6 +662,8 @@ namespace RogueCastle
 			m_gate->Position(Vector2(m_gateX, m_gateY + m_gate->Height() * QuadOut((float) (m_gateTime / 1.5))));
 			m_gate->Draw(camera);
 		}
+		if (m_bossChest != nullptr && (m_phase == Phase::Won || m_phase == Phase::Chest || m_phase == Phase::Leaving))
+			m_bossChest->Draw(camera);
 		if (m_phase != Phase::Intro) return;
 		if (m_shadow != nullptr) m_shadow->Draw(camera);
 		for (auto &orb : m_orbs) if (orb->Opacity() > 0) orb->Draw(camera);

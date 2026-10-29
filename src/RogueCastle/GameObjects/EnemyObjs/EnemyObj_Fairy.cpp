@@ -149,6 +149,7 @@ void EnemyObj_Fairy::InitializeOne(EnemyDifficulty difficulty)
 
 void EnemyObj_Fairy::InitializeEV()
 {
+	m_cooldownWeights[0] = 70; m_cooldownWeights[1] = 30; m_cooldownWeights[2] = 0;
 	InitializeOne(DifficultyType);
 }
 
@@ -300,3 +301,9 @@ void EnemyObj_Fairy::RunBasicLogic()
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_Fairy::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_CHASE, ACTION_AWAY, ACTION_STOP };
+	StartAction(moves[move]);
+}

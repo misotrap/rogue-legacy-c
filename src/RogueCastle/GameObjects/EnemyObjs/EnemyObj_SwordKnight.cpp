@@ -140,6 +140,11 @@ void EnemyObj_SwordKnight::InitializeOne(EnemyDifficulty difficulty)
 
 void EnemyObj_SwordKnight::InitializeEV()
 {
+	/* 14/11/75 basic, 40/30/30 advanced and expert, 100/0/0 miniboss */
+	{
+		static const int cd[4][3] = { {14, 11, 75}, {40, 30, 30}, {40, 30, 30}, {100, 0, 0} };
+		for (int i = 0; i < 3; i++) m_cooldownWeights[i] = cd[DifficultyType][i];
+	}
 	InitializeOne(DifficultyType);
 }
 
@@ -379,3 +384,9 @@ void EnemyObj_SwordKnight::RunMinibossLogic()
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_SwordKnight::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_WALK_TOWARDS, ACTION_WALK_AWAY, ACTION_WALK_STOP };
+	StartAction(moves[move]);
+}

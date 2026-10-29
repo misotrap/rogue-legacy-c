@@ -71,6 +71,10 @@ namespace RogueCastle
 		// The castle entrance gate (CastleEntranceRoomObj): it drops behind
 		// the hero the first time he comes in, then keeps him from going back
 		DS2DEngine::SpriteObj *m_gate = nullptr;
+		// The boss chest (BossRoomObj.cs line 137): it fades in and drops to
+		// the floor in 4 s, then waits for the hero to open it
+		std::unique_ptr<class ChestObj> m_bossChest;
+		float m_chestFloor = 0;
 		bool m_gateClosed = false;
 		double m_gateTime = 0;
 		float m_gateX = 0, m_gateY = 0;

@@ -126,7 +126,7 @@ protected:
 	virtual bool ActionComplete() { return m_actionTimer <= 0; }
 
 	/* Checks the terrain under the feet (simplified CheckGroundCollision)
-	 * and turns the enemy around at ledges when it cannot fall off them. */
+	 * and stops the enemy at ledges when it cannot fall off them. */
 	void CheckGroundCollision();
 
 	/* Blink (the red damage flash): flips the tint for blinkTime. */
@@ -140,6 +140,11 @@ protected:
 	float m_invincibleCounterProjectile = 0;
 	float m_cooldownTimer = 0;
 	bool m_runCooldown = false;
+	/* SetCooldownLogicBlock: once an attack ends, the enemy walks towards,
+	 * walks away or stands (these weights) until the cooldown is over. */
+	int m_cooldownWeights[3] = {0, 0, 0};
+	bool m_inCooldown = false;
+	virtual void StartCooldownMove(int move) { (void) move; }
 	float m_initialDelayCounter = 0;
 	bool m_wasFacingLeft = false;
 	Vector2 m_resetPos = Vector2(0, 0);

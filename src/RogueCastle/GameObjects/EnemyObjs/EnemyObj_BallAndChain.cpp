@@ -164,6 +164,7 @@ void EnemyObj_BallAndChain::InitializeOne(EnemyDifficulty difficulty)
 
 void EnemyObj_BallAndChain::InitializeEV()
 {
+	m_cooldownWeights[0] = 40; m_cooldownWeights[1] = 40; m_cooldownWeights[2] = 20;
 	InitializeOne(DifficultyType);
 	/* The balls are created lazily in UpdateEnemy: the level screen is
 	 * attached to the enemy after Initialize. */
@@ -327,3 +328,9 @@ void EnemyObj_BallAndChain::Kill(bool giveXP)
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_BallAndChain::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_WALK_TOWARDS, ACTION_WALK_AWAY, ACTION_WALK_STOP };
+	StartAction(moves[move]);
+}

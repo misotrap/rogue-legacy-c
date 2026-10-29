@@ -37,6 +37,7 @@ private:
 
 	void PickAction(const int *weights, int count, const Action *actions);
 	void StartAction(Action action);
+	void StartCooldownMove(int move) override;
 	void UpdateAction();
 	void FireWave();
 	void InitializeOne(EnemyDifficulty difficulty);

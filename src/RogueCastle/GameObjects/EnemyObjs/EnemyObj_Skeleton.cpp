@@ -27,6 +27,7 @@ EnemyObj_Skeleton::EnemyObj_Skeleton(PlayerObj *target, EnemyDifficulty difficul
 
 void EnemyObj_Skeleton::InitializeEV()
 {
+	m_cooldownWeights[0] = 30; m_cooldownWeights[1] = 30; m_cooldownWeights[2] = 40;
 	/* EnemyObj_Skeleton.cs line 24 (InitializeEV), per difficulty. */
 	switch (DifficultyType)
 	{
@@ -383,3 +384,9 @@ void EnemyObj_Skeleton::RunMinibossLogic()
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_Skeleton::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_WALK_TOWARDS, ACTION_WALK_AWAY, ACTION_WALK_STOP };
+	StartAction(moves[move]);
+}

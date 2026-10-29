@@ -70,9 +70,10 @@ void PhysicsManager::Update(GameTime *gameTime)
 				weightedObj->AccelerationY(weightedObj->AccelerationY() + gravity.Y);
 			if (weightedObj->AccelerationY() > (float) TerminalVelocity)
 				weightedObj->AccelerationY((float) TerminalVelocity);
-
-			weightedObj->UpdatePhysics(gameTime);
 		}
+		/* Unweighted objects (flying enemies) still apply their
+		 * acceleration: the knockback (PhysicsManager.cs line 104) */
+		weightedObj->UpdatePhysics(gameTime);
 		if (!weightedObj->DisableHitboxUpdating())
 			weightedObj->UpdateCollisionBoxes();
 	}

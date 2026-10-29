@@ -146,6 +146,7 @@ void EnemyObj_Energon::InitializeOne(EnemyDifficulty difficulty)
 
 void EnemyObj_Energon::InitializeEV()
 {
+	m_cooldownWeights[0] = 0; m_cooldownWeights[1] = 0; m_cooldownWeights[2] = 100;
 	InitializeOne(DifficultyType);
 }
 
@@ -309,3 +310,9 @@ void EnemyObj_Energon::RunBasicLogic()
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_Energon::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_WALK_TOWARDS, ACTION_WALK_AWAY, ACTION_WALK_STOP };
+	StartAction(moves[move]);
+}

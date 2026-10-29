@@ -164,6 +164,7 @@ void EnemyObj_EarthWizard::ResetState()
 
 void EnemyObj_EarthWizard::InitializeEV()
 {
+	m_cooldownWeights[0] = 100; m_cooldownWeights[1] = 0; m_cooldownWeights[2] = 0;
 	InitializeOne(DifficultyType);
 }
 
@@ -407,3 +408,9 @@ void EnemyObj_EarthWizard::Kill(bool giveXP)
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_EarthWizard::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_MOVE_TOWARDS, ACTION_MOVE_AWAY, ACTION_STOP };
+	StartAction(moves[move]);
+}

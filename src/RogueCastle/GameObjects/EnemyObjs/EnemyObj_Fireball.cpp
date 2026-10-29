@@ -149,6 +149,7 @@ void EnemyObj_Fireball::InitializeOne(EnemyDifficulty difficulty)
 
 void EnemyObj_Fireball::InitializeEV()
 {
+	m_cooldownWeights[0] = 100; m_cooldownWeights[1] = 0; m_cooldownWeights[2] = 0;
 	InitializeOne(DifficultyType);
 }
 
@@ -300,3 +301,9 @@ void EnemyObj_Fireball::RunAdvancedLogic()
 }
 
 } // namespace RogueCastle
+
+void RogueCastle::EnemyObj_Fireball::StartCooldownMove(int move)
+{
+	static const Action moves[3] = { ACTION_CHASE, ACTION_CHASE, ACTION_STOP };
+	StartAction(moves[move]);
+}
