@@ -131,7 +131,10 @@ void ObjContainer::Draw(Camera2D *camera)
 {
 	if (!Visible())
 		return;
-	if (Bounds().Intersects(camera->Bounds()) || ForceDraw())
+	/* FrameBounds: the room cache fills the letterbox bands, so an
+	 * object only inside them (a chandelier at the top of the room)
+	 * stays on screen instead of flickering with the camera. */
+	if (Bounds().Intersects(camera->FrameBounds()) || ForceDraw())
 	{
 		for (GameObj *obj : m_objectList)
 			obj->Draw(camera);

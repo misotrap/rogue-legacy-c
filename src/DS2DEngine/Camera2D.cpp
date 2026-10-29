@@ -29,6 +29,15 @@ Rectangle Camera2D::Bounds() const
 	return Rectangle((int) (m_position.X - w * 0.5f), (int) (m_position.Y - h * 0.5f), w, h);
 }
 
+Rectangle Camera2D::FrameBounds() const
+{
+	/* Everything the draw transform puts on screen:
+	 * screen = (world - position) * zoom + (320, 240). */
+	int w = (int) (SCREEN_W / m_zoom);
+	int h = (int) (SCREEN_H / m_zoom);
+	return Rectangle((int) (m_position.X - w * 0.5f), (int) (m_position.Y - h * 0.5f), w, h);
+}
+
 void Camera2D::Draw(const Texture *texture, Vector2 position, Rectangle srcRect, Color color,
                    float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layer)
 {

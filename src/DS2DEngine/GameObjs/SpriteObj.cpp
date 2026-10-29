@@ -234,8 +234,9 @@ void SpriteObj::Draw(Camera2D *camera)
 	if (Parent() == nullptr)
 	{
 		/* Camera culling for standalone sprites; children rely on the
-		 * parent's test (SpriteObj.cs). */
-		if (ForceDraw() || Bounds().Intersects(camera->Bounds()))
+		 * parent's test (SpriteObj.cs). FrameBounds keeps the objects
+		 * of the letterbox bands on screen (see ObjContainer::Draw). */
+		if (ForceDraw() || Bounds().Intersects(camera->FrameBounds()))
 			camera->Draw(sprite, AbsPosition(), _ssRect, ColourOf(TextureColor(), Opacity()),
 			             Rotation() * 3.14159265f / 180.0f, Anchor(), Scale(), Flip(), Layer());
 	}

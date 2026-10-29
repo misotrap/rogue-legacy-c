@@ -46,6 +46,11 @@ public:
 	void Zoom(float value);
 	/* World rectangle currently visible (C# Camera2D.Bounds). */
 	Rectangle Bounds() const;
+	/* The whole 640x480 frame the camera draws into: unlike Bounds(),
+	 * it covers the letterbox bands too (the room cache fills them), so
+	 * the live-drawn objects (animated decorations, enemies...) do not
+	 * flicker at the top and bottom of the screen. */
+	Rectangle FrameBounds() const;
 	/* The screen rows it shows: 360 for the castle view (between the HUD
 	 * bands), the full 480 for the menus that use the whole screen */
 	void ViewHeight(float rows) { m_viewHeight = rows; }
