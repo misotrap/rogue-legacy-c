@@ -31,6 +31,13 @@ namespace RogueCastle
 		void Draw(DS2DEngine::Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<DS2DEngine::GameObj *> *bgObjs = nullptr);
 		// Frees the decorations built for the rooms (on a new castle)
 		void Clear();
+		// SkyObj: night sky, moon and two cloud layers, seen through the
+		// transparent parts of the backgrounds (ParallaxFX in the original).
+		// Drawn once per frame, before the rooms, and only when it shows.
+		void DrawSky(DS2DEngine::Camera2D *camera);
+		// Whether the sky shows through this area's background (its image
+		// has transparent texels; looked up once)
+		bool SkyShowsThrough(Levels::LevelType type);
 
 	private:
 		struct Art
@@ -54,8 +61,9 @@ namespace RogueCastle
 		// world units starting at (x, y), turned by 'degrees'
 		static void Strip(DS2DEngine::Camera2D *camera, const std::string &sprite, float x, float y, float length, float degrees, float scale);
 		static void DrawBorder(DS2DEngine::Camera2D *camera, const Levels::ObjData &b, const Art &art);
-		// SkyObj: night sky, moon and two cloud layers, seen through the
-		// magenta parts of the backgrounds (ParallaxFX in the original)
-		static void DrawSky(DS2DEngine::Camera2D *camera);
+		std::map<int, bool> m_skyThrough;
+		// The two cloud layers, tinted once (blue night tints)
+		Texture m_clouds[2] = {};
+		int m_cloudsW = 0, m_cloudsH = 0;
 	};
 }

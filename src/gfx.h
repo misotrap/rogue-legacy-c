@@ -42,6 +42,8 @@ int gfx_load_texture(Texture *t, const char *path);
 void gfx_free_texture(Texture *t);
 
 void gfx_begin(uint32_t *frame);
+/* Pixels covered by the blits since the last reset (the overdraw meter) */
+extern uint64_t gfx_pixels;
 /* The frame passed to gfx_begin (for the text draws that run outside the
  * HUD, e.g. the level screen's floating pickup texts). */
 uint32_t *gfx_frame();

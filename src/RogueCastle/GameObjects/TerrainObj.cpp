@@ -39,6 +39,7 @@ void TerrainObj::Populate(int x, int y, int width, int height,
 	if (collidesTop && !collidesBottom && !collidesLeft && !collidesRight)
 		_height = height / 2;
 
+	for (CollisionBox *box : m_collisionBoxes) delete box;   /* placed again (a folding platform's floor) */
 	m_collisionBoxes.clear();
 	CollisionBox *terrainBox = new CollisionBox(0, 0, _width, _height, Consts::TERRAIN_HITBOX, this);
 	terrainBox->PhysicsParent(this);

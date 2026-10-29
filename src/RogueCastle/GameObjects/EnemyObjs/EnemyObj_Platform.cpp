@@ -51,14 +51,20 @@ bool EnemyObj_Platform::PlatformsOpen() const
 	    && m_target->Stats()->hero.HasTrait(TraitType::PlatformsOpen);
 }
 
-Rectangle EnemyObj_Platform::TerrainBounds() const
+void EnemyObj_Platform::UpdateFloor(float dt)
 {
-	// The plate (the first part) is the floor; folded, the whole
-	// enemy (the physics culling needs a real box)
-	if (!CollidesTop() || NumChildren() == 0)
-		return Bounds();
-	Rectangle b = GetChildAt(0)->Bounds();
-	return Rectangle(b.X, b.Y, b.Width, 22);
+	// The plate's top, once fully out (5 frames at 30 per second)
+	m_extendTime = m_isExtended ? m_extendTime + dt : 0;
+	m_floor->Enabled = m_isExtended && (m_extendTime >= 0.17f || PlatformsOpen());
+	if (m_floor->Enabled && NumChildren() > 0)
+	{
+		// The plate's bounds are relative to the platform
+		Rectangle plate = GetChildAt(0)->Bounds();
+		Rectangle b((int) X() + plate.X, (int) Y() + plate.Y, plate.Width, plate.Height);
+		Rectangle now = m_floor->TerrainBounds();
+		if (now.X != b.X || now.Y != b.Y || now.Width != b.Width)
+			m_floor->Populate(b.X, b.Y, b.Width, 20, true, false, false, false);
+	}
 }
 
 void EnemyObj_Platform::UpdateEnemy(GameTime *gameTime)
@@ -71,6 +77,7 @@ void EnemyObj_Platform::UpdateEnemy(GameTime *gameTime)
 			m_isExtended = true;
 			PlayAnimation("EndRetract", "EndRetract");
 		}
+		UpdateFloor(dt);
 		return;
 	}
 	if (m_warningBlinks > 0 && (m_warningTimer -= dt) <= 0)
@@ -95,6 +102,7 @@ void EnemyObj_Platform::UpdateEnemy(GameTime *gameTime)
 			Audio::PlaySound("Platform_Activate_03", "Platform_Activate_04");
 		}
 	}
+	UpdateFloor(dt);
 }
 
 void EnemyObj_Platform::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
@@ -130,6 +138,7 @@ void EnemyObj_Platform::ResetState()
 	m_blinkedWarning = false;
 	m_retractCounter = 0;
 	m_warningBlinks = 0;
+	m_floor->Enabled = false;
 	EnemyObj::ResetState();
 	StopAnimation();
 }

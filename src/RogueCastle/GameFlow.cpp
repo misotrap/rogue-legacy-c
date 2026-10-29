@@ -650,6 +650,12 @@ namespace RogueCastle
 		{
 			gfx_begin(frame);
 			gfx_clear(0xFF000000u);
+			/* Camera2D rounds to the screen pixel while drawing: otherwise
+			 * the parts of an object (a fireplace and its fire) round
+			 * apart and tremble as the camera glides */
+			const Vector2 exactCamera = m_level->Camera()->Position();
+			const float zoom = m_level->Camera()->Zoom();
+			m_level->Camera()->Position(Vector2(roundf(exactCamera.X * zoom) / zoom, roundf(exactCamera.Y * zoom) / zoom));
 			m_level->Camera()->ElapsedTotalSeconds(drawElapsed);
 			m_level->Draw(m_level->Camera());
 			if (InCourtyard()) m_court.Draw(m_level->Camera(), m_save.skills);
@@ -708,6 +714,7 @@ namespace RogueCastle
 			else if (m_paused)
 				m_pause.Draw(frame, m_level->Camera(), m_level->Player(), m_level->CurrentRoom(), v.heroName,
 					Text::Loc::Get(LocIDs::ClassType_ToStringID(m_save.hero.classType, m_save.hero.isFemale)));
+			m_level->Camera()->Position(exactCamera);
 			break;
 		}
 		}

@@ -31,6 +31,7 @@ namespace RogueCastle
 	RoomRenderer::~RoomRenderer()
 	{
 		Clear();
+		for (Texture &t : m_clouds) free(t.px);
 	}
 
 	void RoomRenderer::Clear()
@@ -255,6 +256,24 @@ namespace RogueCastle
 		return d;
 	}
 
+	bool RoomRenderer::SkyShowsThrough(Levels::LevelType type)
+	{
+		auto it = m_skyThrough.find((int) type);
+		if (it != m_skyThrough.end()) return it->second;
+		bool through = true;
+		const Texture *tex;
+		Rectangle src;
+		if (ImageOf(ArtFor(type).background, tex, src))
+		{
+			through = false;
+			for (int y = src.Y; y < src.Y + src.Height && !through; y += 1 << tex->shift)
+				for (int x = src.X; x < src.X + src.Width; x += 1 << tex->shift)
+					if ((gfx_texel(tex, x, y) >> 24) != 255) { through = true; break; }
+		}
+		m_skyThrough[(int) type] = through;
+		return through;
+	}
+
 	void RoomRenderer::DrawSky(Camera2D *camera)
 	{
 		// In screen space, like the original's sky render target
@@ -267,15 +286,44 @@ namespace RogueCastle
 				200 * 0.5f + 60 - topLeft.Y * 0.01f * 0.5f, 1.0f, 0);
 		if (ImageOf("ParallaxDifferenceClouds_Sprite", tex, src))
 		{
-			// Two layers sliding at 0.2 and 0.4 of the camera, tinted blue
+			// Two layers sliding at 0.2 and 0.4 of the camera, tinted blue:
+			// the tinted copies are made once (half size, like the sheets)
 			const struct { float speed; uint32_t tint; int flip; float shift; } layers[] = {
 				{ 0.2f, 0xFF0A0A50u, 0, 0 }, { 0.4f, 0xFF5050A0u, 1, -250 } };
-			for (const auto &l : layers)
+			int h = src.Height < 360 ? src.Height : 360;
+			if (m_clouds[0].px == nullptr)
 			{
-				float offset = fmodf(-topLeft.X * l.speed * 0.5f + l.shift, (float) src.Width);
-				if (offset > 0) offset -= src.Width;
-				for (float x = offset; x < SCREEN_W; x += src.Width)
-					gfx_blit_tinted(tex, src.X, src.Y, src.Width, src.Height < 360 ? src.Height : 360, x, 60, 1.0f, l.flip, l.tint);
+				m_cloudsW = src.Width;
+				m_cloudsH = h;
+				for (int i = 0; i < 2; i++)
+				{
+					Texture &t = m_clouds[i];
+					t.w = src.Width;
+					t.h = h;
+					t.shift = 1;
+					t.stride = (src.Width + 1) / 2;
+					t.px = (uint32_t *) malloc((size_t) t.stride * ((h + 1) / 2) * 4);
+					uint32_t c = layers[i].tint;
+					uint32_t cr = (c >> 16) & 255, cg = (c >> 8) & 255, cb = c & 255;
+					for (int y = 0; y < (h + 1) / 2; y++)
+						for (int x = 0; x < t.stride; x++)
+						{
+							int fx = src.X + 2 * x + 1, fy = src.Y + 2 * y + 1;
+							if (fx >= src.X + src.Width) fx = src.X + src.Width - 1;
+							if (fy >= src.Y + h) fy = src.Y + h - 1;
+							uint32_t p = gfx_texel(tex, fx, fy);
+							uint32_t r = ((p >> 16) & 255) * cr / 255, g = ((p >> 8) & 255) * cg / 255, b = (p & 255) * cb / 255;
+							t.px[(size_t) y * t.stride + x] = (p & 0xFF000000u) | (r << 16) | (g << 8) | b;
+						}
+				}
+			}
+			for (int i = 0; i < 2; i++)
+			{
+				const auto &l = layers[i];
+				float offset = fmodf(-topLeft.X * l.speed * 0.5f + l.shift, (float) m_cloudsW);
+				if (offset > 0) offset -= m_cloudsW;
+				for (float x = offset; x < SCREEN_W; x += m_cloudsW)
+					gfx_blit(&m_clouds[i], 0, 0, m_cloudsW, m_cloudsH, x, 60, 1.0f, l.flip);
 			}
 		}
 	}
@@ -284,8 +332,7 @@ namespace RogueCastle
 	{
 		const Art art = ArtFor(room.levelType);
 		Decorations &d = DecorationsFor(room);
-		// 0. sky (only seen through the transparent parts of the art)
-		DrawSky(camera);
+		// 0. the sky is drawn once by the level, before the rooms
 		// 1. background over the whole room (not in the courtyard: DisplayBG=False)
 		if (room.name != "Start")
 			Tile(camera, art.background, room.x, room.y, (float) room.width, (float) room.height, 2);

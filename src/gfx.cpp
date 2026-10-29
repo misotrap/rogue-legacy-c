@@ -6,6 +6,7 @@
 #include <string.h>
 
 static uint32_t *fb;
+uint64_t gfx_pixels = 0;
 
 int gfx_load_texture(Texture *t, const char *path)
 {
@@ -42,7 +43,10 @@ int gfx_load_texture(Texture *t, const char *path)
 	/* The world is always drawn at half size or less: keep one texel in
 	 * four (the odd ones, those the 0.5 blits sample). Four times less
 	 * memory and memory traffic on the console. */
-	if (getenv("RL_FULLRES") == NULL && t->w >= 2 && t->h >= 2)
+	/* The courtyard's sheet keeps its full size: its trees show at 1:1 and
+	 * lose their leaves at half size */
+	int fullSize = getenv("RL_FULLRES") != NULL || strstr(path, "startingRoomSpritesheet") != NULL;
+	if (!fullSize && t->w >= 2 && t->h >= 2)
 	{
 		int hw = t->w / 2, hh = t->h / 2;
 		uint32_t *half = (uint32_t *) malloc((size_t) hw * hh * 4);
@@ -163,6 +167,7 @@ static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, flo
 		if (iy < loRow) iy = loRow;
 		const uint32_t *src = t->px + (size_t) iy * t->stride;
 		uint32_t *dst = fb + (size_t) y * SCREEN_W;
+		gfx_pixels += (uint64_t) (xe - xs);
 		int32_t u = u0;
 		for (int x = xs; x < xe; x++, u += step)
 		{

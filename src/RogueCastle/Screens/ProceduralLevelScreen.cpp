@@ -5,6 +5,7 @@
 #include "../Types/TraitType.h"
 #include "../EVs/GlobalEV.h"
 #include "../Game.h"
+#include "../GameObjects/EnemyObjs/EnemyObj_Platform.h"
 #include "../GameObjects/EnemyObjs/EnemyObj.h"
 #include "../GameObjects/ProjectileObj.h"
 #include "../GameObjects/ItemDropObj.h"
@@ -130,7 +131,13 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			enemy->SetTerrain(&m_allTerrain);
 			m_physicsManager.AddObject(enemy);
 			if (enemy->Type == EnemyType::Platform)
-				m_castleTerrain.push_back(enemy);   /* the folding platforms are floors once out */
+			{
+				/* the folding platforms' floors, there once unfolded */
+				PlatformFloor *floor = static_cast<EnemyObj_Platform *>(enemy)->Floor();
+				floor->Populate((int) enemy->X(), (int) enemy->Y(), 1, 1, true, false, false, false);
+				m_physicsManager.AddObject(floor);
+				m_castleTerrain.push_back(floor);
+			}
 		}
 		for (ChestObj *chest : room->ChestList())
 		{
@@ -582,14 +589,36 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 	 * decorations) of the rooms in view, then their objects on top.
 	 * m_roomList is built in the order of m_castle.rooms. */
 	Rectangle view = camera->Bounds();
+	/* The sky once, before the rooms, when one of them lets it show */
+	bool sky = false;
+	for (size_t i = 0; i < m_castle.rooms.size() && i < m_roomList.size() && !sky; i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
+			sky = r.name == "Start" || m_roomRenderer.SkyShowsThrough(r.levelType);
+	}
+	uint64_t px0 = gfx_pixels;
+	if (sky)
+		m_roomRenderer.DrawSky(camera);
+	else
+		gfx_fill(0, 60, SCREEN_W, 360, 0xFF041D56u);   // the night blue the sky would start with
+	uint64_t pxSky = gfx_pixels - px0;
 	for (size_t i = 0; i < m_castle.rooms.size() && i < m_roomList.size(); i++)
 	{
 		const Levels::PlacedRoom &r = m_castle.rooms[i];
 		if (Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
 			m_roomRenderer.Draw(camera, r, &m_roomList[i]->BGObjList());
 	}
+	uint64_t pxRooms = gfx_pixels - px0 - pxSky;
 	for (RoomObj *room : m_roomList)
 		room->Draw(camera);
+	if (rl_trace())
+	{
+		static int frames = 0;
+		if (++frames % 120 == 0)
+			fprintf(stderr, "overdraw: sky %lluk, room art %lluk, room objects %lluk\n", (unsigned long long) pxSky / 1000,
+			        (unsigned long long) pxRooms / 1000, (unsigned long long) (gfx_pixels - px0 - pxSky - pxRooms) / 1000);
+	}
 
 	for (ProjectileObj *proj : m_projectiles)
 		proj->Draw(camera);

@@ -1,5 +1,6 @@
 #include "perf.h"
 #include "platform.h"
+#include "gfx.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -18,6 +19,7 @@ namespace
 	// The log: sums over 5 s
 	double s_logSum[PERF_COUNT] = {}, s_logMax = 0;
 	int s_logFrames = 0, s_logSteps = 0;
+	uint64_t s_logPixels = 0;
 	char s_label[32] = "";
 
 	// A 3x5 font: digits, then '.', ' ', 'L','D','E','I','C','F','M','S'
@@ -85,6 +87,8 @@ void perf_frame(int steps)
 	s_steps += steps;
 	s_logFrames++;
 	s_logSteps += steps;
+	s_logPixels += gfx_pixels;
+	gfx_pixels = 0;
 	if (now - s_secondStart >= 1)
 	{
 		for (int i = 0; i < PERF_COUNT; i++)
@@ -109,7 +113,8 @@ void perf_frame(int steps)
 			fprintf(stderr, " %s %.1f", NAMES[i], s_logSum[i] / s_logFrames * 1000);
 			s_logSum[i] = 0;
 		}
-		fprintf(stderr, " ms\n");
+		fprintf(stderr, " ms | %.0fk px/img\n", s_logPixels / 1000.0 / s_logFrames);
+		s_logPixels = 0;
 		fflush(stderr);
 		s_logFrames = s_logSteps = 0;
 		s_logMax = 0;
