@@ -225,6 +225,11 @@ namespace RogueCastle
 
 	void GameFlow::OnPlayerDeath()
 	{
+		/* The killed enemies of the run (EnemiesKilledInRun): the death
+		 * screen's parade (GameOverScreen.cs PassInData). */
+		std::vector<std::pair<uint8_t, int>> kills;
+		if (m_level != nullptr)
+			kills = m_level->KillList();
 		AddFamilyNode(m_save.NewBossBeaten);
 		m_save.LoadStartingRoom = true;   /* GameOverScreen.cs line 182 */
 		/* GameOverScreen.cs lines 177-192: the Lich's gains go with him;
@@ -249,7 +254,7 @@ namespace RogueCastle
 
 		// GameOverScreen draws the hero itself, lit under the spotlight:
 		// its look and place, and the last frame without it
-		HeroLook look;
+		GameOverScreen::HeroLook look;
 		int killerKind = 0;
 		std::string killerName;
 		if (PlayerObj *p = m_level->Player())
@@ -279,9 +284,7 @@ namespace RogueCastle
 		delete m_level;
 		m_level = nullptr;
 		m_deathTimer = 0;
-		std::string name = Text::Loc::Format(h.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
-			h.name, h.romanNumeral);
-		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name, h.isFemale, look, killerKind, killerName);
+		m_gameOver.Open(m_assets.c_str(), m_lastFrame, h, look, kills, killerKind, killerName);
 		m_lastFrame.clear();
 		m_state = State::GameOver;
 	}

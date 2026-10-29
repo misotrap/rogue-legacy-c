@@ -78,8 +78,18 @@ static EnemyObj *CreateEnemy(const Levels::ObjData &obj, PlayerObj *player)
 		diff = Diff::EXPERT;
 	else if (obj.difficulty == "MINIBOSS")
 		diff = Diff::MINIBOSS;
+	return RoomObj::CreateEnemyOfType(obj.enemyType, diff, player);
+}
 
-	switch (obj.enemyType)
+/* Builds any ported enemy by type and difficulty: the room data path
+ * above, and the death screen's parade of the enemies killed in the
+ * run (GameOverScreen.cs line 300). */
+EnemyObj *RoomObj::CreateEnemyOfType(uint8_t enemyType, int difficulty,
+                                     PlayerObj *player)
+{
+	using Diff = EnemyObj::EnemyDifficulty;
+	const Diff diff = (Diff) difficulty;
+	switch (enemyType)
 	{
 	case EnemyType::Skeleton:
 		return new EnemyObj_Skeleton(player, diff);

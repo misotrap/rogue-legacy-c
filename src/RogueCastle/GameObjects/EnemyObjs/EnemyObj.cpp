@@ -368,6 +368,10 @@ void EnemyObj::Kill(bool giveXP)
 	Visible(false);
 	IsCollidableFlag = false;
 	StopAnimation();
+	/* EnemiesKilledInRun: the death screen's parade lists them
+	 * (GameOverScreen.cs PassInData/300). */
+	if (m_levelScreen != nullptr)
+		m_levelScreen->RecordKill((uint8_t) Type, (int) DifficultyType);
 	/* EnemyObj.cs line 906. */
 	Audio::PlaySound("Enemy_Death");
 

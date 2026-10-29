@@ -41,6 +41,10 @@ public:
 	                                        uint8_t spell);
 	/* The nuke spell (ProjectileObj.cs line 578: the whole room). */
 	void DamageAllEnemies(int damage);
+	/* EnemiesKilledInRun (PlayerStats): what the death screen's parade
+	 * shows (GameOverScreen.cs line 300, DropStats). */
+	const std::vector<std::pair<uint8_t, int>> &KillList() const { return m_killList; }
+	void RecordKill(uint8_t type, int difficulty) { m_killList.push_back({type, difficulty}); }
 	/* The time stop spell: the enemies freeze for TIMESTOP_XVal seconds. */
 	void CastTimeStop();
 	void StopTimeStop();
@@ -107,6 +111,7 @@ private:
 	std::vector<RoomObj *> m_roomList;
 	std::vector<class ChestObj *> m_chestList;   /* the rooms own them */
 	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */
+	std::vector<std::pair<uint8_t, int>> m_killList;   /* EnemiesKilledInRun */
 	/* Every floor and wall of the castle; m_allTerrain holds those around
 	 * the current room (the ground probes of the hero and the enemies),
 	 * refilled on each room change */

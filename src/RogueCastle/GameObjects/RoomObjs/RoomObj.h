@@ -23,6 +23,11 @@ public:
 	RoomObj();
 	~RoomObj();
 
+	/* Builds any ported enemy by type and difficulty: the room data
+	 * path of LoadRoom, and the death screen's parade of the kills. */
+	static class EnemyObj *CreateEnemyOfType(uint8_t enemyType, int difficulty,
+	                                         class PlayerObj *player);
+
 	/* Builds the room from the LevelBuilder2 output (castle coordinates).
 	 * The player is passed as the enemies' target. */
 	void LoadRoom(const Levels::PlacedRoom &placed, class PlayerObj *player);
