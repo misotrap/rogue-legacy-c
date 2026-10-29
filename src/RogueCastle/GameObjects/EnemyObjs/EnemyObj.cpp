@@ -11,12 +11,14 @@
 #include "../ItemDropObj.h"
 #include "../../EVs/GameEV.h"
 #include "../../Types/EnemyType.h"
+#include "../../Types/SpecialItemType.h"
 #include "../../Types/SpellType.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
 #include <cstdio>
 #include "../../../Audio/Audio.h"
 #include <cstdlib>
+#include "../../../debugflags.h"
 
 namespace RogueCastle
 {
@@ -348,6 +350,20 @@ void EnemyObj::Kill(bool giveXP)
 	/* EnemyObj.cs line 884: the hero's kill rewards */
 	if (giveXP && m_target != nullptr)
 		m_target->OnEnemyKilled(Level, GivesLichHealth);
+	/* EnemyObj.cs line 896: the GoldPerKill special item drops two
+	 * coins per kill. */
+	if (giveXP && m_target != nullptr && m_target->Stats() != nullptr
+	    && m_target->Stats()->SpecialItem == SpecialItemType::GoldPerKill
+	    && m_levelScreen != nullptr)
+	{
+		m_levelScreen->DropItem(Position(), ItemDropType::Coin,
+		                        ItemDropType::CoinAmount);
+		m_levelScreen->DropItem(Position(), ItemDropType::Coin,
+		                        ItemDropType::CoinAmount);
+		if (rl_trace())
+			fprintf(stderr, "goldperkill: 2 coins at %.0f,%.0f\n",
+			        X(), Y());
+	}
 	IsKilled = true;
 	Visible(false);
 	IsCollidableFlag = false;

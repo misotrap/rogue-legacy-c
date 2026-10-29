@@ -593,6 +593,15 @@ namespace RogueCastle
 				m_save.hero.spell = (uint8_t) atoi(debugSpell);
 				m_level->Player()->CastSpell(false);
 			}
+			/* Dev/test: RL_DEBUG_ITEM=<SpecialItemType> gives that one
+			 * special item (Glasses 8, GoldPerKill 5, Revive 3...). */
+			static const char *debugItem = getenv("RL_DEBUG_ITEM");
+			static bool itemGiven = false;
+			if (debugItem != nullptr && !itemGiven)
+			{
+				itemGiven = true;
+				m_save.SpecialItem = (uint8_t) atoi(debugItem);
+			}
 			/* Dev/test: RL_DEBUG_CLASS=<ClassType> + RL_DEBUG_POWER=1
 			 * fires that class power once. */
 			static const char *debugClass = getenv("RL_DEBUG_CLASS");
