@@ -35,6 +35,14 @@ namespace RogueCastle
 		// transparent parts of the backgrounds (ParallaxFX in the original).
 		// Drawn once per frame, before the rooms, and only when it shows.
 		void DrawSky(DS2DEngine::Camera2D *camera);
+		// The room's still art (background, walls, borders, spikes, still
+		// decorations), drawn once into a room-sized image when the hero
+		// enters it; each frame then copies the visible part and draws the
+		// animated decorations on top. The sky shows through its holes.
+		void BuildCache(DS2DEngine::Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<DS2DEngine::GameObj *> *bgObjs);
+		void DrawCached(DS2DEngine::Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<DS2DEngine::GameObj *> *bgObjs);
+		bool CacheIsFor(const Levels::PlacedRoom &room) const { return m_cacheRoom == &room && m_cache != nullptr; }
+		bool CacheOpaque() const { return m_cacheOpaque; }
 		// Whether the sky shows through this area's background (its image
 		// has transparent texels; looked up once)
 		bool SkyShowsThrough(Levels::LevelType type);
@@ -62,6 +70,13 @@ namespace RogueCastle
 		static void Strip(DS2DEngine::Camera2D *camera, const std::string &sprite, float x, float y, float length, float degrees, float scale);
 		static void DrawBorder(DS2DEngine::Camera2D *camera, const Levels::ObjData &b, const Art &art);
 		std::map<int, bool> m_skyThrough;
+		uint32_t *m_cache = nullptr;
+		int m_cacheW = 0, m_cacheH = 0;
+		size_t m_cacheCapacity = 0;
+		const Levels::PlacedRoom *m_cacheRoom = nullptr;
+		bool m_cacheOpaque = false;
+		bool m_buildingCache = false;   // Draw leaves out the animated decorations
+		static bool Animated(const DS2DEngine::GameObj *o) { return o->TotalFrames() > 1; }
 		// The two cloud layers, tinted once (blue night tints)
 		Texture m_clouds[2] = {};
 		int m_cloudsW = 0, m_cloudsH = 0;

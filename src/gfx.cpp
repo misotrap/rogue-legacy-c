@@ -120,9 +120,10 @@ static inline uint32_t Blend(uint32_t src, uint32_t dst)
 	uint32_t rb, g;
 	if (a == 255) return src;
 	if (a == 0) return dst;
-	/* premultiplied: out = src + dst * (1 - a) */
+	/* premultiplied: out = src + dst * (1 - a), the alpha too (the room
+	 * caches keep it: a blended texel over an opaque one is opaque) */
 	rb = ((dst & 0x00FF00FFu) * ia + 0x00800080u) >> 8 & 0x00FF00FFu;
-	g = ((dst & 0x0000FF00u) * ia + 0x00008000u) >> 8 & 0x0000FF00u;
+	g = (((dst >> 8) & 0x00FF00FFu) * ia + 0x00800080u) & 0xFF00FF00u;
 	return src + rb + g;
 }
 
@@ -158,6 +159,33 @@ static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, flo
 	const int shift = t->shift;
 	const int loIdx = lo >> shift, hiIdx = (hi - 1 - shift) >> shift;
 	const int loRow = sy >> shift, hiRow = (sy + sh - 1 - shift) >> shift;
+	/* The stored column of each destination column, worked out once per
+	 * blit (the per-pixel work is then one table read): the columns are
+	 * monotonic, so those outside the frame are only at the two ends */
+	static int cols[SCREEN_W];
+	int first = xs, last = xe;   /* the drawn columns: [first, last) */
+	{
+		int32_t u = u0;
+		int n = 0;
+		for (int x = xs; x < xe; x++, u += step)
+		{
+			int iu = u >> 16;
+			int tx = flip ? sx + sw - 1 - iu : sx + iu;
+			if (tx < lo || tx >= hi)
+			{
+				if (n == 0) first = x + 1;
+				else if (last == xe) last = x;
+				continue;
+			}
+			if (last != xe) continue;
+			int ix = tx >> shift;
+			if (ix > hiIdx) ix = hiIdx;
+			if (ix < loIdx) ix = loIdx;
+			cols[n++] = ix;
+		}
+		if (first >= last) return;
+	}
+	const int count = last - first;
 	for (int y = ys; y < ye; y++)
 	{
 		int ty = sy + (int) ((y - y0 + 0.5f) * invY);
@@ -166,22 +194,27 @@ static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, flo
 		if (iy > hiRow) iy = hiRow;
 		if (iy < loRow) iy = loRow;
 		const uint32_t *src = t->px + (size_t) iy * t->stride;
-		uint32_t *dst = fb + (size_t) y * SCREEN_W;
-		gfx_pixels += (uint64_t) (xe - xs);
-		int32_t u = u0;
-		for (int x = xs; x < xe; x++, u += step)
+		uint32_t *dst = fb + (size_t) y * SCREEN_W + first;
+		gfx_pixels += (uint64_t) count;
+		if (tint == NULL)
 		{
-			int iu = u >> 16;
-			int tx = flip ? sx + sw - 1 - iu : sx + iu;
-			if (tx < lo || tx >= hi) continue;
-			int ix = tx >> shift;
-			if (ix > hiIdx) ix = hiIdx;
-			if (ix < loIdx) ix = loIdx;
-			uint32_t p = src[ix];
-			if (tint != NULL) p = ApplyTint(p, *tint);
-			uint32_t a = p >> 24;
-			if (a == 255) dst[x] = p;
-			else if (a != 0) dst[x] = Blend(p, dst[x]);
+			for (int i = 0; i < count; i++)
+			{
+				uint32_t p = src[cols[i]];
+				uint32_t a = p >> 24;
+				if (a == 255) dst[i] = p;
+				else if (a != 0) dst[i] = Blend(p, dst[i]);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < count; i++)
+			{
+				uint32_t p = ApplyTint(src[cols[i]], *tint);
+				uint32_t a = p >> 24;
+				if (a == 255) dst[i] = p;
+				else if (a != 0) dst[i] = Blend(p, dst[i]);
+			}
 		}
 	}
 }

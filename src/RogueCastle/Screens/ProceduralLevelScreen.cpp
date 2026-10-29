@@ -594,7 +594,11 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 	for (size_t i = 0; i < m_castle.rooms.size() && i < m_roomList.size() && !sky; i++)
 	{
 		const Levels::PlacedRoom &r = m_castle.rooms[i];
-		if (Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
+		if (!Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
+			continue;
+		if (m_roomList[i] == m_currentRoom && m_roomRenderer.CacheIsFor(r) && !m_noRoomCache)
+			sky = !m_roomRenderer.CacheOpaque();   /* the cache covers everything, or shows the holes */
+		else
 			sky = r.name == "Start" || m_roomRenderer.SkyShowsThrough(r.levelType);
 	}
 	uint64_t px0 = gfx_pixels;
@@ -603,11 +607,24 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 	else
 		gfx_fill(0, 60, SCREEN_W, 360, 0xFF041D56u);   // the night blue the sky would start with
 	uint64_t pxSky = gfx_pixels - px0;
+	/* The current room from its cache (built the first frame in it: the
+	 * short wait on entering a room), the others live */
 	for (size_t i = 0; i < m_castle.rooms.size() && i < m_roomList.size(); i++)
 	{
 		const Levels::PlacedRoom &r = m_castle.rooms[i];
-		if (Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
-			m_roomRenderer.Draw(camera, r, &m_roomList[i]->BGObjList());
+		if (!Rectangle((int) r.x, (int) r.y, r.width, r.height).Intersects(view))
+			continue;
+		if (m_roomList[i] == m_currentRoom && !m_noRoomCache)
+		{
+			if (!m_roomRenderer.CacheIsFor(r))
+				m_roomRenderer.BuildCache(camera, r, &m_roomList[i]->BGObjList());
+			if (m_roomRenderer.CacheIsFor(r))
+			{
+				m_roomRenderer.DrawCached(camera, r, &m_roomList[i]->BGObjList());
+				continue;
+			}
+		}
+		m_roomRenderer.Draw(camera, r, &m_roomList[i]->BGObjList());
 	}
 	uint64_t pxRooms = gfx_pixels - px0 - pxSky;
 	for (RoomObj *room : m_roomList)

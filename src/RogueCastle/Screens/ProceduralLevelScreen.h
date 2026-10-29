@@ -92,6 +92,8 @@ private:
 	std::vector<DS2DEngine::IPhysicsObj *> m_castleTerrain;
 	std::vector<DS2DEngine::IPhysicsObj *> m_allTerrain;
 	void RefreshLocalTerrain();
+	/* RL_NO_ROOM_CACHE: draw the rooms live (to compare) */
+	bool m_noRoomCache = getenv("RL_NO_ROOM_CACHE") != nullptr;
 	std::vector<Slope> m_allSlopes;
 	std::vector<Hazard> m_allHazards;
 	RoomObj *m_currentRoom = nullptr;

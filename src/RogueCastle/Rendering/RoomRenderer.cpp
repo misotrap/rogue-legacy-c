@@ -1,5 +1,9 @@
 #include "RoomRenderer.h"
+#include "../../debugflags.h"
+#include <cstdio>
 #include <cstdlib>
+#include <algorithm>
+#include <cstring>
 
 #include "../../DS2DEngine/GameObjs/ObjContainer.h"
 #include "../../DS2DEngine/GameObjs/SpriteObj.h"
@@ -32,10 +36,12 @@ namespace RogueCastle
 	{
 		Clear();
 		for (Texture &t : m_clouds) free(t.px);
+		free(m_cache);
 	}
 
 	void RoomRenderer::Clear()
 	{
+		m_cacheRoom = nullptr;   // a new castle: the room cache is stale
 		for (auto &entry : m_decorations)
 		{
 			for (GameObj *o : entry.second.back) delete o;
@@ -337,9 +343,9 @@ namespace RogueCastle
 		if (room.name != "Start")
 			Tile(camera, art.background, room.x, room.y, (float) room.width, (float) room.height, 2);
 		// 2. background-layer decorations
-		for (GameObj *o : d.back) o->Draw(camera);
+		for (GameObj *o : d.back) if (!m_buildingCache || !Animated(o)) o->Draw(camera);
 		if (bgObjs != nullptr)
-			for (GameObj *o : *bgObjs) o->Draw(camera);
+			for (GameObj *o : *bgObjs) if (!m_buildingCache || !Animated(o)) o->Draw(camera);
 		// 3. walls: the foreground tile inside every solid block taller than 40
 		for (const Levels::ObjData &o : room.objs)
 			if (o.type == "CollHullObj" && o.rotation != 0 && o.height > 40)   // the ramps: no steps showing under them
@@ -355,6 +361,95 @@ namespace RogueCastle
 		for (const Levels::ObjData &o : room.objs)
 			if (o.type == "HazardObj") Strip(camera, "Spikes_Sprite", o.x, o.y, o.width, o.rotation, 1);
 		// 5. the other decorations
-		for (GameObj *o : d.front) o->Draw(camera);
+		for (GameObj *o : d.front) if (!m_buildingCache || !Animated(o)) o->Draw(camera);
+	}
+
+	void RoomRenderer::BuildCache(Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<GameObj *> *bgObjs)
+	{
+		// The room at the screen's scale (zoom 0.5), drawn screen by screen
+		const float zoom = camera->Zoom();
+		int w = (int) (room.width * zoom), h = (int) (room.height * zoom);
+		if ((size_t) w * h > m_cacheCapacity)
+		{
+			free(m_cache);
+			m_cacheCapacity = (size_t) w * h;
+			m_cache = (uint32_t *) malloc(m_cacheCapacity * 4);
+			if (m_cache == nullptr) { m_cacheCapacity = 0; m_cacheRoom = nullptr; return; }
+		}
+		m_cacheW = w;
+		m_cacheH = h;
+		static std::vector<uint32_t> screen;
+		screen.assign((size_t) SCREEN_W * SCREEN_H, 0);
+		const Vector2 keep = camera->Position();
+		camera->ViewHeight(SCREEN_H);
+		m_buildingCache = true;
+		for (int cy = 0; cy < h; cy += SCREEN_H)
+			for (int cx = 0; cx < w; cx += SCREEN_W)
+			{
+				// The camera that puts this piece of the room at the screen's top-left
+				camera->Position(Vector2(room.x + (cx + SCREEN_W * 0.5f) / zoom, room.y + (cy + 240) / zoom));
+				std::fill(screen.begin(), screen.end(), 0u);
+				gfx_begin(screen.data());
+				Draw(camera, room, bgObjs);
+				for (int y = 0; y < SCREEN_H && cy + y < h; y++)
+				{
+					int n = w - cx < SCREEN_W ? w - cx : SCREEN_W;
+					memcpy(m_cache + (size_t) (cy + y) * w + cx, screen.data() + (size_t) y * SCREEN_W, (size_t) n * 4);
+				}
+			}
+		m_buildingCache = false;
+		camera->ViewHeight(360);
+		camera->Position(keep);
+		m_cacheRoom = &room;
+		m_cacheOpaque = true;
+		size_t holes = 0, partial = 0;
+		for (size_t i = 0; i < (size_t) w * h; i++)
+		{
+			uint32_t a = m_cache[i] >> 24;
+			if (a == 0) holes++;
+			else if (a != 255) partial++;
+		}
+		m_cacheOpaque = holes == 0;   // the screen ignores alpha: no hole, no sky behind
+		if (rl_trace())
+			fprintf(stderr, "room cache %s: %dx%d, %zu holes, %zu partial\n", room.name.c_str(), w, h, holes, partial);
+	}
+
+	void RoomRenderer::DrawCached(Camera2D *camera, const Levels::PlacedRoom &room, const std::vector<GameObj *> *bgObjs)
+	{
+		// Screen (sx, sy) shows the cache's (sx + ox, sy + oy)
+		const float zoom = camera->Zoom();
+		int ox = (int) lroundf((camera->X() - room.x) * zoom - SCREEN_W * 0.5f);
+		int oy = (int) lroundf((camera->Y() - room.y) * zoom - 240);
+		uint32_t *frame = gfx_frame();
+		int x0 = ox < 0 ? -ox : 0, x1 = m_cacheW - ox < SCREEN_W ? m_cacheW - ox : SCREEN_W;
+		for (int sy = 60; sy < 420 && x0 < x1; sy++)
+		{
+			int cy = sy + oy;
+			if (cy < 0 || cy >= m_cacheH) continue;
+			const uint32_t *src = m_cache + (size_t) cy * m_cacheW + ox;
+			uint32_t *dst = frame + (size_t) sy * SCREEN_W;
+			if (m_cacheOpaque)
+				memcpy(dst + x0, src + x0, (size_t) (x1 - x0) * 4);
+			else
+				for (int x = x0; x < x1; x++)
+				{
+					uint32_t p = src[x], a = p >> 24;
+					if (a == 255) dst[x] = p;
+					else if (a != 0)
+					{
+						uint32_t d = dst[x], ia = 255 - a;
+						uint32_t rb = ((d & 0x00FF00FFu) * ia + 0x00800080u) >> 8 & 0x00FF00FFu;
+						uint32_t g = ((d & 0x0000FF00u) * ia + 0x00008000u) >> 8 & 0x0000FF00u;
+						dst[x] = p + rb + g;
+					}
+				}
+		}
+		gfx_pixels += (uint64_t) (x1 > x0 ? x1 - x0 : 0) * 360;
+		// The animated decorations, live (behind ones end up over the walls)
+		Decorations &d = DecorationsFor(room);
+		for (GameObj *o : d.back) if (Animated(o)) o->Draw(camera);
+		if (bgObjs != nullptr)
+			for (GameObj *o : *bgObjs) if (Animated(o)) o->Draw(camera);
+		for (GameObj *o : d.front) if (Animated(o)) o->Draw(camera);
 	}
 }
