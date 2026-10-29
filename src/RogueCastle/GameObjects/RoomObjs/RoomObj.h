@@ -68,7 +68,7 @@ public:
 	/* The Dementia trait (SpawnDementiaEnemy): a hallucination of the given
 	 * type standing where a real enemy of the room is, until the hero
 	 * leaves (TempEnemyList) */
-	class EnemyObj *SpawnTempEnemy(uint8_t type, Vector2 position, class PlayerObj *player);
+	class EnemyObj *SpawnTempEnemy(uint8_t type, Vector2 position, class PlayerObj *player, const char *difficulty = "BASIC");
 	void ClearTempEnemies(DS2DEngine::PhysicsManager &physics);
 	/* Breakables and decoration containers, drawn and simulated by the room. */
 	const std::vector<DS2DEngine::PhysicsObjContainer *> &GameObjList() const { return m_gameObjList; }

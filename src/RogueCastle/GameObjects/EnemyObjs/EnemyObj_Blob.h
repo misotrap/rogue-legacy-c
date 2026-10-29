@@ -24,6 +24,11 @@ protected:
 	void RunExpertLogic() override;
 	void RunMinibossLogic() override;
 	void UpdateEnemy(GameTime *gameTime) override;
+	/* EnemyObj_Blob.cs line 735: at 0 hp it refills, shrinks, speeds up
+	 * and splits off a smaller blob, until its NumHits run out */
+	void HitEnemy(int damage, Vector2 collisionPt, bool isPlayer) override;
+	int NumHits = 2;
+	float BlobSizeChange = 0.725f, BlobSpeedChange = 2.0f;
 
 private:
 	enum Action

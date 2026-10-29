@@ -64,6 +64,9 @@ public:
 	bool IsValid() const { return m_valid; }
 	void UpdateCamera();               /* ProceduralLevelScreen.cs line 1621 */
 	void SpawnDementiaEnemy();         /* ProceduralLevelScreen.cs line 2382 */
+	/* AddEnemyToCurrentRoom (line 2414): a temporary enemy of the given type
+	 * in the hero's room, wired to the hero, the terrain and the physics */
+	class EnemyObj *AddEnemyToCurrentRoom(uint8_t type, Vector2 position, const char *difficulty = "BASIC");
 
 private:
 	void CheckForRoomTransition();     /* ProceduralLevelScreen.cs line 1189 */

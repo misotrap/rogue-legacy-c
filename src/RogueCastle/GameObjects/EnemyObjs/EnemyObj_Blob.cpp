@@ -148,6 +148,47 @@ void EnemyObj_Blob::InitializeOne(EnemyDifficulty difficulty)
 void EnemyObj_Blob::InitializeEV()
 {
 	InitializeOne(DifficultyType);
+	/* the splitting numbers per difficulty (lines 50-185, 900-920) */
+	switch (DifficultyType)
+	{
+	case ADVANCED: NumHits = 3; BlobSizeChange = 0.6f; BlobSpeedChange = 2.25f; break;
+	case EXPERT: NumHits = 4; BlobSizeChange = 0.65f; BlobSpeedChange = 2.25f; break;
+	case MINIBOSS: NumHits = 6; BlobSizeChange = 0.6f; BlobSpeedChange = 2.0f; break;
+	default: NumHits = 2; BlobSizeChange = 0.725f; BlobSpeedChange = 2.0f; break;
+	}
+}
+
+void EnemyObj_Blob::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
+{
+	if (m_target == nullptr || m_target->CurrentHealth <= 0)
+		return;
+	EnemyObj::HitEnemy(damage, collisionPt, isPlayer);
+	if (CurrentHealth > 0 || IsKilled)
+		return;
+	CurrentHealth = MaxHealth;
+	NumHits--;
+	if (NumHits > 0 && m_levelScreen != nullptr)
+	{
+		/* CreateBlob (line 548): the same kind, smaller and faster, flung
+		 * away from the hero */
+		static const char *const names[] = { "BASIC", "ADVANCED", "EXPERT", "MINIBOSS" };
+		EnemyObj *spawned = m_levelScreen->AddEnemyToCurrentRoom(EnemyType::Blob, Position(), names[DifficultyType]);
+		if (spawned != nullptr)
+		{
+			EnemyObj_Blob *blob = static_cast<EnemyObj_Blob *>(spawned);
+			blob->ApplyLevelGains(Level);
+			blob->Scale(Vector2(ScaleX() * BlobSizeChange, ScaleY() * BlobSizeChange));
+			blob->NumHits = NumHits;
+			blob->Speed *= BlobSpeedChange;
+			float kx = (float) (rand() % 201 - 500), ky = (float) (rand() % 401 + 300);
+			blob->AccelerationX(blob->X() < m_target->X() ? -(m_target->CurrentEnemyKnockBack().X + kx) : m_target->CurrentEnemyKnockBack().X + kx);
+			blob->AccelerationY(-(m_target->CurrentEnemyKnockBack().Y + ky));
+		}
+		Scale(Vector2(ScaleX() * BlobSizeChange, ScaleY() * BlobSizeChange));
+		Speed *= BlobSpeedChange;
+	}
+	if (NumHits <= 0)
+		Kill(true);
 }
 
 void EnemyObj_Blob::PickAction(const int *weights, int count, const Action *actions)

@@ -499,6 +499,12 @@ void EnemyObj::ApplyLevel(int level, bool bossRoom)
 	else if (DifficultyType == MINIBOSS)
 		Level += LevelEV::ENEMY_MINIBOSS_LEVEL_MOD;
 
+	ApplyLevelGains(Level);
+}
+
+void EnemyObj::ApplyLevelGains(int level)
+{
+	Level = level;
 	/* StatLevelHPMod 0.16, StatLevelDMGMod 0.091, StatLevelXPMod 0.025 */
 	int hpGain = (int) (MaxHealth * 0.160f), dmgGain = (int) (Damage * 0.0910f), xpGain = (int) (XPValue * 0.025f);
 	bool projectileIsDamage = ProjectileDamage == Damage;

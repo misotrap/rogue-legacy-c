@@ -87,10 +87,16 @@ public:
 	/* ProceduralLevelScreen.InitializeEnemies + the per-level gains
 	 * (EnemyObj.cs lines 200 and 1222): once, after Initialize */
 	void ApplyLevel(int level, bool bossRoom);
+	/* the per-level gains alone, from the freshly initialized stats */
+	void ApplyLevelGains(int level);
 	int State = STATE_WANDER;
 	float DistanceToPlayer = 0;
 	bool IsKilled = false;
 	bool IsPaused = false;
+	/* EnemyObj.cs line 1015: the time stop freezes it (no logic, no
+	 * weight, no animation) */
+	void PauseEnemy() { if (IsPaused || IsKilled) return; IsPaused = true; DisableAllWeightFlag = true; PauseAnimation(); }
+	void UnpauseEnemy() { if (!IsPaused) return; IsPaused = false; DisableAllWeightFlag = false; if (!IsKilled) ResumeAnimation(); }
 	bool IsInvincible() const { return m_invincibleCounter > 0 || m_invincibleCounterProjectile > 0; }
 
 	PlayerObj *Target() const { return m_target; }

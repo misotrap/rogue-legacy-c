@@ -247,6 +247,10 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	 * physics of the projectiles). */
 	if (m_currentRoom != nullptr && !m_timeStopped)
 		m_currentRoom->Update(gameTime);
+	else if (m_currentRoom != nullptr)
+		for (EnemyObj *enemy : m_currentRoom->EnemyList())   // frozen, but they still die
+			if (!enemy->IsKilled && !enemy->NonKillable && enemy->CurrentHealth <= 0)
+				enemy->Kill(true);
 	if (m_player != nullptr)
 		m_player->Update(gameTime);
 
@@ -286,6 +290,11 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	for (size_t i = 0; i < m_projectiles.size(); )
 	{
 		ProjectileObj *proj = m_projectiles[i];
+		if (m_timeStopped && proj->Source != nullptr && !proj->IsKilled)
+		{
+			i++;   /* the enemies' shots hang in the air during the time stop */
+			continue;
+		}
 		proj->Update(gameTime);
 		if (getenv("RL_DEBUG_HITS") != nullptr)
 			fprintf(stderr, "projupd: %s spell=%d x=%.0f y=%.0f killed=%d alive=%d\n",
@@ -761,8 +770,12 @@ void ProceduralLevelScreen::DamageAllEnemies(int damage)
 	/* ProjectileObj.cs line 581: the nuke hits every enemy of the room. */
 	if (m_currentRoom == nullptr)
 		return;
-	for (EnemyObj *enemy : m_currentRoom->EnemyList())
+	/* by index, over the enemies there now: a splitting blob adds to the list */
+	const std::vector<EnemyObj *> &list = m_currentRoom->EnemyList();
+	size_t count = list.size();
+	for (size_t i = 0; i < count && i < list.size(); i++)
 	{
+		EnemyObj *enemy = list[i];
 		if (!enemy->IsKilled && !enemy->NonKillable)
 			enemy->HitEnemy(damage, Vector2(enemy->X(), enemy->Y()), true);
 	}
@@ -774,17 +787,48 @@ void ProceduralLevelScreen::CastTimeStop()
 	 * hero's mana pays TIMESTOP_ACTIVE_MANA_DRAIN per tick). */
 	m_timeStopped = true;
 	Audio::PlaySound("Cast_TimeStop");
+	/* PauseAllEnemies + PauseAllProjectiles (line 2563) */
+	if (m_currentRoom != nullptr)
+		for (EnemyObj *enemy : m_currentRoom->EnemyList())
+			enemy->PauseEnemy();
+	for (ProjectileObj *proj : m_projectiles)
+		if (proj->Source != nullptr)
+		{
+			proj->DisableAllWeightFlag = true;
+			proj->PauseAnimation();
+		}
 }
 
 void ProceduralLevelScreen::StopTimeStop()
 {
 	m_timeStopped = false;
+	if (m_currentRoom != nullptr)
+		for (EnemyObj *enemy : m_currentRoom->EnemyList())
+			enemy->UnpauseEnemy();
+	for (ProjectileObj *proj : m_projectiles)
+		if (proj->Source != nullptr)
+		{
+			proj->DisableAllWeightFlag = false;
+			proj->ResumeAnimation();
+		}
 }
 
 } // namespace RogueCastle
 
 namespace RogueCastle
 {
+EnemyObj *ProceduralLevelScreen::AddEnemyToCurrentRoom(uint8_t type, Vector2 position, const char *difficulty)
+{
+	if (m_currentRoom == nullptr) return nullptr;
+	EnemyObj *enemy = m_currentRoom->SpawnTempEnemy(type, position, m_player, difficulty);
+	if (enemy == nullptr) return nullptr;
+	enemy->SetPlayerTarget(m_player);
+	enemy->SetLevelScreen(this);
+	enemy->SetTerrain(&m_allTerrain);
+	m_physicsManager.AddObject(enemy);
+	return enemy;
+}
+
 void ProceduralLevelScreen::SpawnDementiaEnemy()
 {
 	/* ProceduralLevelScreen.cs line 1382: entering an ordinary room, a 20%
@@ -812,15 +856,11 @@ void ProceduralLevelScreen::SpawnDementiaEnemy()
 	uint8_t type = model->IsWeightedFlag
 		? LevelEV::DEMENTIA_GROUND_LIST[rand() % (sizeof(LevelEV::DEMENTIA_GROUND_LIST))]
 		: LevelEV::DEMENTIA_FLIGHT_LIST[rand() % (sizeof(LevelEV::DEMENTIA_FLIGHT_LIST))];
-	EnemyObj *enemy = m_currentRoom->SpawnTempEnemy(type, model->Position(), m_player);
+	EnemyObj *enemy = AddEnemyToCurrentRoom(type, model->Position());
 	if (enemy == nullptr)
 		return;
 	enemy->Demented = true;
 	enemy->NonKillable = true;
-	enemy->SetPlayerTarget(m_player);
-	enemy->SetLevelScreen(this);
-	enemy->SetTerrain(&m_allTerrain);
-	m_physicsManager.AddObject(enemy);
 	if (getenv("RL_DEBUG_TRACE") != nullptr)
 		fprintf(stderr, "dementia: enemy %d in %s\n", (int) type, room->Name().c_str());
 }

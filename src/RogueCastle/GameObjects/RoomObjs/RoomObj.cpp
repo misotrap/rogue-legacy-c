@@ -403,11 +403,11 @@ void RoomObj::Draw(Camera2D *camera)
 		obj->Draw(camera);
 }
 
-EnemyObj *RoomObj::SpawnTempEnemy(uint8_t type, Vector2 position, PlayerObj *player)
+EnemyObj *RoomObj::SpawnTempEnemy(uint8_t type, Vector2 position, PlayerObj *player, const char *difficulty)
 {
 	Levels::ObjData data;
 	data.enemyType = type;
-	data.difficulty = "BASIC";
+	data.difficulty = difficulty;
 	EnemyObj *enemy = CreateEnemy(data, player);
 	if (enemy == nullptr)
 		return nullptr;
