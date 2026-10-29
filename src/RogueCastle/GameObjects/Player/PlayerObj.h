@@ -77,6 +77,7 @@ public:
 	/* The last thing that hurt the hero, for the game over text:
 	 * 0 unknown, 1 an enemy, 2 a boss, 3 a shot without a shooter, 4 a trap */
 	int KillerKind = 0;
+	bool m_wasOnSlope = false;   // trace: on a ramp last step
 	std::string KillerName;
 	void CollisionResponse(DS2DEngine::CollisionBox *thisBox, DS2DEngine::CollisionBox *otherBox,
 	                       int collisionResponseType) override;

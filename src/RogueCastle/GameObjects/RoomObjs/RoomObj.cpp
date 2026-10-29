@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/RoomObjs/RoomObj.cs (subset). */
 #include "RoomObj.h"
+#include "../../../debugflags.h"
 #include <cmath>
 #include <algorithm>
 #include "../../../DS2DEngine/GameObjs/SpriteObj.h"
@@ -328,7 +329,7 @@ void RoomObj::Update(GameTime *gameTime)
 	{
 		EnemyObj *enemy = m_enemyList[i];
 		enemy->Update(gameTime);
-		if (getenv("RL_DEBUG_TRACE") != nullptr)
+		if (rl_trace())
 			fprintf(stderr, "e: %s %s vis=%d killed=%d x=%.0f y=%.0f hp=%.0f\n",
 			        Name().c_str(), enemy->SpriteName().c_str(), (int) enemy->Visible(),
 			        (int) enemy->IsKilled, enemy->X(), enemy->Y(), enemy->CurrentHealth);

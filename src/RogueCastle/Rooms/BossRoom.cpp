@@ -1,4 +1,5 @@
 #include "BossRoom.h"
+#include "../../debugflags.h"
 #include "../../SpriteSystem/SpriteLibrary.h"
 
 #include "../../Audio/Audio.h"
@@ -406,7 +407,8 @@ namespace RogueCastle
 			const char *arg = debugNear;
 			debugNear = nullptr;
 			bool breakable = arg[0] == 'b', hazard = arg[0] == 'h';   // h<n>: beside the n-th spikes
-			int want = atoi(breakable || hazard ? arg + 1 : arg), seen = 0;
+			bool slope = arg[0] == 's';                                 // s<n>: beside the n-th ramp's top
+			int want = atoi(breakable || hazard || slope ? arg + 1 : arg), seen = 0;
 			const char *comma = strchr(arg, ',');
 			float dx = comma != nullptr ? (float) atof(comma + 1) : -150;
 			const char *comma2 = comma != nullptr ? strchr(comma + 1, ',') : nullptr;
@@ -415,6 +417,18 @@ namespace RogueCastle
 			{
 				if (r->Name() == "Boss") continue;
 				DS2DEngine::GameObj *target = nullptr;
+				if (slope)
+				{
+					for (const Slope &s : r->SlopeList())
+						if (seen++ == want)
+						{
+							player->X(s.x + dx);
+							player->Y(s.y + dy);
+							fprintf(stderr, "near: ramp top %.0f,%.0f w%.0f h%.0f in %s\n", s.x, s.y, s.width, s.height, r->Name().c_str());
+							return false;
+						}
+					continue;
+				}
 				if (hazard)
 				{
 					for (const Hazard &h : r->HazardList())
@@ -549,7 +563,7 @@ namespace RogueCastle
 				save.NewBossBeaten = true;
 				m_phase = Phase::Won;
 				m_bossChest.reset();
-				if (getenv("RL_DEBUG_TRACE") != nullptr) fprintf(stderr, "boss: beaten\n");
+				if (rl_trace()) fprintf(stderr, "boss: beaten\n");
 				m_time = 0;
 			}
 			return false;

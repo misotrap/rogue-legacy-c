@@ -1,4 +1,5 @@
 #include "GameFlow.h"
+#include "../debugflags.h"
 #include "../perf.h"
 
 #include "../Audio/Audio.h"
@@ -119,7 +120,7 @@ namespace RogueCastle
 			if (m_save.hero.HasTrait(TraitType::Hyperactive))
 				player->Speed *= 1 + GameEV::TRAIT_MOVESPEED_AMOUNT;
 		}
-		if (getenv("RL_DEBUG_TRACE") != nullptr)
+		if (rl_trace())
 			fprintf(stderr, "hero-stats: hp=%.0f/%.0f mp=%.0f dmg=%d magic=%d armor=%.0f weight=%d\n",
 			        m_level->Player()->MaxHealth(), m_level->Player()->MaxHealth(),
 			        m_level->Player()->MaxMana(), m_level->Player()->TotalDamage(),
@@ -475,6 +476,9 @@ namespace RogueCastle
 			}
 			if (player != nullptr && InCourtyard())
 			{
+				/* The courtyard is a safe place: unlimited mana (the
+				 * spells cast there, Charon's talk) */
+				player->CurrentMana = player->MaxMana();
 				/* StartingRoomObj.cs line 346: the roofs of the stands are
 				 * solid only once the stand is there */
 				if (!m_level->RoomList().empty())

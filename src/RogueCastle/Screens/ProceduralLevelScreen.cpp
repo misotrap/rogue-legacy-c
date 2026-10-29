@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Screens/ProceduralLevelScreen.cs (subset). */
 #include "ProceduralLevelScreen.h"
+#include "../../debugflags.h"
 #include "../Types/EnemyType.h"
 #include "../Types/TraitType.h"
 #include "../EVs/GlobalEV.h"
@@ -209,7 +210,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		DropItem(pos, ItemDropType::Stat_Defense, 1);
 	}
 
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 	{
 		for (const Levels::PlacedRoom &r : m_castle.rooms)
 		{
@@ -231,7 +232,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		}
 	}
 
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 		fprintf(stderr, "physics list: %d objects, player tag=%d\n",
 		        m_physicsManager.NumObjects(), m_player->CollisionTypeTag());
 	m_valid = true;
@@ -299,7 +300,7 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 			continue;
 		}
 		proj->Update(gameTime);
-		if (getenv("RL_DEBUG_HITS") != nullptr)
+		if (rl_hits())
 			fprintf(stderr, "projupd: %s spell=%d x=%.0f y=%.0f killed=%d alive=%d\n",
 			        proj->SpriteName().c_str(), (int) proj->Spell, proj->X(), proj->Y(),
 			        (int) proj->IsKilled, (int) proj->IsAlive);
@@ -386,7 +387,7 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 
 	m_physicsManager.Update(gameTime);
 
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 		fprintf(stderr, "t: room=%s sprite=%s x=%.0f y=%.0f ground=%d\n",
 		        m_currentRoom->Name().c_str(), m_player->SpriteName().c_str(), m_player->X(), m_player->Y(),
 		        (int) m_player->m_isTouchingGround);
@@ -448,7 +449,7 @@ void ProceduralLevelScreen::InitializeChests()
 			chest->ForceOpen();
 	}
 
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 	{
 		fprintf(stderr, "chests: %d\n", (int) m_chestList.size());
 		for (ChestObj *chest : m_chestList)
@@ -664,7 +665,7 @@ void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
 {
 	m_projectiles.push_back(proj);
 	m_physicsManager.AddObject(proj);
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 		fprintf(stderr, "proj: %s (%.0f,%.0f) [add]\n",
 		        proj->SpriteName().c_str(), proj->X(), proj->Y());
 }
@@ -709,7 +710,7 @@ ProjectileObj *ProceduralLevelScreen::FireProjectile(const char *spriteName, Vec
 	}
 	m_projectiles.push_back(proj);
 	m_physicsManager.AddObject(proj);
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 		fprintf(stderr, "proj: %s (%.0f,%.0f) h=(%.2f,%.2f) speed=%.0f\n",
 		        spriteName, position.X, position.Y, heading.X, heading.Y, speed);
 	return proj;
@@ -769,7 +770,7 @@ ProjectileObj *ProceduralLevelScreen::FireSpellProjectile(const ProjectileData &
 
 	m_projectiles.push_back(proj);
 	m_physicsManager.AddObject(proj);
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 		fprintf(stderr, "spell: %s (%d) (%.0f,%.0f) angle=%.0f speed=%.0f dmg=%d\n",
 		        data.spriteName.c_str(), (int) spell, x, y, angle, data.speed,
 		        data.damage);
@@ -872,7 +873,7 @@ void ProceduralLevelScreen::SpawnDementiaEnemy()
 		return;
 	enemy->Demented = true;
 	enemy->NonKillable = true;
-	if (getenv("RL_DEBUG_TRACE") != nullptr)
+	if (rl_trace())
 		fprintf(stderr, "dementia: enemy %d in %s\n", (int) type, room->Name().c_str());
 }
 }

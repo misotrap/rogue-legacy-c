@@ -38,8 +38,10 @@ int main(int argc, char **argv)
 		double now = plat_time();
 		acc += now - last;
 		last = now;
-		if (acc > 0.25)
-			acc = 0.25;
+		/* At most 4 logic steps per drawn frame: when drawing is slow the
+		 * game slows down a little instead of spiralling into catch-up */
+		if (acc > 4 * TICK)
+			acc = 4 * TICK;
 
 		/* Fixed 60 Hz logic, any number of steps per drawn frame. */
 		int steps = 0;

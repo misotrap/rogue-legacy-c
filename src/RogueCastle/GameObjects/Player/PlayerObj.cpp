@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/Player/PlayerObj.cs. */
 #include "PlayerObj.h"
+#include "../../../debugflags.h"
 #include "../../Equipment/EquipmentData.h"
 #include "../../../Text/Loc.h"
 #include "../../EVs/LevelEV.h"
@@ -579,7 +580,8 @@ void PlayerObj::UpdatePlayerCollision()
 	 * player out of rotated boxes along the slope): the top surface is
 	 * y = corner.y + |x - corner.x| between the two upper edges. The feet
 	 * are put back on it from inside, or kept on it when walking down. */
-	if (m_slopes != nullptr && AccelerationY() >= 0 && m_dropThroughGroundTimer <= 0)
+	bool onSlope = false;
+	if (m_slopes != nullptr && AccelerationY() >= 0)   /* ramps stay solid when dropping through a platform */
 	{
 		const float k = 0.70710678f;
 		float left = (float) tb.X, right = (float) tb.Right(), fy = (float) tb.Bottom();
@@ -595,15 +597,21 @@ void PlayerObj::UpdatePlayerCollision()
 			if (cx > x1) cx = x1;
 			float surface = sl.y + fabsf(cx - sl.x);
 			if (fy < surface - 14 || fy > surface + 40)
+			{
+				if (rl_trace() && m_wasOnSlope && fy > surface + 40 && fy < surface + 200)
+					fprintf(stderr, "ramp: lost, feet %.0f under the surface %.0f (x %.0f, ramp %.0f,%.0f) accY %.0f\n", fy, surface, cx, sl.x, sl.y, AccelerationY());
 				continue;
+			}
 			Y(Y() + surface - fy);
 			AccelerationY(0);
 			touching = true;
+			onSlope = true;
 			onOneWay = false;
 			break;
 		}
 	}
 
+	m_wasOnSlope = onSlope;
 	if (touching && State != STATE_DRAGON)
 	{
 		/* Player just landed (PlayerObj.cs line 1795). */

@@ -14,6 +14,7 @@
 #include "../../Types/SpellType.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include <cmath>
+#include <cstdio>
 #include "../../../Audio/Audio.h"
 #include <cstdlib>
 
@@ -293,6 +294,13 @@ void EnemyObj::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
 
 	Blink(Color(255, 0, 0), 0.1f);
 	CurrentHealth -= damage;
+	/* TextManager.DisplayNumberText (EnemyObj.cs line 823): the damage in red */
+	if (m_levelScreen != nullptr && damage > 0)
+	{
+		char text[16];
+		snprintf(text, sizeof(text), "%d", damage);
+		m_levelScreen->AddPopup(text, X(), (float) Bounds().Top(), 0xFFFF0000u);
+	}
 
 	if (isPlayer)
 	{

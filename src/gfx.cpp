@@ -102,32 +102,76 @@ static inline uint32_t Blend(uint32_t src, uint32_t dst)
 	return src + rb + g;
 }
 
-void gfx_blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip)
+/* A scaled blit in 16.16 fixed point (no float per pixel: the console's
+ * CPU is slow at it). tint: 0 = plain, else the per-channel multipliers
+ * of BlitTint (16.16) applied before blending. */
+struct TintK { uint32_t a, r, g, b; };
+
+static inline uint32_t ApplyTint(uint32_t p, const TintK &k)
 {
-	int x0, y0, x1, y1, x, y;
-	float inv;
+	uint32_t a = ((p >> 24) * k.a + 32768) >> 16;
+	uint32_t r = (((p >> 16) & 255) * k.r + 32768) >> 16;
+	uint32_t g = (((p >> 8) & 255) * k.g + 32768) >> 16;
+	uint32_t b = ((p & 255) * k.b + 32768) >> 16;
+	return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
+static void Blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip, const TintK *tint)
+{
 	if (t == NULL || t->px == NULL || scale <= 0.0f || sw <= 0 || sh <= 0) return;
-	x0 = (int) floorf(dx + 0.5f);
-	y0 = (int) floorf(dy + 0.5f);
-	x1 = x0 + (int) floorf(sw * scale + 0.5f);
-	y1 = y0 + (int) floorf(sh * scale + 0.5f);
-	inv = 1.0f / scale;
-	for (y = (y0 < 0 ? 0 : y0); y < y1 && y < SCREEN_H; y += 1)
+	int x0 = (int) floorf(dx + 0.5f), y0 = (int) floorf(dy + 0.5f);
+	int x1 = x0 + (int) floorf(sw * scale + 0.5f), y1 = y0 + (int) floorf(sh * scale + 0.5f);
+	float inv = 1.0f / scale;
+	int32_t step = (int32_t) (inv * 65536.0f);
+	int xs = x0 < 0 ? 0 : x0, xe = x1 < SCREEN_W ? x1 : SCREEN_W;
+	int ys = y0 < 0 ? 0 : y0, ye = y1 < SCREEN_H ? y1 : SCREEN_H;
+	if (xs >= xe || ys >= ye) return;
+	/* The texels this blit may read: [sx, sx + sw) inside the texture */
+	int lo = sx < 0 ? 0 : sx, hi = sx + sw < t->w ? sx + sw : t->w;
+	int32_t u0 = (int32_t) ((xs - x0 + 0.5f) * inv * 65536.0f);
+	for (int y = ys; y < ye; y++)
 	{
 		int ty = sy + (int) ((y - y0 + 0.5f) * inv);
-		const uint32_t *src;
-		uint32_t *dst;
 		if (ty < sy || ty >= sy + sh || ty < 0 || ty >= t->h) continue;
-		src = t->px + (size_t) ty * t->w;
-		dst = fb + (size_t) y * SCREEN_W;
-		for (x = (x0 < 0 ? 0 : x0); x < x1 && x < SCREEN_W; x += 1)
+		const uint32_t *src = t->px + (size_t) ty * t->w;
+		uint32_t *dst = fb + (size_t) y * SCREEN_W;
+		int32_t u = u0;
+		for (int x = xs; x < xe; x++, u += step)
 		{
-			int u = (int) ((x - x0 + 0.5f) * inv);
-			int tx = flip ? sx + sw - 1 - u : sx + u;
-			if (tx < 0 || tx >= t->w) continue;
-			dst[x] = Blend(src[tx], dst[x]);
+			int iu = u >> 16;
+			int tx = flip ? sx + sw - 1 - iu : sx + iu;
+			if (tx < lo || tx >= hi) continue;
+			uint32_t p = src[tx];
+			if (tint != NULL) p = ApplyTint(p, *tint);
+			uint32_t a = p >> 24;
+			if (a == 255) dst[x] = p;
+			else if (a != 0) dst[x] = Blend(p, dst[x]);
 		}
 	}
+}
+
+void gfx_blit(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip)
+{
+	Blit(t, sx, sy, sw, sh, dx, dy, scale, flip, NULL);
+}
+
+void gfx_blit_tinted(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip, uint32_t colour)
+{
+	if (colour == 0xFFFFFFFFu)
+	{
+		Blit(t, sx, sy, sw, sh, dx, dy, scale, flip, NULL);
+		return;
+	}
+	uint32_t ca = colour >> 24;
+	if (ca == 0) return;
+	/* Premultiplied texel times the colour, whose alpha scales everything:
+	 * channel * c * ca / 255^2, as 16.16 multipliers */
+	TintK k;
+	k.a = (ca * 65536u + 127) / 255;
+	k.r = (((colour >> 16) & 255) * ca * 65536u + 32512) / 65025;
+	k.g = (((colour >> 8) & 255) * ca * 65536u + 32512) / 65025;
+	k.b = ((colour & 255) * ca * 65536u + 32512) / 65025;
+	Blit(t, sx, sy, sw, sh, dx, dy, scale, flip, &k);
 }
 
 /* Premultiplied texel times a colour (whose alpha scales everything) */
@@ -139,40 +183,6 @@ static inline uint32_t Tint(uint32_t p, uint32_t c)
 	uint32_t g = ((((p >> 8) & 255) * ((c >> 8) & 255) + 127) / 255 * ca + 127) / 255;
 	uint32_t b = (((p & 255) * (c & 255) + 127) / 255 * ca + 127) / 255;
 	return (a << 24) | (r << 16) | (g << 8) | b;
-}
-
-void gfx_blit_tinted(const Texture *t, int sx, int sy, int sw, int sh, float dx, float dy, float scale, int flip, uint32_t colour)
-{
-	if (colour == 0xFFFFFFFFu)
-	{
-		gfx_blit(t, sx, sy, sw, sh, dx, dy, scale, flip);
-		return;
-	}
-	if ((colour >> 24) == 0) return;
-	int x0, y0, x1, y1, x, y;
-	float inv;
-	if (t == NULL || t->px == NULL || scale <= 0.0f || sw <= 0 || sh <= 0) return;
-	x0 = (int) floorf(dx + 0.5f);
-	y0 = (int) floorf(dy + 0.5f);
-	x1 = x0 + (int) floorf(sw * scale + 0.5f);
-	y1 = y0 + (int) floorf(sh * scale + 0.5f);
-	inv = 1.0f / scale;
-	for (y = (y0 < 0 ? 0 : y0); y < y1 && y < SCREEN_H; y += 1)
-	{
-		int ty = sy + (int) ((y - y0 + 0.5f) * inv);
-		const uint32_t *src;
-		uint32_t *dst;
-		if (ty < sy || ty >= sy + sh || ty < 0 || ty >= t->h) continue;
-		src = t->px + (size_t) ty * t->w;
-		dst = fb + (size_t) y * SCREEN_W;
-		for (x = (x0 < 0 ? 0 : x0); x < x1 && x < SCREEN_W; x += 1)
-		{
-			int u = (int) ((x - x0 + 0.5f) * inv);
-			int tx = flip ? sx + sw - 1 - u : sx + u;
-			if (tx < 0 || tx >= t->w) continue;
-			dst[x] = Blend(Tint(src[tx], colour), dst[x]);
-		}
-	}
 }
 
 void gfx_blit_ex(const Texture *t, int sx, int sy, int sw, int sh, float x, float y, float originX, float originY,

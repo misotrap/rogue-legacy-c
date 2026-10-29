@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/ChestObj.cs. */
 #include "ChestObj.h"
+#include "../../debugflags.h"
 #include "Player/PlayerObj.h"
 #include "ItemDropObj.h"
 #include "../Screens/GetItemScreen.h"
@@ -269,7 +270,7 @@ void ChestObj::GivePrint(ProceduralLevelScreen *level, PlayerObj *player)
 		reward.worldX = X();
 		reward.worldY = Y() - Bounds().Height;
 		GetItem::Push(reward);
-		if (getenv("RL_DEBUG_TRACE") != nullptr)
+		if (rl_trace())
 			fprintf(stderr, "chest: blueprint %d of category %d unlocked\n",
 			        index, category);
 	}

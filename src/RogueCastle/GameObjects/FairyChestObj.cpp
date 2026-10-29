@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/FairyChestObj.cs. */
 #include "FairyChestObj.h"
+#include "../../debugflags.h"
 #include "../Screens/GetItemScreen.h"
 #include "Player/PlayerObj.h"
 #include "ItemDropObj.h"
@@ -114,7 +115,7 @@ void FairyChestObj::OpenChest(ProceduralLevelScreen *level, PlayerObj *player)
 		reward.worldX = X();
 		reward.worldY = Y() - Bounds().Height;
 		GetItem::Push(reward);
-		if (getenv("RL_DEBUG_TRACE") != nullptr)
+		if (rl_trace())
 			fprintf(stderr, "fairy chest: rune %d of category %d unlocked\n",
 			        ability, category);
 	}

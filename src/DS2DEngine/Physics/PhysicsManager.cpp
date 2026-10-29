@@ -1,5 +1,6 @@
 /* Port of DS2DEngine/src/Physics/PhysicsManager.cs. */
 #include "PhysicsManager.h"
+#include "../../debugflags.h"
 #include "../CollisionMath.h"
 #include "../Consts.h"
 
@@ -118,7 +119,7 @@ void PhysicsManager::Update(GameTime *gameTime)
 					else if ((firstBox->Type() == Consts::WEAPON_HITBOX && secondBox->Type() == Consts::BODY_HITBOX)
 					         || (firstBox->Type() == Consts::BODY_HITBOX && secondBox->Type() == Consts::WEAPON_HITBOX))
 					{
-						if (getenv("RL_DEBUG_HITS") != nullptr)
+						if (rl_hits())
 							fprintf(stderr, "wxb: t1=%d t2=%d f=[%d,%d %dx%d] s=[%d,%d %dx%d] int=%d\n",
 							        firstObj->CollisionTypeTag(), secondObj->CollisionTypeTag(),
 							        firstBox->AbsRect().X, firstBox->AbsRect().Y, firstBox->AbsRect().Width, firstBox->AbsRect().Height,
