@@ -101,22 +101,31 @@ namespace RogueCastle
 		m_lastFrame = lastFrame;
 		m_lastFrame.resize((size_t) SCREEN_W * SCREEN_H, BLACK);
 
-		/* The camera starts as the castle view (Zoom 0.5) and closes in on
-		 * the body (GameOverScreen.cs line 270: Tween Camera 1 s to the
-		 * player, feet 10 under the centre, Zoom 1). */
+		/* The camera stays at the castle's zoom (the C#'s Zoom 1 on its
+		 * 1320x720 screen IS the port's 0.5) and recentres on the body
+		 * over 1 s (GameOverScreen.cs line 270: the feet 10 under the
+		 * centre). The hero does not move. */
 		m_camera.Position(Vector2(660, 360));
 		m_camera.Zoom(0.5f);
+		m_uiCamera.Position(Vector2(660, 360));
+		m_uiCamera.Zoom(0.5f);
+		m_uiCamera.ElapsedTotalSeconds(0);
 		// The light cone points down onto the body (LoadContent line 126)
 		m_spotlight = Make("GameOverSpotlight_Sprite", 1320 / 2, 40 + 150);
 		m_spotlight->Rotation(90);
 		m_plate = Make("DialogBox_Sprite", 1320 / 2, 610);
-		// The heir's framed portrait (m_playerFrame, line 137): above the body
-		m_frame = Make("LineageScreenFrame_Sprite", look.x, look.y - 120 - 82);
-		m_frame->Scale(Vector2(2, 2));
+		/* The heir's framed portrait (m_playerFrame, line 137): the same
+		 * card as the lineage screen - the frame around the portrait,
+		 * the plaque under it, at the body position -120 (the anchor
+		 * the lineage entries use). */
+		m_cardY = look.y - 120;
+		m_frame = Make("LineageScreenFrame_Sprite", look.x + 5, m_cardY - 12);
+		m_frame->Scale(Vector2(2.8f, 2.8f));
 		m_portrait = MakeHero("PlayerIdle_Character", look.scale);
-		m_portrait->Position(Vector2(look.x + 10, look.y - 120));
-		m_plaque = Make("LineageScreenPlaque1Long_Sprite", look.x, look.y - 120 + 82 - 10);
-		m_plaque->Scale(Vector2(1.8f, 1.8f));
+		m_portrait->Position(Vector2(look.x + 10, m_cardY));
+		m_plaque = Make("LineageScreenPlaque1Long_Sprite",
+		                look.x + 5, m_cardY - 12 + 81 * 2.8f - 30);
+		m_plaque->Scale(Vector2(1.8f, 2));
 		m_hero = MakeHero("PlayerHurt_Character", look.scale);
 		m_hero->Position(Vector2(look.x, look.y));
 
@@ -126,7 +135,9 @@ namespace RogueCastle
 		m_parade.clear();
 		m_paradeAt.clear();
 		double delay = 0;
-		float px = look.x - 320 + 200, py = look.y + look.feet - 10 - 240 + 450;
+		/* Camera.TopLeftCorner + (200, 450): the camera lands on the
+		 * body, so the view spans it +- (660, 360). */
+		float px = look.x - 660 + 200, py = look.y + look.feet - 10 - 360 + 450;
 		for (const std::pair<uint8_t, int> &kill : kills)
 		{
 			if (m_parade.size() >= PARADE_MAX) break;
@@ -142,9 +153,9 @@ namespace RogueCastle
 			enemy->PlayAnimation(true);
 			enemy->Position(Vector2(px, py));
 			px += 25;
-			if (px + 60 > look.x - 320 + 200 + 950)
+			if (px + 60 > look.x - 660 + 200 + 950)
 			{
-				px = look.x - 320 + 200;
+				px = look.x - 660 + 200;
 				py += 30;
 			}
 			m_parade.push_back(enemy);
@@ -210,20 +221,19 @@ namespace RogueCastle
 		m_time += dt;
 		m_camera.ElapsedTotalSeconds(dt);
 
-		/* The camera closes in on the body: 1 s from the castle view to
-		 * (the player, his feet 10 under the centre) at Zoom 1. */
+		/* The camera recentres on the body over 1 s (Quad.EaseInOut):
+		 * the feet 10 under the centre, the zoom never changes (the
+		 * C#'s Zoom 1 = the port's 0.5). */
 		if (m_time >= 1 && m_time <= 2)
 		{
 			float e = QuadInOut(m_time - 1);
 			m_camera.X(660 + (m_look.x - 660) * e);
 			m_camera.Y(360 + (m_look.y + m_look.feet - 10 - 360) * e);
-			m_camera.Zoom(0.5f + 0.5f * e);
 		}
 		else if (m_time > 2)
 		{
 			m_camera.X(m_look.x);
 			m_camera.Y(m_look.y + m_look.feet - 10);
-			m_camera.Zoom(1);
 		}
 
 		if (before < 1.1 && m_time >= 1.1) Audio::PlaySound("Player_Death_Spotlight");
@@ -283,10 +293,11 @@ namespace RogueCastle
 		gfx_begin(frame);
 		if (!m_open) { gfx_clear(BLACK); return; }
 		Darken(frame, m_lastFrame, Clamp01(m_time / 0.5));
-		float zoom = m_camera.Zoom();
+		const float zoom = m_camera.Zoom();   // 0.5: the castle's view
 		// camera space -> screen (the world draws go through m_camera, the
 		// texts are screen space)
 		auto sx = [&](float wx) { return (wx - m_camera.X()) * zoom + SCREEN_W / 2; };
+		auto sy = [&](float wy) { return (wy - m_camera.Y()) * zoom + 240; };
 
 		// The parade of the killed enemies (DropStats)
 		for (size_t i = 0; i < m_parade.size(); i++)
@@ -302,25 +313,28 @@ namespace RogueCastle
 			m_frame->Draw(&m_camera);
 			m_portrait->Draw(&m_camera);
 			m_plaque->Draw(&m_camera);
-			float cx = sx(m_look.x);
-			float y = (m_look.y - 120 + 82 - 10 + 20 - m_camera.Y()) * zoom + 240;
-			m_font.DrawOutlined(frame, m_heir.name.c_str(), cx, y, 0.32f * zoom, WHITE, OUTLINE, 1, Text::Align::Centre);
+			/* The card's texts, laid out like the lineage entries
+			 * (DrawEntry): the name 10 above the y+140 line, the class,
+			 * the traits. */
+			float cx = sx(m_look.x + 5);
+			float y = sy(m_cardY + 140) - 10;
+			m_font.DrawOutlined(frame, m_heir.name.c_str(), cx, y, 0.32f, WHITE, OUTLINE, 1, Text::Align::Centre);
 			y += 16;
-			m_font.DrawOutlined(frame, m_classLine.c_str(), cx, y, 0.24f * zoom, WHITE, OUTLINE, 1, Text::Align::Centre);
+			m_font.DrawOutlined(frame, m_classLine.c_str(), cx, y, 0.24f, WHITE, OUTLINE, 1, Text::Align::Centre);
 			y += 14;
-			m_font.DrawOutlined(frame, m_traitLine.c_str(), cx, y, 0.24f * zoom, WHITE, OUTLINE, 1, Text::Align::Centre);
+			m_font.DrawOutlined(frame, m_traitLine.c_str(), cx, y, 0.24f, WHITE, OUTLINE, 1, Text::Align::Centre);
 		}
 		m_hero->Draw(&m_camera);
 		if (m_time >= 3 && m_ghost != nullptr && m_ghost->Opacity() > 0.01f)
 			m_ghost->Draw(&m_camera);
 
-		// The spotlight comes with the fade to black (1 s, 0.1 s ramp)
-		if (m_time >= 1) m_spotlight->Draw(&m_camera);
-		// The dialogue plate fades in with the death animation (2 s)
+		// The spotlight and the plate are screen-space UI (the C#'s
+		// second, camera-less pass): they never follow the moving camera
+		if (m_time >= 1) m_spotlight->Draw(&m_uiCamera);
 		if (m_time >= 2)
 		{
 			m_plate->Opacity(Clamp01((m_time - 2) / 0.5));
-			m_plate->Draw(&m_camera);
+			m_plate->Draw(&m_uiCamera);
 			const float cx = SCREEN_W / 2, top = 365 - 45;
 			m_font.DrawOutlined(frame, m_slain.c_str(), cx, top + 8, 0.42f, WHITE, BLACK, 1, Text::Align::Centre);
 			m_font.DrawOutlined(frame, m_hint.c_str(), cx, top + 36, 0.3f, HINT_COLOUR, BLACK, 1, Text::Align::Centre);

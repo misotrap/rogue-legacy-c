@@ -60,7 +60,8 @@ namespace RogueCastle
 		DS2DEngine::ObjContainer *MakeHero(const char *sprite, float scale);
 
 		Text::Font m_font;
-		DS2DEngine::Camera2D m_camera;   // starts at the 1320x720 view, closes to Zoom 1
+		DS2DEngine::Camera2D m_camera;    // recentres on the body over 1 s
+		DS2DEngine::Camera2D m_uiCamera;  // fixed: the plate and the spotlight are screen-space UI (Draw's second pass)
 		DS2DEngine::SpriteObj *m_spotlight = nullptr, *m_ghost = nullptr, *m_plate = nullptr;
 		DS2DEngine::SpriteObj *m_frame = nullptr, *m_plaque = nullptr;   // the heir's card
 		DS2DEngine::ObjContainer *m_hero = nullptr;      // the body, lit, over the dark
@@ -71,6 +72,7 @@ namespace RogueCastle
 		Lineage::Heir m_heir;
 		std::string m_slain, m_hint, m_partingTitle, m_continue, m_classLine, m_traitLine;
 		std::vector<uint32_t> m_lastFrame;
+		float m_cardY = 0;    // the heir card's anchor (the body y - 120)
 		double m_time = 0;
 		bool m_open = false, m_female = false;
 		bool m_deathSound[16] = {};   // the per-frame sounds, by frame index
