@@ -26,6 +26,8 @@
 
 namespace RogueCastle
 {
+static float ClassTotalHPMultiplier(uint8_t klass);
+
 
 using namespace DS2DEngine;
 
@@ -510,6 +512,22 @@ void PlayerObj::Update(GameTime *gameTime)
 	X(X() + Heading().X * (CurrentSpeed() * elapsedSeconds));
 
 	UpdatePlayerCollision();
+	/* The spikes (HazardObj, GLOBAL_DAMAGE_WALL): 20% of the base max hp;
+	 * ForceInvincible does not protect from them (PlayerObj.cs line 2288) */
+	if (m_hazards != nullptr && !IsKilled && State != STATE_HURT && m_invincibleCounter <= 0)
+	{
+		Rectangle me = TerrainBounds();
+		for (const Hazard &h : *m_hazards)
+		{
+			Rectangle r((int) h.x, (int) h.y, (int) h.width, (int) h.height);
+			if (!me.Intersects(r)) continue;
+			float base = MaxHealth() - (m_stats != nullptr ? m_stats->LichHealth : 0);
+			if (m_stats != nullptr) base /= ClassTotalHPMultiplier(m_stats->hero.classType);
+			int damage = (int) (lroundf(base) * GameEV::HAZARD_DAMAGE_PERCENT);
+			HitPlayer(damage < 1 ? 1 : damage, Vector2(h.x + h.width * 0.5f, h.y + h.height * 0.5f));
+			break;
+		}
+	}
 	/* UpdateAnimationState only runs when no logic set is active
 	 * (PlayerObj.cs line 1392). */
 	if (!IsLogicSetActive())
@@ -954,6 +972,13 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 
 	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN)
 	{
+		/* PlayerObj.cs line 1973: only walls stop the hero (WALL,
+		 * WALL_FOR_PLAYER, ENEMYWALL/the port's damage walls), never the
+		 * terrain boxes of the enemies or of the loot */
+		IPhysicsObj *wall = otherBox->PhysicsParent();
+		int tag = wall != nullptr ? wall->CollisionTypeTag() : 1;
+		if (tag != 1 && tag != 4 && tag != 5 && tag != 10)
+			return;
 		/* PlayerObj.cs line 1985: the platforms open underneath (one-ways)
 		 * let the hero drop through them, jump up through them, and do
 		 * not catch him from below */

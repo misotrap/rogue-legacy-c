@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/ItemDropObj.cs. */
 #include "ItemDropObj.h"
+#include "../../DS2DEngine/Consts.h"
 #include "Player/PlayerObj.h"
 #include "../Save/SaveGame.h"
 #include "../EVs/GameEV.h"
@@ -150,6 +151,16 @@ void ItemDropObj::GiveReward(PlayerObj *player)
 	default:
 		break;
 	}
+}
+
+void ItemDropObj::CollisionResponse(DS2DEngine::CollisionBox *thisBox, DS2DEngine::CollisionBox *otherBox, int collisionResponseType)
+{
+	DS2DEngine::IPhysicsObj *other = otherBox->PhysicsParent();
+	if (collisionResponseType != ::Consts::COLLISIONRESPONSE_TERRAIN || other == nullptr || other->CollisionTypeTag() != 1)
+		return;
+	PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);
+	if (AccelerationY() == 0)
+		AccelerationX(0);   /* it stops where it lands */
 }
 
 } // namespace RogueCastle

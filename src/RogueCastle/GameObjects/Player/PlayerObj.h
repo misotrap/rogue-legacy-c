@@ -41,6 +41,7 @@ public:
 	void UpdatePlayerCollision();
 	void SetTerrain(const std::vector<DS2DEngine::IPhysicsObj *> *terrain) { m_attachedTerrain = terrain; }
 	void SetSlopes(const std::vector<Slope> *slopes) { m_slopes = slopes; }
+	void SetHazards(const std::vector<Hazard> *hazards) { m_hazards = hazards; }
 	void SetLevelScreen(class ProceduralLevelScreen *levelScreen) { m_levelScreen = levelScreen; }
 	class ProceduralLevelScreen *LevelScreen() const { return m_levelScreen; }
 
@@ -161,6 +162,7 @@ public:
 	float m_dropThroughGroundDuration = 0.1f;   /* PlayerObj.cs line 99 */
 	const std::vector<DS2DEngine::IPhysicsObj *> *m_attachedTerrain = nullptr;
 	const std::vector<Slope> *m_slopes = nullptr;
+	const std::vector<Hazard> *m_hazards = nullptr;
 
 	/* Attack / dash state (the C# LogicSet machinery, PlayerObj.cs
 	 * InitializeLogic line 276, compacted: the original only ever plays

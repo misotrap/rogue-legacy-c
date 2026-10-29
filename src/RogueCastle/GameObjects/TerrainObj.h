@@ -17,6 +17,8 @@ namespace RogueCastle
 /* A 45 degree CollHullObj: the rectangle (x, y, width, height) turned
  * around its top-left corner, so its top is a ramp both ways */
 struct Slope { float x, y, width, height; };
+/* A HazardObj's spikes: the box that hurts (20% of the base max hp) */
+struct Hazard { float x, y, width, height; };
 
 class TerrainObj : public DS2DEngine::GameObj, public DS2DEngine::IPhysicsObj
 {

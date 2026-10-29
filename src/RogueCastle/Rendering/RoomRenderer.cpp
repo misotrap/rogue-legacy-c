@@ -304,6 +304,9 @@ namespace RogueCastle
 		// 4. borders
 		for (const Levels::ObjData &o : room.objs)
 			if (o.type == "BorderObj") DrawBorder(camera, o, art);
+		// the spikes (HazardObj.Draw: the sprite repeated along the width)
+		for (const Levels::ObjData &o : room.objs)
+			if (o.type == "HazardObj") Strip(camera, "Spikes_Sprite", o.x, o.y, o.width, o.rotation, 1);
 		// 5. the other decorations
 		for (GameObj *o : d.front) o->Draw(camera);
 	}

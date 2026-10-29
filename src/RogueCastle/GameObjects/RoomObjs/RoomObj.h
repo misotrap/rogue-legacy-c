@@ -62,6 +62,7 @@ public:
 
 	const std::vector<TerrainObj *> &TerrainObjList() const { return m_terrainList; }
 	const std::vector<Slope> &SlopeList() const { return m_slopeList; }
+	const std::vector<Hazard> &HazardList() const { return m_hazardList; }
 	/* A CollHullObj by its name ("BlacksmithBlock"...), nullptr if none */
 	TerrainObj *TerrainNamed(const std::string &name) const;
 	/* The Dementia trait (SpawnDementiaEnemy): a hallucination of the given
@@ -96,6 +97,7 @@ private:
 	int m_linkedRoom = -1;
 	std::vector<TerrainObj *> m_terrainList;
 	std::vector<Slope> m_slopeList;
+	std::vector<Hazard> m_hazardList;
 	std::vector<std::pair<std::string, TerrainObj *>> m_namedTerrain;
 	std::vector<class EnemyObj *> m_tempEnemies;
 	std::vector<DS2DEngine::PhysicsObjContainer *> m_gameObjList;   /* owned */

@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/RoomObjs/RoomObj.cs (subset). */
 #include "RoomObj.h"
+#include <cmath>
 #include <algorithm>
 #include "../../../DS2DEngine/GameObjs/SpriteObj.h"
 #include "../../../SpriteSystem/SpriteLibrary.h"
@@ -171,6 +172,29 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 			m_terrainList.push_back(terrain);
 			if (obj.name.compare(0, 9, "Coll_Hull") != 0)
 				m_namedTerrain.emplace_back(obj.name, terrain);
+		}
+		/* HazardObj (HazardObj.cs): the spikes, turned around their top-left
+		 * corner. Spikes_Sprite's boxes: the solid part (10, 15, width-25,
+		 * 40) and the one that hurts (0, 0, width, 60) */
+		else if (obj.type == "HazardObj")
+		{
+			auto turned = [&](float ox, float oy, float w, float h)
+			{
+				float rad = obj.rotation * 3.14159265f / 180.0f, c = cosf(rad), s = sinf(rad);
+				float xs[4] = { ox, ox + w, ox + w, ox }, ys[4] = { oy, oy, oy + h, oy + h };
+				float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
+				for (int i = 0; i < 4; i++)
+				{
+					float px = obj.x + xs[i] * c - ys[i] * s, py = obj.y + xs[i] * s + ys[i] * c;
+					x0 = fminf(x0, px); x1 = fmaxf(x1, px); y0 = fminf(y0, py); y1 = fmaxf(y1, py);
+				}
+				return Hazard { roundf(x0), roundf(y0), roundf(x1 - x0), roundf(y1 - y0) };
+			};
+			Hazard solid = turned(10, 15, obj.width - 25, 40);
+			TerrainObj *terrain = new TerrainObj((int) solid.width, (int) solid.height);
+			terrain->Populate((int) solid.x, (int) solid.y, (int) solid.width, (int) solid.height, true, true, true, true);
+			m_terrainList.push_back(terrain);
+			m_hazardList.push_back(turned(0, 0, obj.width, 60));
 		}
 		/* Collidable PhysicsObj (bookcases...): WALL_FOR_PLAYER, solid on
 		 * top only (LevelParser.cs line 161), so the hero can stand on them */

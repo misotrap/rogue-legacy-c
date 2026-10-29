@@ -83,6 +83,7 @@ private:
 	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */
 	std::vector<DS2DEngine::IPhysicsObj *> m_allTerrain;
 	std::vector<Slope> m_allSlopes;
+	std::vector<Hazard> m_allHazards;
 	RoomObj *m_currentRoom = nullptr;
 	bool m_timeStopped = false;  /* the time stop spell (a flag: it lasts
 	                              while the hero's mana pays the drain) */

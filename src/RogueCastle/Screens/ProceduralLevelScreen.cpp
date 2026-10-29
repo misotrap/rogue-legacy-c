@@ -88,6 +88,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	m_player = new PlayerObj();
 	m_player->SetTerrain(&m_allTerrain);
 	m_player->SetSlopes(&m_allSlopes);
+	m_player->SetHazards(&m_allHazards);
 	m_player->SetLevelScreen(this);
 	m_physicsManager.AddObject(m_player);
 
@@ -110,6 +111,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		}
 		for (const Slope &slope : room->SlopeList())
 			m_allSlopes.push_back(slope);
+		for (const Hazard &hazard : room->HazardList())
+			m_allHazards.push_back(hazard);
 		for (DS2DEngine::PhysicsObjContainer *obj : room->GameObjList())
 			m_physicsManager.AddObject(obj);
 		/* BreakableObj.cpp needs the level to drop its loot (no RTTI, so
@@ -252,9 +255,16 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	bool upPressed = Game::GlobalInput.JustPressed(PLAYER_UP1)
 	                  || Game::GlobalInput.JustPressed(PLAYER_UP2);
 	Rectangle playerBounds = m_player != nullptr ? m_player->Bounds() : Rectangle();
+	Rectangle roomBounds = m_currentRoom != nullptr ? m_currentRoom->Bounds() : Rectangle();
 	for (ChestObj *chest : m_chestList)
 	{
-		chest->Update(gameTime);
+		/* FairyChestObj checks its condition from Draw, so only in the
+		 * room the hero is in (ProceduralLevelScreen.cs: CurrentRoom.Draw) */
+		bool here = roomBounds.Intersects(chest->Bounds());
+		if (!chest->IsFairyChest() || here)
+			chest->Update(gameTime);
+		if (!here)
+			continue;
 		if (chest->IsOpen() || chest->IsLocked || m_player == nullptr)
 			continue;
 		if (chest->Bounds().Intersects(playerBounds) && m_player->IsTouchingGround()
@@ -595,6 +605,14 @@ void ProceduralLevelScreen::DropItem(Vector2 position, int dropType, float amoun
 	m_itemDrops.push_back(item);
 	m_physicsManager.AddObject(item);
 	item->Position(position);
+	/* ItemDropObj.ConvertDrop (line 87): a terrain box so it lands */
+	item->UpdateCollisionBoxes();
+	{
+		Rectangle b = item->RelativeBounds();
+		item->AddCollisionBox(b.X, b.Y, b.Width, b.Height, ::Consts::TERRAIN_HITBOX);
+		item->DisableHitboxUpdatingFlag = true;
+		item->UpdateTerrainBox();
+	}
 	item->AccelerationY(-(480 + (float) (rand() % 241)));          /* -720..-480 */
 	item->AccelerationX((float) (rand() % 241) - 120);             /* -120..120 */
 	item->AnimationDelay(1 / 20.0f);
@@ -616,6 +634,14 @@ void ProceduralLevelScreen::DropItemWide(Vector2 position, int dropType, float a
 	m_itemDrops.push_back(item);
 	m_physicsManager.AddObject(item);
 	item->Position(position);
+	/* ItemDropObj.ConvertDrop (line 87): a terrain box so it lands */
+	item->UpdateCollisionBoxes();
+	{
+		Rectangle b = item->RelativeBounds();
+		item->AddCollisionBox(b.X, b.Y, b.Width, b.Height, ::Consts::TERRAIN_HITBOX);
+		item->DisableHitboxUpdatingFlag = true;
+		item->UpdateTerrainBox();
+	}
 	item->AccelerationY(-300 - (float) (rand() % 901));            /* -1200..-300 */
 	item->AccelerationX((float) (rand() % 1201) - 600);             /* -600..600 */
 	item->AnimationDelay(1 / 20.0f);

@@ -49,6 +49,8 @@ namespace ItemDropType
 class ItemDropObj : public DS2DEngine::PhysicsObjContainer
 {
 public:
+	/* ItemDropObj.cs line 162: lands only on the terrain (walls, floors) */
+	void CollisionResponse(DS2DEngine::CollisionBox *thisBox, DS2DEngine::CollisionBox *otherBox, int collisionResponseType) override;
 	ItemDropObj();
 
 	/* ItemDropObj.cs line 21 (ConvertDrop): the sprite and the amount. */

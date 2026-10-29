@@ -395,8 +395,8 @@ namespace RogueCastle
 		{
 			const char *arg = debugNear;
 			debugNear = nullptr;
-			bool breakable = arg[0] == 'b';
-			int want = atoi(breakable ? arg + 1 : arg), seen = 0;
+			bool breakable = arg[0] == 'b', hazard = arg[0] == 'h';   // h<n>: beside the n-th spikes
+			int want = atoi(breakable || hazard ? arg + 1 : arg), seen = 0;
 			const char *comma = strchr(arg, ',');
 			float dx = comma != nullptr ? (float) atof(comma + 1) : -150;
 			const char *comma2 = comma != nullptr ? strchr(comma + 1, ',') : nullptr;
@@ -405,6 +405,18 @@ namespace RogueCastle
 			{
 				if (r->Name() == "Boss") continue;
 				DS2DEngine::GameObj *target = nullptr;
+				if (hazard)
+				{
+					for (const Hazard &h : r->HazardList())
+						if (seen++ == want)
+						{
+							player->X(h.x + dx);
+							player->Y(h.y + dy);
+							fprintf(stderr, "near: spikes %.0f,%.0f %.0fx%.0f in %s\n", h.x, h.y, h.width, h.height, r->Name().c_str());
+							return false;
+						}
+					continue;
+				}
 				if (breakable)
 				{
 					for (BreakableObj *b : r->BreakableObjList())
