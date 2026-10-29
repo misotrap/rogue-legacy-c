@@ -19,6 +19,7 @@ public:
 	EnemyObj_IceWizard(PlayerObj *target, EnemyDifficulty difficulty);
 	~EnemyObj_IceWizard() override;
 	void ResetState() override;
+	void Kill(bool giveXP = true) override;
 
 protected:
 	void InitializeEV() override;

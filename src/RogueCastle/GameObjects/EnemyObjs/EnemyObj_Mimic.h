@@ -12,6 +12,7 @@ namespace RogueCastle
 class EnemyObj_Mimic : public EnemyObj
 {
 public:
+	void HitEnemy(int damage, Vector2 collisionPt, bool isPlayer) override;
 	EnemyObj_Mimic(PlayerObj *target, EnemyDifficulty difficulty);
 
 protected:
@@ -23,6 +24,8 @@ protected:
 	void UpdateEnemy(GameTime *gameTime) override;
 
 private:
+	bool m_isAttacking = false;   /* provoked: hit or touched */
+	void Provoke();
 	enum Action
 	{
 		ACTION_NONE,

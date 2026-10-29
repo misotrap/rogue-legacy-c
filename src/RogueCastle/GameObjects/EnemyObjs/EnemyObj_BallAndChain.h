@@ -19,6 +19,7 @@ public:
 	EnemyObj_BallAndChain(PlayerObj *target, EnemyDifficulty difficulty);
 	~EnemyObj_BallAndChain() override;
 	void ResetState() override;
+	void Kill(bool giveXP = true) override;
 
 protected:
 	void InitializeEV() override;

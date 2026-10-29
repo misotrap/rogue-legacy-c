@@ -19,6 +19,7 @@ public:
 	EnemyObj_FireWizard(PlayerObj *target, EnemyDifficulty difficulty);
 	~EnemyObj_FireWizard() override;
 	void ResetState() override;
+	void Kill(bool giveXP = true) override;
 
 protected:
 	void InitializeEV() override;

@@ -348,4 +348,11 @@ void EnemyObj_IceWizard::RunBasicLogic()
 	}
 }
 
+void EnemyObj_IceWizard::Kill(bool giveXP)
+{
+	/* EnemyObj_IceWizard.cs Kill: the held spell goes with its caster */
+	ResetIceball();
+	EnemyObj::Kill(giveXP);
+}
+
 } // namespace RogueCastle

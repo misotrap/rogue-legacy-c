@@ -20,6 +20,7 @@ public:
 	EnemyObj_EarthWizard(PlayerObj *target, EnemyDifficulty difficulty);
 	~EnemyObj_EarthWizard() override;
 	void ResetState() override;
+	void Kill(bool giveXP = true) override;
 
 protected:
 	void InitializeEV() override;

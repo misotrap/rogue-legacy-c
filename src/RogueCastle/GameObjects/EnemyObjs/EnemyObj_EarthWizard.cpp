@@ -399,4 +399,11 @@ void EnemyObj_EarthWizard::RunMinibossLogic()
 	}
 }
 
+void EnemyObj_EarthWizard::Kill(bool giveXP)
+{
+	/* EnemyObj_EarthWizard.cs Kill: the held spell goes with its caster */
+	CancelEarthSpell();
+	EnemyObj::Kill(giveXP);
+}
+
 } // namespace RogueCastle

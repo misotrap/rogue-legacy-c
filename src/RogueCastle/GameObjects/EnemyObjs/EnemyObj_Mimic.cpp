@@ -14,6 +14,7 @@ EnemyObj_Mimic::EnemyObj_Mimic(PlayerObj *target, EnemyDifficulty difficulty)
 {
 	/* EnemyObj_Mimic.cs line 310 (constructor). */
 	Type = EnemyType::Mimic;
+	LockFlip = true;   /* line 183: it faces where it was placed until provoked */
 }
 
 /* The difficulty blocks of InitializeEV only differ by their EV names
@@ -201,28 +202,33 @@ void EnemyObj_Mimic::UpdateAction()
 void EnemyObj_Mimic::UpdateEnemy(GameTime *gameTime)
 {
 	(void) gameTime;
+	/* CollisionResponse (line 296): touching the hero wakes it */
+	if (!m_isAttacking && !IsKilled && m_target != nullptr && Bounds().Intersects(m_target->TerrainBounds()))
+		Provoke();
 	UpdateAction();
+}
+
+void EnemyObj_Mimic::Provoke()
+{
+	m_isAttacking = true;
+	m_actionActive = false;   /* StopLogicBlock */
+	LockFlip = false;
+}
+
+void EnemyObj_Mimic::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
+{
+	if (!m_isAttacking) Provoke();   /* line 283 */
+	EnemyObj::HitEnemy(damage, collisionPt, isPlayer);
 }
 
 void EnemyObj_Mimic::RunBasicLogic()
 {
 	/* EnemyObj_Mimic.cs line 177: shake as a warning when the player
 	 * lingers, hop at them when they are close. */
-	switch (State)
-	{
-	case STATE_MELEE_ENGAGE:
-	case STATE_PROJECTILE_ENGAGE:
-		if (!m_actionActive)
-			StartAction(ACTION_JUMP);
-		break;
-	case STATE_ENGAGE:
-	case STATE_WANDER:
-		if (!m_actionActive)
-			StartAction(ACTION_SHAKE);
-		break;
-	default:
-		break;
-	}
+	/* line 220: it only shakes until hit or touched, then hops at the
+	 * hero whatever the distance */
+	if (!m_actionActive)
+		StartAction(m_isAttacking ? ACTION_JUMP : ACTION_SHAKE);
 }
 
 } // namespace RogueCastle

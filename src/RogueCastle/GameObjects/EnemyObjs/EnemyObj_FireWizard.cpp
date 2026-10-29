@@ -345,4 +345,11 @@ void EnemyObj_FireWizard::RunBasicLogic()
 	}
 }
 
+void EnemyObj_FireWizard::Kill(bool giveXP)
+{
+	/* EnemyObj_FireWizard.cs Kill: the held spell goes with its caster */
+	ResetFireball();
+	EnemyObj::Kill(giveXP);
+}
+
 } // namespace RogueCastle

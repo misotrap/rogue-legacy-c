@@ -265,6 +265,8 @@ void EnemyObj_Wolf::RunBasicLogic()
 	case STATE_ENGAGE:
 		if (!Chasing)
 			StartAction(ACTION_WALK);
+		else if (CurrentSpeed() == 0)
+			CurrentSpeed(Speed);   /* the C# keeps galloping: a finished set keeps its speed */
 		break;
 	case STATE_WANDER:
 		if (Chasing)

@@ -311,4 +311,19 @@ void EnemyObj_BallAndChain::ResetState()
 	EnemyObj::ResetState();
 }
 
+void EnemyObj_BallAndChain::Kill(bool giveXP)
+{
+	/* EnemyObj_BallAndChain.cs line 407: the balls go with the knight
+	 * (the original turns them into bouncing spikes; not ported yet) */
+	for (ProjectileObj **ball : { &m_ball, &m_ball2 })
+		if (*ball != nullptr)
+		{
+			(*ball)->IsKilled = true;
+			(*ball)->Visible(false);
+			(*ball)->IsCollidableFlag = false;
+			*ball = nullptr;
+		}
+	EnemyObj::Kill(giveXP);
+}
+
 } // namespace RogueCastle

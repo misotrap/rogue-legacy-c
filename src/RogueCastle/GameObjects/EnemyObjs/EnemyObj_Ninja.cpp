@@ -386,7 +386,10 @@ void EnemyObj_Ninja::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
 {
 	/* EnemyObj_Ninja.cs line 363: a chance to teleport to the ceiling
 	 * instead of taking the hit. */
-	if (m_target != nullptr && m_target->CurrentHealth > 0 && m_action != ACTION_TELEPORT
+	/* In the shipped game the teleport never happens: it needs
+	 * m_closestCeiling, which is only set inside that very branch
+	 * (EnemyObj_Ninja.cs line 439). Kept off to match. */
+	if (false && m_target != nullptr && m_target->CurrentHealth > 0 && m_action != ACTION_TELEPORT
 	    && (float) rand() / (float) RAND_MAX <= ChanceToTeleport)
 	{
 		TerrainObj *ceiling = FindClosestCeiling();

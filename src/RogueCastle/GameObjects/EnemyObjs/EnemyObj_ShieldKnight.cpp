@@ -144,9 +144,7 @@ void EnemyObj_ShieldKnight::InitializeOne(EnemyDifficulty difficulty)
 		KnockBack = Vector2(EnemyEV::ShieldKnight_Basic_KnockBack.X, EnemyEV::ShieldKnight_Basic_KnockBack.Y);
 		break;
 	}
-	/* The shield blocks even more on higher difficulties (line 17 area). */
-	if (DifficultyType == EXPERT || DifficultyType == MINIBOSS)
-		m_blockDmgReduction = 0.7f;
+	/* m_blockDmgReduction stays 0.6 on every difficulty (line 17) */
 }
 
 void EnemyObj_ShieldKnight::InitializeEV()
