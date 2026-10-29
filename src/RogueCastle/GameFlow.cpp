@@ -1,4 +1,5 @@
 #include "GameFlow.h"
+#include "../perf.h"
 
 #include "../Audio/Audio.h"
 #include "../Text/Loc.h"
@@ -620,6 +621,7 @@ namespace RogueCastle
 
 	void GameFlow::DrawState(uint32_t *frame, double drawElapsed)
 	{
+		if (m_state != State::Castle) perf_label("menu");
 		switch (m_state)
 		{
 		case State::Title:
@@ -648,6 +650,12 @@ namespace RogueCastle
 			m_level->Draw(m_level->Camera());
 			if (InCourtyard()) m_court.Draw(m_level->Camera(), m_save.skills);
 			m_bossRoom.DrawWorld(m_level->Camera());
+			perf_mark(PERF_WORLD);
+			if (m_level->CurrentRoom() != nullptr)
+			{
+				static const char *const AREAS[] = { "cour", "chateau", "jardin", "donjon", "tour" };
+				perf_label(InCourtyard() ? "cour" : AREAS[(int) m_level->CurrentRoom()->LevelType() % 5]);
+			}
 			const bool glasses = m_save.SpecialItem == 8;   // SpecialItemType.Glasses
 			if (m_level->Player() != nullptr)
 			{
@@ -656,6 +664,7 @@ namespace RogueCastle
 				m_traitEffects.World(frame, m_save.hero, glasses, dungeon,
 					(m_level->Player()->X() - cam->X()) * 0.5f + SCREEN_W / 2, (m_level->Player()->Y() - cam->Y()) * 0.5f + SCREEN_H / 2);
 			}
+			perf_mark(PERF_EFFECTS);
 			HUDValues v;
 			/* The hero's real vitals (PlayerObj health and mana). */
 			if (m_level->Player() != nullptr)
@@ -684,7 +693,9 @@ namespace RogueCastle
 				if (room == nullptr || (room->name != "Boss" && room->name != "ChallengeBoss"))
 					m_map.DrawMini(frame, m_level->Castle(), px, py, 1 / 60.0);
 			}
+			perf_mark(PERF_HUD);
 			m_traitEffects.Screen(frame, m_save.hero, glasses, m_level->Camera(), drawElapsed);
+			perf_mark(PERF_EFFECTS);
 			m_dialogue.Dyslexia = m_save.hero.HasTrait(TraitType::Dyslexia);
 			if (m_dialogue.IsOpen()) m_dialogue.Draw(frame);
 			m_bossRoom.Draw(frame);

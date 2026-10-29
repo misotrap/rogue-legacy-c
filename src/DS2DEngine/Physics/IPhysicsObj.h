@@ -53,6 +53,9 @@ public:
 	 * spell projectiles (which use the projectile invincibility counter
 	 * and their own damage) from the sword. */
 	virtual bool IsSpellProjectile() const { return false; }
+	/* EnergonProjectileObj.CollisionResponse: the hero's box (its type) met
+	 * this shot; true when the shot is sent back at its shooter */
+	virtual bool Reflect(int playerBoxType, bool airAttacking, bool blocking) { (void) playerBoxType; (void) airAttacking; (void) blocking; return false; }
 	/* What killed the hero (GameOverScreen): the enemy's name, "" for a
 	 * shot without a shooter, nullptr when it is not a killer. boss: a
 	 * miniboss or the last boss, "terrassé par" in the original. */

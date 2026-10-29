@@ -248,9 +248,12 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	if (m_currentRoom != nullptr && !m_timeStopped)
 		m_currentRoom->Update(gameTime);
 	else if (m_currentRoom != nullptr)
-		for (EnemyObj *enemy : m_currentRoom->EnemyList())   // frozen, but they still die
+		for (size_t i = 0; i < m_currentRoom->EnemyList().size(); i++)   // frozen, but they still die
+		{
+			EnemyObj *enemy = m_currentRoom->EnemyList()[i];
 			if (!enemy->IsKilled && !enemy->NonKillable && enemy->CurrentHealth <= 0)
 				enemy->Kill(true);
+		}
 	if (m_player != nullptr)
 		m_player->Update(gameTime);
 
@@ -664,6 +667,13 @@ void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
 	if (getenv("RL_DEBUG_TRACE") != nullptr)
 		fprintf(stderr, "proj: %s (%.0f,%.0f) [add]\n",
 		        proj->SpriteName().c_str(), proj->X(), proj->Y());
+}
+
+void ProceduralLevelScreen::KillProjectilesFrom(EnemyObj *source)
+{
+	for (ProjectileObj *proj : m_projectiles)
+		if (proj->Source == source)
+			proj->KillProjectile();
 }
 
 ProjectileObj *ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,

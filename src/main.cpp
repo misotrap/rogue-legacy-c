@@ -6,6 +6,7 @@
 #include "RogueCastle/Game.h"
 #include "RogueCastle/GameFlow.h"
 #include "gfx.h"
+#include "perf.h"
 #include "platform.h"
 
 #define TICK (1.0 / 60.0)   /* fixed game step */
@@ -33,6 +34,7 @@ int main(int argc, char **argv)
 	lastDraw = last;
 	while (plat_poll(&buttons) && !flow.WantsQuit())
 	{
+		perf_start();
 		double now = plat_time();
 		acc += now - last;
 		last = now;
@@ -40,11 +42,14 @@ int main(int argc, char **argv)
 			acc = 0.25;
 
 		/* Fixed 60 Hz logic, any number of steps per drawn frame. */
+		int steps = 0;
 		while (acc >= TICK)
 		{
 			flow.Update(buttons, TICK);
 			acc -= TICK;
+			steps++;
 		}
+		perf_mark(PERF_UPDATE);
 
 		double drawElapsed = now - lastDraw;
 		lastDraw = now;
@@ -52,7 +57,11 @@ int main(int argc, char **argv)
 		/* The Vertigo trait: the whole world plays upside down. */
 		if (flow.VertigoActive())
 			gfx_flip_vertical(plat_frame());
+		perf_draw(plat_frame());
+		perf_mark(PERF_HUD);
 		plat_present();
+		perf_mark(PERF_PRESENT);
+		perf_frame(steps);
 	}
 	plat_quit();
 	return 0;

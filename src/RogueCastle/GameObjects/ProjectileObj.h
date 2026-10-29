@@ -26,6 +26,10 @@ public:
 
 	int DealsDamage() const override { return Damage; }
 	bool IsSpellProjectile() const override { return true; }
+	bool Reflect(int playerBoxType, bool airAttacking, bool blocking) override;
+	/* EnergonProjectileObj: the type (0 sword, 1 shield, 2 down sword) the
+	 * hero must answer with to send it back; -1 for other shots */
+	int EnergonType = -1;
 	const std::string *KillerName(bool &boss) const override;
 	uint8_t ProjectileSpell() const override { return Spell; }
 	/* ProjectileObj.cs line 697: DestroysWithEnemy. */

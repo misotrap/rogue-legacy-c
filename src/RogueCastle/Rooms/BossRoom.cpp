@@ -376,6 +376,11 @@ namespace RogueCastle
 		RoomObj *room = level->CurrentRoom();
 		if (player == nullptr || room == nullptr || player->IsKilled) return false;
 
+		/* Dev/test: RL_DEBUG_KILL=<s> kills the room's enemies after s seconds */
+		static double debugKill = getenv("RL_DEBUG_KILL") != nullptr ? atof(getenv("RL_DEBUG_KILL")) : -1;
+		if (debugKill > 0 && (debugKill -= dt) <= 0)
+			level->DamageAllEnemies(1000000);
+
 		/* Dev/test: RL_DEBUG_BOSS=<LevelType 1-4> puts the hero at that
 		 * area's boss door, 5 at the last boss's. */
 		static const char *debugBoss = getenv("RL_DEBUG_BOSS");

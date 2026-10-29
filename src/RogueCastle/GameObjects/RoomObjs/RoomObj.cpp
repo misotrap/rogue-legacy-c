@@ -323,8 +323,10 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 void RoomObj::Update(GameTime *gameTime)
 {
 	/* CurrentRoom.Update(gameTime): the enemies of the active room. */
-	for (EnemyObj *enemy : m_enemyList)
+	/* By index: a dying enemy may add others (the ball knight's spikes) */
+	for (size_t i = 0; i < m_enemyList.size(); i++)
 	{
+		EnemyObj *enemy = m_enemyList[i];
 		enemy->Update(gameTime);
 		if (getenv("RL_DEBUG_TRACE") != nullptr)
 			fprintf(stderr, "e: %s %s vis=%d killed=%d x=%.0f y=%.0f hp=%.0f\n",

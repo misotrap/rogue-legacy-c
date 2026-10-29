@@ -975,6 +975,15 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 
 void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, int collisionResponseType)
 {
+	/* The Energon's shots: answered with the right move, they go back */
+	if (collisionResponseType == Consts::COLLISIONRESPONSE_FIRSTBOXHIT
+	    || collisionResponseType == Consts::COLLISIONRESPONSE_SECONDBOXHIT)
+	{
+		IPhysicsObj *otherParent = otherBox->PhysicsParent();
+		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 3
+		    && otherParent->Reflect(thisBox->Type(), IsAirAttacking, State == STATE_BLOCKING))
+			return;
+	}
 	/* PlayerObj.cs line 2053: an enemy weapon touching the player's body
 	 * hits (blocking comes with the Knight2 class). */
 	if (thisBox->Type() == Consts::BODY_HITBOX && otherBox->Type() == Consts::WEAPON_HITBOX

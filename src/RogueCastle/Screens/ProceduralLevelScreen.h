@@ -51,6 +51,8 @@ public:
 	void AddPopup(const std::string &text, float x, float y, uint32_t colour);
 	/* Dev/test (RL_DEBUG_CHEST): "12p" opens chest 12, forcing a print. */
 	void DebugOpenChest(const char *arg);
+	/* The shots of this enemy vanish (EnemyObj_Energon.DestroyAllProjectiles) */
+	void KillProjectilesFrom(class EnemyObj *source);
 	class ProjectileObj *FireProjectile(const char *spriteName, Vector2 position,
 	                    Vector2 heading, float speed, int damage,
 	                    Vector2 scale, bool weighted, class EnemyObj *source,

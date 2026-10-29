@@ -45,6 +45,25 @@ ProjectileObj::ProjectileObj(const std::string &spriteName, Vector2 position,
 	UpdateTerrainBox();
 }
 
+bool ProjectileObj::Reflect(int playerBoxType, bool airAttacking, bool blocking)
+{
+	/* EnergonProjectileObj.cs line 50: the sword, the down strike or the
+	 * block (by type) sends it back at the Energon, twice as fast */
+	if (EnergonType < 0 || CollisionTypeTag() != 3 || Source == nullptr)
+		return false;
+	bool weapon = playerBoxType == Consts::WEAPON_HITBOX, body = playerBoxType == Consts::BODY_HITBOX;
+	if ((EnergonType == 0 && weapon && !airAttacking) || (EnergonType == 1 && body && blocking)
+	    || (EnergonType == 2 && weapon && airAttacking))
+	{
+		ChaseObj = (DS2DEngine::GameObj *) Source;
+		CollisionTypeTag(2);
+		m_speed *= 2;
+		Audio::PlaySound("Player_Block");
+		return true;
+	}
+	return false;
+}
+
 const std::string *ProjectileObj::KillerName(bool &boss) const
 {
 	static const std::string none;

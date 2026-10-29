@@ -314,16 +314,30 @@ void EnemyObj_BallAndChain::ResetState()
 
 void EnemyObj_BallAndChain::Kill(bool giveXP)
 {
-	/* EnemyObj_BallAndChain.cs line 407: the balls go with the knight
-	 * (the original turns them into bouncing spikes; not ported yet) */
-	for (ProjectileObj **ball : { &m_ball, &m_ball2 })
-		if (*ball != nullptr)
-		{
-			(*ball)->IsKilled = true;
-			(*ball)->Visible(false);
-			(*ball)->IsCollidableFlag = false;
-			*ball = nullptr;
-		}
+	/* EnemyObj_BallAndChain.cs line 407: each ball breaks loose as a
+	 * bouncing spike, flying on along its circle (slowed down by 1.5) */
+	static const char *const names[] = { "BASIC", "ADVANCED", "EXPERT", "MINIBOSS" };
+	const float speed = ChainSpeed * 200 / 1.5f;
+	for (int i = 0; i < 2; i++)
+	{
+		ProjectileObj *&ball = i == 0 ? m_ball : m_ball2;
+		if (ball == nullptr) continue;
+		Vector2 at = ball->Position();
+		ball->IsKilled = true;
+		ball->Visible(false);
+		ball->IsCollidableFlag = false;
+		ball = nullptr;
+		if (m_levelScreen == nullptr || IsHallucination()) continue;
+		EnemyObj *spike = m_levelScreen->AddEnemyToCurrentRoom(EnemyType::BouncySpike, at, names[DifficultyType]);
+		if (spike == nullptr) continue;
+		// The tangent of the circle: the ball's angle + 90 degrees
+		float angle = i == 0 ? m_ballAngle : DifficultyType == EXPERT ? -m_ballAngle * ChainSpeed2Modifier : m_ballAngle * ChainSpeed2Modifier;
+		float rad = (angle + 90) * PI / 180.0f;
+		spike->Heading(Vector2(cosf(rad), sinf(rad)));
+		spike->Speed = i == 0 ? speed : speed * ChainSpeed2Modifier;
+		spike->CurrentSpeed(spike->Speed);
+		if (IsPaused) spike->PauseEnemy();
+	}
 	EnemyObj::Kill(giveXP);
 }
 

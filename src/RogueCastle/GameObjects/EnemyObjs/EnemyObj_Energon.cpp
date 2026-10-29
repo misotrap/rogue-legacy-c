@@ -4,6 +4,9 @@
 #include "../../Types/EnemyType.h"
 #include "../Player/PlayerObj.h"
 #include "../../Screens/ProceduralLevelScreen.h"
+#include "../ProjectileObj.h"
+#include "../../../Audio/Audio.h"
+#include "../../../DS2DEngine/Consts.h"
 #include <cmath>
 #include <cstdlib>
 
@@ -21,6 +24,81 @@ EnemyObj_Energon::EnemyObj_Energon(PlayerObj *target, EnemyDifficulty difficulty
 	: EnemyObj("EnemyEnergonIdle_Character", target, difficulty)
 {
 	Type = EnemyType::Energon;
+	m_shield = new DS2DEngine::SpriteObj("EnergonSwordShield_Sprite");
+	m_shield->AnimationDelay(1 / 10.0f);
+	m_shield->PlayAnimation(true);
+	m_shield->Opacity(0.5f);
+	m_shield->Scale(Vector2(1.2f, 1.2f));
+}
+
+EnemyObj_Energon::~EnemyObj_Energon()
+{
+	delete m_shield;
+}
+
+void EnemyObj_Energon::SwitchType(unsigned char type)
+{
+	m_currentAttackType = type;
+	static const char *const SHIELDS[3] = { "EnergonSwordShield_Sprite", "EnergonShieldShield_Sprite", "EnergonDownSwordShield_Sprite" };
+	m_shield->ChangeSprite(SHIELDS[type]);
+	m_shield->PlayAnimation(true);
+}
+
+void EnemyObj_Energon::Draw(DS2DEngine::Camera2D *camera)
+{
+	EnemyObj::Draw(camera);
+	if (IsKilled || !Visible()) return;
+	m_shield->Position(Position());
+	m_shield->Flip(Flip());
+	m_shield->Draw(camera);
+}
+
+void EnemyObj_Energon::Kill(bool giveXP)
+{
+	if (m_levelScreen != nullptr) m_levelScreen->KillProjectilesFrom(this);
+	EnemyObj::Kill(giveXP);
+}
+
+void EnemyObj_Energon::CollisionResponse(DS2DEngine::CollisionBox *thisBox, DS2DEngine::CollisionBox *otherBox,
+                                         int collisionResponseType)
+{
+	/* EnemyObj_Energon.cs CollisionResponse */
+	DS2DEngine::IPhysicsObj *other = otherBox->PhysicsParent();
+	if (collisionResponseType == Consts::COLLISIONRESPONSE_FIRSTBOXHIT && other != nullptr && m_target != nullptr)
+	{
+		if (other == (DS2DEngine::IPhysicsObj *) m_target)
+		{
+			// The sword bounces off: the hero is pushed back, no damage
+			if (m_invincibleCounter <= 0)
+			{
+				Rectangle b = m_target->Bounds();
+				float kb = m_target->EnemyKnockBack.X;
+				m_target->AccelerationX(b.X + b.Width / 2 < X() ? -kb : kb);
+				m_target->AccelerationY(-m_target->EnemyKnockBack.Y);
+				Audio::PlaySound("Player_Block");
+				m_invincibleCounter = InvincibilityTime;
+				Blink(Color(173, 216, 230), 0.1f);
+			}
+			return;
+		}
+		if (other->IsSpellProjectile())
+		{
+			ProjectileObj *proj = static_cast<ProjectileObj *>(other);
+			if (proj->EnergonType >= 0)
+			{
+				// Its own shot sent back: it hurts only if the shield matches
+				if (proj->IsKilled) return;
+				proj->KillProjectile();
+				Rectangle a = thisBox->AbsRect();
+				if (proj->EnergonType == m_currentAttackType)
+					HitEnemy(proj->DealsDamage(), Vector2((float) a.X, (float) a.Y), true);
+				else
+					Audio::PlaySound("Player_Block");
+				return;
+			}
+		}
+	}
+	EnemyObj::CollisionResponse(thisBox, otherBox, collisionResponseType);
 }
 
 /* The difficulty blocks of InitializeEV only differ by their EV names
@@ -154,16 +232,16 @@ void EnemyObj_Energon::SwitchRandomType()
 {
 	/* SwitchRandomType (line 334): a type different from the current
 	 * one (the shield sprite change is visual only). */
-	unsigned char stored = m_currentAttackType;
-	while (stored == m_currentAttackType)
-		m_currentAttackType = (unsigned char) (rand() % 3);
+	unsigned char type = m_currentAttackType;
+	while (type == m_currentAttackType)
+		type = (unsigned char) (rand() % 3);
+	SwitchType(type);
 }
 
 void EnemyObj_Energon::FireProjectile()
 {
-	/* FireProjectile (line 297): the weapon ghost of the current type.
-	 * The original homes slowly at the player; the port aims at the
-	 * player's position when firing. */
+	/* FireProjectile (line 297): the weapon ghost of the current type,
+	 * homing at the hero (EnergonProjectileObj: ChaseTarget, TurnSpeed 1) */
 	const char *sprite = "EnergonSwordProjectile_Sprite";
 	switch (m_currentAttackType)
 	{
@@ -172,9 +250,15 @@ void EnemyObj_Energon::FireProjectile()
 	default: break;
 	}
 	float angle = atan2f(m_target->Y() - Y(), m_target->X() - X());
-	m_levelScreen->FireProjectile(sprite, Position(), Vector2(cosf(angle), sinf(angle)),
-	                              ProjectileSpeed, (int) ProjectileDamage,
-	                              ProjectileScale, false, this);
+	ProjectileObj *shot = m_levelScreen->FireProjectile(sprite, Position(), Vector2(cosf(angle), sinf(angle)),
+	                              ProjectileSpeed, (int) Damage, ProjectileScale, false, this);
+	shot->EnergonType = m_currentAttackType;
+	shot->ChaseTarget = true;
+	shot->ChaseObj = m_target;
+	shot->TurnSpeed = 1;
+	shot->Orientation = angle;
+	shot->Opacity(0.8f);
+	shot->Flip(Flip());
 }
 
 void EnemyObj_Energon::PickAction(const int *weights, int count, const Action *actions)
