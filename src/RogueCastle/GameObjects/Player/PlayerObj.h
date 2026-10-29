@@ -209,6 +209,12 @@ public:
 	float DashCoolDown = 0;
 	Vector2 KnockBack = Vector2(0, 0);
 	Vector2 EnemyKnockBack = Vector2(0, 0);
+	/* PlayerObj.cs line 3609: the grounded swing knocks harder */
+	Vector2 CurrentEnemyKnockBack() const { return m_activeLS == LS_STANDING_ATTACK3 ? Vector2(300, 360) : EnemyKnockBack; }
+	int NumAirBounces = 0;      /* down-strikes chained without landing */
+	float InvincibilityTime() const;   /* line 3697: + Invuln_Time_Up */
+	float BlockManaDrain() const;
+	float TotalGoldBonus() const;   /* line 3996 */
 
 	void InitializeEV();
 	float TotalMovementSpeed();      /* PlayerObj.cs line 4055 */

@@ -286,6 +286,7 @@ void EnemyObj::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
 		if (m_target->IsAirAttacking)
 		{
 			m_target->IsAirAttacking = false;
+			m_target->NumAirBounces++;
 			m_target->AccelerationY(-m_target->AirAttackKnockBack);
 		}
 	}
@@ -298,10 +299,10 @@ void EnemyObj::HitEnemy(int damage, Vector2 collisionPt, bool isPlayer)
 		if (KnockBack == Vector2(0, 0))
 		{
 			if (X() < m_target->X())
-				AccelerationX(-m_target->EnemyKnockBack.X * knockbackMod);
+				AccelerationX(-m_target->CurrentEnemyKnockBack().X * knockbackMod);
 			else
-				AccelerationX(m_target->EnemyKnockBack.X * knockbackMod);
-			AccelerationY(-m_target->EnemyKnockBack.Y * knockbackMod);
+				AccelerationX(m_target->CurrentEnemyKnockBack().X * knockbackMod);
+			AccelerationY(-m_target->CurrentEnemyKnockBack().Y * knockbackMod);
 		}
 		else
 		{
@@ -420,7 +421,7 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 						CurrentSpeed(0);
 						float mod = GameEV::BARBARIAN_SHOUT_KNOCKBACK_MOD;
 						Vector2 kb = KnockBack != Vector2(0, 0)
-						                 ? KnockBack : m_target->EnemyKnockBack;
+						                 ? KnockBack : m_target->CurrentEnemyKnockBack();
 						if (X() < m_target->X())
 							AccelerationX(-kb.X * mod);
 						else

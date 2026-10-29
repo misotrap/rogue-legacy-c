@@ -215,6 +215,12 @@ namespace RogueCastle
 	{
 		AddFamilyNode(m_save.NewBossBeaten);
 		m_save.LoadStartingRoom = true;   /* GameOverScreen.cs line 182 */
+		/* GameOverScreen.cs lines 177-192: the Lich's gains go with him;
+		 * the faceless portraits if he had Prosopagnosia */
+		m_save.LichHealth = 0;
+		m_save.LichMana = 0;
+		m_save.LichHealthMod = 1;
+		m_save.HasProsopagnosia = m_save.hero.HasTrait(TraitType::Prosopagnosia);
 		const Lineage::Heir &h = m_save.hero;
 		m_save.IsDead = true;
 		m_save.TimesDead++;

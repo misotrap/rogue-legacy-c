@@ -85,7 +85,8 @@ void ItemDropObj::GiveReward(PlayerObj *player)
 		float castleLockGoldModifier = 1;
 		if (stats->HasArchitectFee)
 			castleLockGoldModifier = GameEV::ARCHITECT_FEE;
-		int goldAmount = (int) (m_amount * castleLockGoldModifier + 0.5f);
+		/* ItemDropObj.cs line 104: x (1 + TotalGoldBonus) x the architect fee */
+		int goldAmount = (int) (m_amount * (1 + player->TotalGoldBonus()) * castleLockGoldModifier + 0.5f);
 		stats->Gold += goldAmount;
 		PopupColour = Color(255, 255, 0);   /* the yellow gold text */
 		char buf[32];

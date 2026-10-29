@@ -36,7 +36,17 @@ void BreakableObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherB
 	    && !HitBySpellsOnly)
 	{
 		if (!Broken && otherBox->PhysicsParent()->CollisionTypeTag() == 2 /* player */)
+		{
 			Break();
+			/* PlayerObj.cs line 1949: a down-strike bounces off it */
+			PlayerObj *player = m_levelScreen != nullptr ? m_levelScreen->Player() : nullptr;
+			if (player != nullptr && otherBox->PhysicsParent() == (DS2DEngine::IPhysicsObj *) player && player->IsAirAttacking)
+			{
+				player->IsAirAttacking = false;
+				player->NumAirBounces++;
+				player->AccelerationY(-player->AirAttackKnockBack);
+			}
+		}
 	}
 
 	/* Hack to make only terrain or other breakables collide with this:

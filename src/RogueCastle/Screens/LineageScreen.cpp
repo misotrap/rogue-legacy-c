@@ -323,6 +323,7 @@ namespace RogueCastle
 			if (m_xShift != 0) { m_xShift = 0; return false; }   // back to the heirs first
 			// LineageScreen.StartGame: the chosen heir becomes the hero
 			m_state->hero = m_state->currentBranches[m_selected];
+			m_state->HasProsopagnosia = false;
 			m_state->currentBranches.clear();
 			m_state->RerolledChildren = false;
 			SpriteSystem::SpriteLibrary::FreeSheet("getItemScreenSpritesheet");

@@ -77,7 +77,12 @@ float PlayerObj::TotalMovementSpeed()
 	/* PlayerObj.cs line 4055: moveSpeed = Speed * (TotalMovementSpeedPercent
 	 * + flightSpeedMod). The percent is 1 + equipment/runes/trait bonuses
 	 * (all 0 for the default knight, see TotalMovementSpeedPercent). */
-	return Speed * (1.0f + 0.0f);
+	if (m_stats == nullptr) return Speed;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	float classMod = m_stats->hero.classType == ClassType::Ninja || m_stats->hero.classType == ClassType::Ninja2 ? PlayerEV::NINJA_MOVESPEED_MOD : 0;
+	/* Hyperactive is already in Speed (GameFlow) */
+	return Speed * (1 + equip.secondary[EquipmentSecondaryDataType::MoveSpeed]
+		+ equip.runes[EquipmentAbilityType::MovementSpeed] * GameEV::RUNE_MOVEMENTSPEED_MOD + classMod);
 }
 
 void PlayerObj::ChangeSprite(const std::string &spriteName)
@@ -188,7 +193,7 @@ void PlayerObj::UpdateLogicSet()
 				Audio::PlaySound("Player_Attack01", "Player_Attack02");   /* the attack LogicSets */
 			ChangeSprite("PlayerAttacking3_Character");
 			UpdateEquipmentObjs();
-			AnimationDelay(AttackAnimationDelay);
+			AnimationDelay(1.0f / (20 + (m_stats != nullptr ? m_stats->skills.ModifierAmount(Skills::SkillType::Attack_Speed_Up) : 0)));   /* line 246 */
 			PlayAnimation(2, 4, false);
 			break;
 		case 1:   /* Delay(AttackDelay) then PlayAnimation("AttackStart","End") */
@@ -210,7 +215,7 @@ void PlayerObj::UpdateLogicSet()
 			IsAirAttacking = true;
 			ChangeSprite("PlayerAirAttack_Character");
 			UpdateEquipmentObjs();
-			AnimationDelay(AttackAnimationDelay);
+			AnimationDelay(1.0f / (20 + (m_stats != nullptr ? m_stats->skills.ModifierAmount(Skills::SkillType::Attack_Speed_Up) : 0)));   /* line 246 */
 			PlayAnimation("Start", "Start", false);
 			break;
 		case 1:
@@ -428,7 +433,7 @@ void PlayerObj::Update(GameTime *gameTime)
 		 * knight, while the block button is held. */
 		if (Game::GlobalInput.Pressed(PLAYER_BLOCK) && CanBlock() && !IsLogicSetActive())
 		{
-			if (CurrentMana >= GameEV::KNIGHT_BLOCK_DRAIN)
+			if (CurrentMana >= BlockManaDrain())
 			{
 				if (m_isTouchingGround)
 					CurrentSpeed(0);
@@ -512,6 +517,13 @@ void PlayerObj::Update(GameTime *gameTime)
 	X(X() + Heading().X * (CurrentSpeed() * elapsedSeconds));
 
 	UpdatePlayerCollision();
+	/* CharacterObj.CurrentHealth / CurrentMana are clamped to [0, max] */
+	if (m_stats != nullptr)
+	{
+		if (CurrentHealth > MaxHealth()) CurrentHealth = MaxHealth();
+		if (CurrentMana > MaxMana()) CurrentMana = MaxMana();
+		if (CurrentMana < 0) CurrentMana = 0;
+	}
 	/* The spikes (HazardObj, GLOBAL_DAMAGE_WALL): 20% of the base max hp;
 	 * ForceInvincible does not protect from them (PlayerObj.cs line 2288) */
 	if (m_hazards != nullptr && !IsKilled && State != STATE_HURT && m_invincibleCounter <= 0)
@@ -599,7 +611,8 @@ void PlayerObj::UpdatePlayerCollision()
 			/* PlayerObj.cs line 1774: a hurt hero turns invincible as he
 			 * lands, an air attack is cancelled, the knockback stops */
 			if (State == STATE_HURT)
-				m_invincibleCounter = BaseInvincibilityTime;
+				m_invincibleCounter = InvincibilityTime();
+			NumAirBounces = 0;
 			if (IsAirAttacking)
 			{
 				IsAirAttacking = false;
@@ -697,6 +710,8 @@ static float ClassTotalHPMultiplier(uint8_t klass)
 	case Assassin: case Assassin2: return PlayerEV::ASSASSIN_HEALTH_MOD;
 	case SpellSword: case SpellSword2: return PlayerEV::SPELLSWORD_HEALTH_MOD;
 	case Lich: case Lich2: return PlayerEV::LICH_HEALTH_MOD;
+	case Dragon: return PlayerEV::DRAGON_HEALTH_MOD;
+	case Traitor: return PlayerEV::TRAITOR_HEALTH_MOD;
 	default: return 1.0f;
 	}
 }
@@ -713,6 +728,8 @@ static float ClassTotalMPMultiplier(uint8_t klass)
 	case Assassin: case Assassin2: return PlayerEV::ASSASSIN_MANA_MOD;
 	case SpellSword: case SpellSword2: return PlayerEV::SPELLSWORD_MANA_MOD;
 	case Lich: case Lich2: return PlayerEV::LICH_MANA_MOD;
+	case Dragon: return PlayerEV::DRAGON_MANA_MOD;
+	case Traitor: return PlayerEV::TRAITOR_MANA_MOD;
 	default: return 1.0f;
 	}
 }
@@ -731,9 +748,21 @@ int PlayerObj::TotalDamage() const
 	                         + m_stats->skills.ModifierAmount(Skills::SkillType::Attack_Up)
 	                         + m_stats->skills.ModifierAmount(Skills::SkillType::Damage_Up_Final))
 	                         * ClassDamageGivenMultiplier(m_stats->hero.classType));
+	/* TotalAirAttackDamageMod (line 3576): half, plus Down_Strike_Up per
+	 * chained bounce, at most full */
+	if (IsAirAttacking)
+	{
+		float mod = 0.5f + m_stats->skills.ModifierAmount(Skills::SkillType::Down_Strike_Up) * NumAirBounces;
+		damageDealt = (int) (damageDealt * (mod > 1 ? 1 : mod));
+	}
 	if (damageDealt < 1)
 		damageDealt = 1;
 	return damageDealt;
+}
+
+float PlayerObj::InvincibilityTime() const
+{
+	return BaseInvincibilityTime + (m_stats != nullptr ? m_stats->skills.ModifierAmount(Skills::SkillType::Invuln_Time_Up) : 0);
 }
 
 int PlayerObj::TotalMagicDamage() const
@@ -790,7 +819,7 @@ float PlayerObj::MaxHealth() const
 	                       + m_stats->BonusHealth * GameEV::ITEM_STAT_MAXHP_AMOUNT
 	                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up)
 	                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up_Final))
-	                       * ClassTotalHPMultiplier(m_stats->hero.classType))
+	                       * ClassTotalHPMultiplier(m_stats->hero.classType) * m_stats->LichHealthMod + 0.5f)   /* x LichHealthMod, rounded */
 	                  + m_stats->LichHealth;
 	if (maxHealth < 1)
 		maxHealth = 1;
@@ -810,7 +839,7 @@ float PlayerObj::MaxMana() const
 		                       + m_stats->BonusHealth * GameEV::ITEM_STAT_MAXHP_AMOUNT
 		                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up)
 		                       + m_stats->skills.ModifierAmount(Skills::SkillType::Health_Up_Final))
-		                       * ClassTotalHPMultiplier(m_stats->hero.classType))
+		                       * ClassTotalHPMultiplier(m_stats->hero.classType) * m_stats->LichHealthMod + 0.5f)   /* x LichHealthMod, rounded */
 		                  + m_stats->LichHealth;
 		if (maxHealth < 1)
 			maxHealth = 1;
@@ -916,7 +945,23 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 	}
 	else
 	{
-		/* TODO C++: death animation and the lineage handoff. */
+		/* PlayerObj.cs line 2371: the Revive item (25% hp, used up), then
+		 * the Death Defy skill's roll (10% hp) before dying */
+		if (m_stats != nullptr)
+		{
+			bool revive = m_stats->SpecialItem == 3;   /* SpecialItemType.Revive */
+			bool dodge = !revive && rand() % 100 + 1 <= (int) (m_stats->skills.ModifierAmount(Skills::SkillType::Death_Dodge) * 100);
+			if (revive || dodge)
+			{
+				CurrentHealth = (float) (int) (MaxHealth() * (revive ? 0.25f : 0.1f));
+				if (revive) m_stats->SpecialItem = 0;
+				m_invincibleCounter = InvincibilityTime();
+				Audio::PlaySound("GetItemStinger3");   // DeathDefiedScreen's stinger
+				if (m_levelScreen != nullptr)
+					m_levelScreen->AddPopup(Text::Loc::Get("LOC_ID_SKILL_NAME_3"), X(), (float) Bounds().Top() - 40, 0xFFFFD700u);
+				return;
+			}
+		}
 		if (m_stats != nullptr && m_stats->hero.isFemale)
 			Audio::PlaySound("Player_Female_Death_01", "Player_Female_Death_02");
 		else
@@ -947,10 +992,10 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 			{
 				if (m_blockInvincibleCounter <= 0)
 				{
-					CurrentMana -= GameEV::KNIGHT_BLOCK_DRAIN;
+					CurrentMana -= BlockManaDrain();
 					m_blockInvincibleCounter = BlockInvincibleTime;
 					char buf[16];
-					snprintf(buf, sizeof(buf), "-%d mp", GameEV::KNIGHT_BLOCK_DRAIN);
+					snprintf(buf, sizeof(buf), "-%d mp", (int) BlockManaDrain());
 					if (m_levelScreen != nullptr)
 						m_levelScreen->AddPopup(buf, X(), (float) Bounds().Top(),
 						                        0xFF87CEEBu);
@@ -1473,7 +1518,12 @@ void PlayerObj::ConvertHPtoMP()
 	                             * GameEV::LICH_HEALTH_CONVERSION_PERCENT);
 	int lichHealthLost = (int) (m_stats->LichHealth
 	                             * GameEV::LICH_HEALTH_CONVERSION_PERCENT);
-	if (MaxMana() + baseHealthLost + lichHealthLost < m_stats->LichMana)
+	/* the cap: twice the base max mana (LICH_MAX_MP_OFF_BASE) */
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	int maxMana = (int) ((100 + equip.mana + m_stats->BonusMana * GameEV::ITEM_STAT_MAXMP_AMOUNT
+		+ m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Up)
+		+ m_stats->skills.ModifierAmount(Skills::SkillType::Mana_Up_Final)) * GameEV::LICH_MAX_MP_OFF_BASE);
+	if (MaxMana() + baseHealthLost + lichHealthLost < maxMana)
 	{
 		Audio::PlaySound("Lich_Swap");
 		m_stats->LichHealthMod *= GameEV::LICH_HEALTH_CONVERSION_PERCENT;
@@ -1680,6 +1730,27 @@ void PlayerObj::OnEnemyKilled(int enemyLevel, bool givesLichHealth)
 			if (m_levelScreen) m_levelScreen->AddPopup(buf, X(), top - 30, 0xFF90EE90u);
 		}
 	}
+}
+
+float PlayerObj::BlockManaDrain() const
+{
+	/* line 3940: less with the ManaDrain equipment and the Block skill */
+	if (m_stats == nullptr) return GameEV::KNIGHT_BLOCK_DRAIN;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	return GameEV::KNIGHT_BLOCK_DRAIN - (int) equip.secondary[EquipmentSecondaryDataType::ManaDrain]
+		- (int) m_stats->skills.ModifierAmount(Skills::SkillType::Block);
+}
+
+float PlayerObj::TotalGoldBonus() const
+{
+	/* PlayerObj.cs line 3996 */
+	if (m_stats == nullptr) return 0;
+	Equipment::Totals equip = m_stats->equipment.ComputeTotals();
+	float bonus = m_stats->skills.ModifierAmount(Skills::SkillType::Gold_Gain_Up) + equip.secondary[EquipmentSecondaryDataType::GoldBonus]
+		+ equip.runes[EquipmentAbilityType::GoldGain] * GameEV::RUNE_GOLDGAIN_MOD + GameEV::NEWGAMEPLUS_GOLDBOUNTY * m_stats->TimesCastleBeaten;
+	if (m_stats->hero.classType == ClassType::Banker || m_stats->hero.classType == ClassType::Banker2)
+		bonus += PlayerEV::BANKER_GOLDGAIN_MOD;
+	return bonus;
 }
 
 } // namespace RogueCastle
