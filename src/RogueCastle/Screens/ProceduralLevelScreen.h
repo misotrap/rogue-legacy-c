@@ -27,6 +27,7 @@ public:
 	 * one flag per chest, in room order; opened chests stay open. */
 	ProceduralLevelScreen(const char *assets, uint32_t seed,
 	                      std::vector<uint8_t> *chestFlags = nullptr, int timesCastleBeaten = 0);
+	~ProceduralLevelScreen();   /* frees the fonts (2 MB of Junicode) */
 
 	void Update(GameTime *gameTime);
 	void Draw(DS2DEngine::Camera2D *camera);
@@ -49,6 +50,15 @@ public:
 	void DropItemWide(Vector2 position, int dropType, float amount);
 	/* TextManager.DisplayNumberStringText: the floating pickup texts. */
 	void AddPopup(const std::string &text, float x, float y, uint32_t colour);
+	/* The fairy chest objective plate (ProceduralLevelScreen.cs lines
+	 * 2870-2935): slides in from the right when the room has a locked
+	 * fairy chest, shows the objective, the failure and the success. */
+	void DisplayObjective(const char *titleID, const char *description,
+	                      const char *progress, bool tween);
+	void ResetObjectivePlate(bool tween);
+	void UpdateObjectiveProgress(const std::string &progress);
+	void ObjectiveFailed();
+	void ObjectiveComplete();
 	/* Dev/test (RL_DEBUG_CHEST): "12p" opens chest 12, forcing a print. */
 	void DebugOpenChest(const char *arg);
 	/* The shots of this enemy vanish (EnemyObj_Energon.DestroyAllProjectiles) */
@@ -81,6 +91,17 @@ private:
 	struct Popup { std::string text; float x, y, timer; uint32_t colour; };
 	std::vector<Popup> m_popups;
 	Text::Font m_goldFont;   /* the gold numbers, like the HUD */
+	Text::Font m_objFont;   /* the objective plate (Junicode, like the C#) */
+	DS2DEngine::SpriteObj *m_objPlate = nullptr;   /* DialogBox_Sprite */
+	DS2DEngine::Camera2D m_objCamera;   /* zoom 1: world = screen */
+	std::string m_objTitle, m_objDescription, m_objProgress;
+	float m_objAlphaTitle = 1;   /* the 0.3 dim of ObjectiveFailed/Complete */
+	float m_objX = 1470;         /* the plate's slide (virtual X) */
+	bool m_objShown = false;
+	double m_objTime = 0;        /* the plate's clock */
+	double m_objSlideStart = 0;
+	float m_objSlideFrom = 0;
+	float m_objSlideTo = 0;
 	Levels::Castle m_castle;
 	RoomRenderer m_roomRenderer;   /* the original look behind the room objects */
 	std::vector<RoomObj *> m_roomList;

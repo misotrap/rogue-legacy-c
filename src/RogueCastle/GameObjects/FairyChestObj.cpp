@@ -5,12 +5,15 @@
 #include "Player/PlayerObj.h"
 #include "ItemDropObj.h"
 #include "../ChestConditionChecker.h"
+#include "../Dialogue/DialogueData.h"
 #include "../EVs/GameEV.h"
 #include "../Types/ChestType.h"
 #include "../Types/ChestConditionType.h"
 #include "../Screens/ProceduralLevelScreen.h"
 #include "../../Audio/Audio.h"
+#include "../../Text/Loc.h"
 #include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <random>
 
@@ -44,8 +47,11 @@ void FairyChestObj::SetConditionType(int conditionType)
 
 void FairyChestObj::SetChestUnlocked()
 {
-	/* FairyChestObj.cs line 56. The objective plate announcement is not
-	 * ported yet (TODO C++: the LOC_ID_LEVEL_SCREEN objective text). */
+	/* FairyChestObj.cs line 56: the condition was met (the invisible
+	 * chest and the no-condition chest keep the plate quiet). */
+	if (m_levelScreen != nullptr && m_conditionType != ChestConditionType::None
+	    && m_conditionType != ChestConditionType::InvisibleChest)
+		m_levelScreen->ObjectiveComplete();
 	State = STATE_FREE;
 	m_lockSprite->Visible(false);
 	m_lockSprite->Opacity(0);
@@ -53,7 +59,10 @@ void FairyChestObj::SetChestUnlocked()
 
 void FairyChestObj::SetChestFailed()
 {
-	/* FairyChestObj.cs line 66. */
+	/* FairyChestObj.cs line 66: the objective plate says it failed. */
+	if (m_levelScreen != nullptr && m_conditionType != ChestConditionType::None
+	    && m_conditionType != ChestConditionType::InvisibleChest)
+		m_levelScreen->ObjectiveFailed();
 	State = STATE_FAILED;
 	Audio::PlaySound("FairyChest_Fail");
 	m_errorSprite->Visible(true);
@@ -82,7 +91,25 @@ void FairyChestObj::Update(GameTime *gameTime)
 		                                         m_levelScreen);
 	if (State == STATE_LOCKED && !IsOpen()
 	    && m_conditionType == ChestConditionType::ReachIn5Seconds)
+	{
 		Timer -= (float) gameTime->ElapsedGameTime;
+		/* FairyChestObj.cs line 168: the countdown on the plate (the
+		 * floating timer above the chest is not ported). */
+		if (m_levelScreen != nullptr)
+		{
+			char key[24];
+			snprintf(key, sizeof(key), "Chest_Locked %d", m_conditionType);
+			const char *desc = "";
+			for (const Dialogue::Entry &e : Dialogue::ENTRIES)
+				if (strcmp(e.name, key) == 0 && e.count > 0)
+				{
+					desc = Text::Loc::Get(e.pages[0].speaker);
+					break;
+				}
+			m_levelScreen->UpdateObjectiveProgress(
+				std::string(desc) + std::to_string((int) Timer + 1));
+		}
+	}
 }
 
 void FairyChestObj::OpenChest(ProceduralLevelScreen *level, PlayerObj *player)

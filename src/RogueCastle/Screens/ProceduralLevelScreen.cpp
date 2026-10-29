@@ -17,10 +17,12 @@
 #include <cstring>
 #include "../../Audio/Audio.h"
 #include "../../Text/Loc.h"
+#include "../Dialogue/DialogueData.h"
 #include "../EVs/GameEV.h"
 #include "../EVs/LevelEV.h"
 #include "../EVs/SpellEVFuncs.h"
 #include "../Types/ChestType.h"
+#include "../Types/ChestConditionType.h"
 #include "../GameObjects/ChestObj.h"
 #include "../GameObjects/FairyChestObj.h"
 #include "../Types/InputMapType.h"
@@ -52,6 +54,13 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	/* The spell projectiles (SpellDagger_Sprite & co). */
 	SpriteSystem::SpriteLibrary::LoadSheet(assets, "startingRoomSpritesheet");
 	m_goldFont.Load(assets, "GoldFont");
+	/* The objective plate's font (Junicode, like the C#) and its box;
+	 * the DialogBox sprite lives in the misc sheet the chests load. */
+	m_objFont.Load(assets, "Junicode");
+	m_objPlate = new DS2DEngine::SpriteObj("DialogBox_Sprite");
+	m_objPlate->ForceDraw(true);
+	m_objCamera.Position(Vector2(660, 360));
+	m_objCamera.Zoom(0.5f);
 	std::vector<Levels::RoomTemplate> templates;
 	char path[512];
 	snprintf(path, sizeof(path), "%s/rooms.txt", assets);
@@ -246,6 +255,15 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		fprintf(stderr, "physics list: %d objects, player tag=%d\n",
 		        m_physicsManager.NumObjects(), m_player->CollisionTypeTag());
 	m_valid = true;
+}
+
+ProceduralLevelScreen::~ProceduralLevelScreen()
+{
+	/* The fonts own their sheet copy (2 MB of Junicode): without this
+	 * every rebuilt castle leaks them. */
+	m_goldFont.Free();
+	m_objFont.Free();
+	delete m_objPlate;
 }
 
 void ProceduralLevelScreen::Update(GameTime *gameTime)
@@ -572,6 +590,34 @@ void ProceduralLevelScreen::CheckForRoomTransition()
 				enemy->ResetState();
 			SpawnDementiaEnemy();
 			m_player->RoomTransitionReset();
+			/* RoomObj.OnEnter line 135 + DisplayFairyChestInfo (line
+			 * 755): the objective plate follows the room's fairy
+			 * chest, or leaves. */
+			ResetObjectivePlate(false);
+			for (ChestObj *chest : roomObj->ChestList())
+			{
+				if (!chest->IsFairyChest() || chest->IsOpen())
+					continue;
+				FairyChestObj *fairy = static_cast<FairyChestObj *>(chest);
+				if (fairy->ConditionType() != ChestConditionType::None
+				    && fairy->ConditionType() != ChestConditionType::InvisibleChest
+				    && fairy->State == FairyChestObj::STATE_LOCKED)
+				{
+					char key[24];
+					snprintf(key, sizeof(key), "Chest_Locked %d",
+					         fairy->ConditionType());
+					const char *desc = "";
+					for (const Dialogue::Entry &e : Dialogue::ENTRIES)
+						if (strcmp(e.name, key) == 0 && e.count > 0)
+						{
+							/* Speakers[0] carries the condition text */
+							desc = Text::Loc::Get(e.pages[0].speaker);
+							break;
+						}
+					DisplayObjective("LOC_ID_LEVEL_SCREEN_2", desc, "", true);
+					break;
+				}
+			}
 			if (getenv("RL_DEBUG_TRANSITIONS") != nullptr)
 				fprintf(stderr, "room transition -> %s (%.0f, %.0f)\n",
 				        roomObj->Name().c_str(), m_player->X(), m_player->Y());
@@ -579,6 +625,14 @@ void ProceduralLevelScreen::CheckForRoomTransition()
 		}
 	}
 }
+
+/* The objective plate, in the 1320x720 virtual screen (the port's
+ * play area): ProceduralLevelScreen.cs line 274-275, X 1170 shown and
+ * 1470 hidden, Y 250, the box scaled to 250x130. */
+static const float OBJ_PLATE_SHOWN = 1170;
+static const float OBJ_PLATE_HIDDEN = 1470;
+static float ObjSX(float v) { return (v - 660) * 0.5f + SCREEN_W / 2; }
+static float ObjSY(float v) { return (v - 360) * 0.5f + 240; }
 
 void ProceduralLevelScreen::Draw(Camera2D *camera)
 {
@@ -662,6 +716,26 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		m_player->Draw(camera);
 		m_player->DrawSwearBubble(camera);
 	}
+
+	/* The fairy chest objective plate (ForceDraw in the C# = the
+	 * 1320x720 virtual screen, the port's play area): the box at
+	 * (1170, 250) scaled to 250x130, the texts as its children at
+	 * (-400, -60), (+40) and (+35) more (line 251-273). */
+	if (m_objX < OBJ_PLATE_HIDDEN - 0.5f && m_objPlate != nullptr)
+	{
+		uint32_t *frame = gfx_frame();
+		uint32_t title = 0xFFFF4444u, text = 0xFFF1E4C7u;
+		m_objPlate->Scale(Vector2(250.0f / 955, 130.0f / 180));
+		m_objPlate->Position(Vector2(m_objX, 250));
+		m_objPlate->Draw(&m_objCamera);
+		m_objFont.DrawOutlined(frame, m_objTitle.c_str(), ObjSX(770), ObjSY(190),
+		                       0.28f, title, 0xFF000000u, 1);
+		m_objFont.DrawOutlined(frame, m_objDescription.c_str(), ObjSX(770), ObjSY(230),
+		                       0.25f, text, 0xFF000000u, 1);
+		if (!m_objProgress.empty())
+			m_objFont.DrawOutlined(frame, m_objProgress.c_str(), ObjSX(770), ObjSY(265),
+			                       0.25f, text, 0xFF000000u, 1);
+	}
 }
 
 void ProceduralLevelScreen::DropItem(Vector2 position, int dropType, float amount)
@@ -691,6 +765,56 @@ void ProceduralLevelScreen::AddPopup(const std::string &text, float x, float y,
                                       uint32_t colour)
 {
 	m_popups.push_back({text, x, y, 1.2f, colour});
+}
+
+void ProceduralLevelScreen::DisplayObjective(const char *titleID,
+                                              const char *description,
+                                              const char *progress, bool tween)
+{
+	/* ProceduralLevelScreen.cs line 2870 (DisplayObjective). */
+	m_objTitle = Text::Loc::Get(titleID);
+	m_objDescription = description != nullptr ? description : "";
+	m_objProgress = progress != nullptr ? progress : "";
+	m_objAlphaTitle = 1;
+	m_objShown = true;
+	m_objSlideFrom = m_objX;
+	m_objSlideTo = OBJ_PLATE_SHOWN;
+	m_objSlideStart = m_objTime;
+	if (!tween)
+		m_objX = OBJ_PLATE_SHOWN;
+}
+
+void ProceduralLevelScreen::ResetObjectivePlate(bool tween)
+{
+	/* ProceduralLevelScreen.cs line 2895: back out of the screen. */
+	if (!m_objShown)
+		return;
+	m_objShown = false;
+	m_objSlideFrom = m_objX;
+	m_objSlideTo = OBJ_PLATE_HIDDEN;
+	m_objSlideStart = m_objTime;
+	if (!tween)
+		m_objX = OBJ_PLATE_HIDDEN;
+}
+
+void ProceduralLevelScreen::UpdateObjectiveProgress(const std::string &progress)
+{
+	/* ProceduralLevelScreen.cs line 2912. */
+	m_objProgress = progress;
+}
+
+void ProceduralLevelScreen::ObjectiveFailed()
+{
+	/* ProceduralLevelScreen.cs line 2917. */
+	m_objTitle = Text::Loc::Get("LOC_ID_LEVEL_SCREEN_6");
+	m_objAlphaTitle = 0.3f;
+}
+
+void ProceduralLevelScreen::ObjectiveComplete()
+{
+	/* ProceduralLevelScreen.cs line 2924. */
+	m_objTitle = Text::Loc::Get("LOC_ID_LEVEL_SCREEN_5");
+	m_objAlphaTitle = 0.3f;
 }
 
 void ProceduralLevelScreen::DropItemWide(Vector2 position, int dropType, float amount)
