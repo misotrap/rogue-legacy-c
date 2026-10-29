@@ -51,7 +51,7 @@ public:
 	void AddPopup(const std::string &text, float x, float y, uint32_t colour);
 	/* Dev/test (RL_DEBUG_CHEST): "12p" opens chest 12, forcing a print. */
 	void DebugOpenChest(const char *arg);
-	void FireProjectile(const char *spriteName, Vector2 position,
+	class ProjectileObj *FireProjectile(const char *spriteName, Vector2 position,
 	                    Vector2 heading, float speed, int damage,
 	                    Vector2 scale, bool weighted, class EnemyObj *source,
 	                    float lifeSpan = 0, bool collidesWithTerrain = false);

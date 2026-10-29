@@ -471,7 +471,24 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 	}
 
 	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN)
+	{
+		/* EnemyObj.cs line 744: walking into a wall stops the enemy */
+		IPhysicsObj *other = otherBox->PhysicsParent();
+		if (other != nullptr && CurrentSpeed() != 0
+		    && (other->CollisionTypeTag() == 1 || other->CollisionTypeTag() == 10))
+		{
+			Vector2 mtd = CollisionMath::CalculateMTD(thisBox->AbsRect(), otherBox->AbsRect());
+			if (fabsf(mtd.X) > 10 && ((mtd.X > 0 && other->CollidesRight()) || (mtd.X < 0 && other->CollidesLeft())))
+				CurrentSpeed(0);
+		}
 		PhysicsObjContainer::CollisionResponse(thisBox, otherBox, collisionResponseType);
+	}
+}
+
+const std::string *EnemyObj::KillerName(bool &boss) const
+{
+	boss = DifficultyType == MINIBOSS || Type == EnemyType::LastBoss;
+	return &Name;
 }
 
 void EnemyObj::ResetState()

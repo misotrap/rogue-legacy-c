@@ -666,7 +666,7 @@ void ProceduralLevelScreen::AddProjectile(ProjectileObj *proj)
 		        proj->SpriteName().c_str(), proj->X(), proj->Y());
 }
 
-void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,
+ProjectileObj *ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 position,
                                            Vector2 heading, float speed, int damage,
                                            Vector2 scale, bool weighted, EnemyObj *source,
                                            float lifeSpan, bool collidesWithTerrain)
@@ -702,6 +702,7 @@ void ProceduralLevelScreen::FireProjectile(const char *spriteName, Vector2 posit
 	if (getenv("RL_DEBUG_TRACE") != nullptr)
 		fprintf(stderr, "proj: %s (%.0f,%.0f) h=(%.2f,%.2f) speed=%.0f\n",
 		        spriteName, position.X, position.Y, heading.X, heading.Y, speed);
+	return proj;
 }
 
 ProjectileObj *ProceduralLevelScreen::FireSpellProjectile(const ProjectileData &data,

@@ -238,8 +238,12 @@ namespace RogueCastle
 		// GameOverScreen draws the hero itself, lit under the spotlight:
 		// its look and place, and the last frame without it
 		HeroLook look;
+		int killerKind = 0;
+		std::string killerName;
 		if (PlayerObj *p = m_level->Player())
 		{
+			killerKind = p->KillerKind;
+			killerName = p->KillerName;
 			for (int i = 0; i < p->NumChildren(); i++)
 			{
 				look.colours.push_back(p->GetChildAt(i)->TextureColor());
@@ -265,7 +269,7 @@ namespace RogueCastle
 		m_deathTimer = 0;
 		std::string name = Text::Loc::Format(h.isFemale ? "LOC_ID_LINEAGE_OBJ_14_NEW" : "LOC_ID_LINEAGE_OBJ_12_NEW",
 			h.name, h.romanNumeral);
-		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name, h.isFemale, look);
+		m_gameOver.Open(m_assets.c_str(), m_lastFrame, name, h.isFemale, look, killerKind, killerName);
 		m_lastFrame.clear();
 		m_state = State::GameOver;
 	}

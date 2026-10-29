@@ -45,6 +45,13 @@ ProjectileObj::ProjectileObj(const std::string &spriteName, Vector2 position,
 	UpdateTerrainBox();
 }
 
+const std::string *ProjectileObj::KillerName(bool &boss) const
+{
+	static const std::string none;
+	boss = false;
+	return Source != nullptr ? Source->KillerName(boss) : &none;
+}
+
 void ProjectileObj::TurnToFace(Vector2 facePosition, float turnSpeed, float elapsed)
 {
 	/* ProjectileObj.cs line 262 (TurnToFace). */
@@ -244,8 +251,24 @@ void ProjectileObj::Update(GameTime *gameTime)
 		break;
 	}
 
-	/* ProjectileObj.cs line 252: spinning */
-	if (RotationSpeed != 0)
+	/* ProjectileObj.cs line 232: homing on the hero */
+	if (ChaseTarget && ChaseObj != nullptr)
+	{
+		TurnToFace(ChaseObj->Position(), TurnSpeed, elapsed);
+		Heading(Vector2(cosf(Orientation), sinf(Orientation)));
+		AccelerationX(0);
+		AccelerationY(0);
+		Rotation(Orientation * 180.0f / (float) M_PI);
+	}
+	/* Line 246: following the arc, or spinning */
+	if (FollowArc && !ChaseTarget && !IsDying)
+	{
+		if (IsWeightedFlag)
+			Rotation(atan2f(AccelerationY(), AccelerationX()) * 180.0f / (float) M_PI);
+		else
+			Rotation(atan2f(Heading().Y, Heading().X) * 180.0f / (float) M_PI);
+	}
+	else if (!ChaseTarget && RotationSpeed != 0)
 		Rotation(Rotation() + RotationSpeed * 60 * elapsed);
 
 	/* Weighted spells (axe, time bomb) fly through the physics manager

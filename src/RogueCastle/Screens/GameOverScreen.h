@@ -35,7 +35,8 @@ namespace RogueCastle
 	public:
 		~GameOverScreen() { Close(); }
 		// lastFrame: the castle frame at the moment of death (SCREEN_W*SCREEN_H)
-		bool Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName, bool isFemale, const HeroLook &look);
+		bool Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName, bool isFemale, const HeroLook &look,
+		          int killerKind = 0, const std::string &killerName = "");
 		void Close();
 		// true once A is pressed after the sequence
 		bool Update(uint32_t pressed, double dt);

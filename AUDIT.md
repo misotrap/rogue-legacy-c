@@ -33,8 +33,9 @@ Tout ce bloc est corrigé, sauf le vol (point 11), qui n'est toujours pas porté
 ## B. Important — EN COURS (29/10)
 
 Corrigés : 16, 17, 18, 20, 21, 22, 23, 24, 25, 29, 31, 32. Corrigés en partie :
-- 28 : l'ennemi s'arrête au bord (l'arrêt contre les murs reste à faire).
-- 30 : le butin est effacé au changement de salle.
+- 28 : corrigé (bords et murs).
+- 30 : butin effacé au changement de salle, flèches qui suivent leur arc, tir de la tourelle experte qui poursuit le héros. Reste la poursuite de l'Énergon et la collision avec les plateformes et les portes.
+- 35 : l'écran de mort nomme le tueur (le défilé des ennemis reste à faire).
 - 26 : Blob, Mimic, Ninja et mages sont faits. Restent le bouclier de l'Énergon et les boules rebondissantes.
 - 34 : manoir, amélioration de classe, plans et runes de départ, Prosopagnosie.
 - 35 : pause, et l'achat qui équipe.

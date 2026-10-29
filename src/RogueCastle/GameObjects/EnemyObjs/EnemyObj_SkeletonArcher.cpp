@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/EnemyObjs/EnemyObj_SkeletonArcher.cs. */
 #include "EnemyObj_SkeletonArcher.h"
+#include "../ProjectileObj.h"
 #include "../../EVs/EnemyEV.h"
 #include "../../Types/EnemyType.h"
 #include "../Player/PlayerObj.h"
@@ -157,9 +158,11 @@ void EnemyObj_SkeletonArcher::FireArrow(float angleDeg)
 	/* The ProjectileData (line 193): a weighted arrow at a fixed angle
 	 * (negative degrees = upward). */
 	float rad = angleDeg * PI / 180.0f;
-	m_levelScreen->FireProjectile("ArrowProjectile_Sprite", Position(),
+	ProjectileObj *arrow = m_levelScreen->FireProjectile("ArrowProjectile_Sprite", Position(),
 	                              Vector2(cosf(rad), sinf(rad)), ProjectileSpeed,
 	                              (int) ProjectileDamage, ProjectileScale, true, this, 0, true);   /* CollidesWithTerrain (the C# ProjectileData) */
+	arrow->RotationSpeed = 0;
+	arrow->FollowArc = true;
 }
 
 /* The arrow fans per difficulty and shot (the C# sets projData.Angle

@@ -26,6 +26,7 @@ public:
 
 	int DealsDamage() const override { return Damage; }
 	bool IsSpellProjectile() const override { return true; }
+	const std::string *KillerName(bool &boss) const override;
 	uint8_t ProjectileSpell() const override { return Spell; }
 	/* ProjectileObj.cs line 697: DestroysWithEnemy. */
 	void OnEnemyHit() override
@@ -58,6 +59,11 @@ public:
 	float Orientation = 0;          /* radians, for homing/bounce */
 	float TurnSpeed = 0;
 	bool ChaseTarget = false;
+	/* ChaseTarget on something other than an enemy (the expert turret's
+	 * shots home on the hero) */
+	DS2DEngine::GameObj *ChaseObj = nullptr;
+	/* FollowArc: the sprite points along its flight (arrows, daggers) */
+	bool FollowArc = false;
 	class EnemyObj *Target = nullptr;
 	bool IgnoreBoundsCheck = false;
 	bool CollidesWithTerrainFlag = false;

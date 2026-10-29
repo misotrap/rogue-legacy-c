@@ -80,6 +80,7 @@ public:
 	bool Demented = false;   /* IsDemented: a Dementia hallucination */
 	bool IsHallucination() const override { return Demented; }
 	std::string Name;
+	const std::string *KillerName(bool &boss) const override;
 	std::string Tag;        /* the room object's Tag (delay:2.0, speed:600...) */
 	int Type = 0;           /* EnemyType.h value */
 	int Level = 0;          /* from the room level (ApplyLevel) */

@@ -7,6 +7,7 @@
 
 #include "../GameObjs/CollisionBox.h"
 #include "../Types.h"
+#include <string>
 #include <vector>
 
 namespace DS2DEngine
@@ -52,6 +53,10 @@ public:
 	 * spell projectiles (which use the projectile invincibility counter
 	 * and their own damage) from the sword. */
 	virtual bool IsSpellProjectile() const { return false; }
+	/* What killed the hero (GameOverScreen): the enemy's name, "" for a
+	 * shot without a shooter, nullptr when it is not a killer. boss: a
+	 * miniboss or the last boss, "terrassé par" in the original. */
+	virtual const std::string *KillerName(bool &boss) const { (void) boss; return nullptr; }
 	/* The SpellType of a spell projectile (0 otherwise), read by the
 	 * enemies for the Barbarian shout knockback. */
 	virtual uint8_t ProjectileSpell() const { return 0; }

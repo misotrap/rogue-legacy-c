@@ -1,4 +1,5 @@
 #include "GameOverScreen.h"
+#include "EnemyNames.h"
 
 #include "../../Audio/Audio.h"
 #include "../../SpriteSystem/SpriteLibrary.h"
@@ -60,7 +61,8 @@ namespace RogueCastle
 		}
 	}
 
-	bool GameOverScreen::Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName, bool isFemale, const HeroLook &look)
+	bool GameOverScreen::Open(const char *assetsDir, const std::vector<uint32_t> &lastFrame, const std::string &heroName, bool isFemale, const HeroLook &look,
+	                          int killerKind, const std::string &killerName)
 	{
 		Close();
 		bool ok = m_font.Loaded() || m_font.Load(assetsDir, "Junicode");
@@ -89,7 +91,15 @@ namespace RogueCastle
 
 		std::string name = heroName;   // "Sieur Lee " when there is no numeral
 		while (!name.empty() && name.back() == ' ') name.pop_back();
-		m_slain = Text::Loc::Format(isFemale ? "LOC_ID_GAME_OVER_SCREEN_7_NEW_F" : "LOC_ID_GAME_OVER_SCREEN_7_NEW", name);
+		// GameOverScreen.cs line 395: "terrassé par" a boss, "tué par" an
+		// enemy, a shot without a shooter, a trap, or just "tué"
+		const char *slainID = killerKind == 2 ? "LOC_ID_GAME_OVER_SCREEN_3_NEW" : killerKind == 1 ? "LOC_ID_GAME_OVER_SCREEN_4_NEW"
+		                    : killerKind == 3 ? "LOC_ID_GAME_OVER_SCREEN_5_NEW" : killerKind == 4 ? "LOC_ID_GAME_OVER_SCREEN_6_NEW"
+		                    : "LOC_ID_GAME_OVER_SCREEN_7_NEW";
+		std::string enemy = killerName;
+		for (const EnemyNameLoc &e : ENEMY_NAMES)
+			if (killerName == e.name) { enemy = Text::Loc::Get(e.locID); break; }
+		m_slain = Text::Loc::Format((std::string(slainID) + (isFemale ? "_F" : "")).c_str(), name, enemy);
 		char id[32];
 		snprintf(id, sizeof(id), "LOC_ID_HINT_%d", 1 + rand() % NUM_HINTS);
 		m_hint = Text::Loc::Get(id);

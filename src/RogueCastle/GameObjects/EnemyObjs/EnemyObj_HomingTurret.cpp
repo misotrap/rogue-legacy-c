@@ -1,5 +1,6 @@
 /* Port of RogueCastle/src/Game Objects/EnemyObjs/EnemyObj_HomingTurret.cs. */
 #include "EnemyObj_HomingTurret.h"
+#include "../ProjectileObj.h"
 #include "../../EVs/EnemyEV.h"
 #include "../../Types/EnemyType.h"
 #include "../Player/PlayerObj.h"
@@ -110,10 +111,18 @@ void EnemyObj_HomingTurret::UpdateEnemy(GameTime *gameTime)
 		float rad = Rotation() * PI / 180.0f;
 		Vector2 heading(flipped ? -cosf(rad) : cosf(rad), sinf(rad));
 		Audio::PlaySound("Turret_Attack01", "Turret_Attack02", "Turret_Attack03");   /* the C# fireProjectileLS */
-		m_levelScreen->FireProjectile("HomingProjectile_Sprite",
+		ProjectileObj *shot = m_levelScreen->FireProjectile("HomingProjectile_Sprite",
 		                              Position() + Vector2(flipped ? -35.0f : 35.0f, 0), heading,
 		                              ProjectileSpeed, (int) Damage,
 		                              ProjectileScale, false, this, 10, true);   /* Lifespan 10, CollidesWithTerrain */
+		if (DifficultyType == EXPERT)
+		{
+			// fireProjectileExpertLS: the shot homes on the hero
+			shot->ChaseTarget = true;
+			shot->ChaseObj = m_target;
+			shot->TurnSpeed = 0.02f;
+			shot->Orientation = atan2f(heading.Y, heading.X);
+		}
 		m_actionTimer = m_fireDelay;
 	}
 }

@@ -536,6 +536,7 @@ void PlayerObj::Update(GameTime *gameTime)
 			float base = MaxHealth() - (m_stats != nullptr ? m_stats->LichHealth : 0);
 			if (m_stats != nullptr) base /= ClassTotalHPMultiplier(m_stats->hero.classType);
 			int damage = (int) (lroundf(base) * GameEV::HAZARD_DAMAGE_PERCENT);
+			KillerKind = 4;
 			HitPlayer(damage < 1 ? 1 : damage, Vector2(h.x + h.width * 0.5f, h.y + h.height * 0.5f));
 			break;
 		}
@@ -1007,6 +1008,10 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 			if (m_invincibleCounter <= 0 && !ForceInvincible)
 			{
 				Rectangle hit = otherBox->AbsRect();
+				bool boss = false;
+				const std::string *killer = otherParent->KillerName(boss);
+				KillerKind = killer == nullptr ? 0 : killer->empty() ? 3 : boss ? 2 : 1;
+				KillerName = killer != nullptr ? *killer : "";
 				HitPlayer(otherParent->DealsDamage(),
 				          Vector2(hit.X + hit.Width * 0.5f, hit.Y + hit.Height * 0.5f));
 				otherParent->OnEnemyHit();   /* the shot that hit dies (DestroysWithEnemy) */
