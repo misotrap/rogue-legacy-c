@@ -29,8 +29,16 @@ namespace RogueCastle
 		m_generator.LoadNames(names.c_str(), female.c_str());
 		bool ok = m_lineage.LoadContent(assetsDir) && m_manor.LoadContent(assetsDir) && m_hud.LoadContent(assetsDir)
 			&& m_map.LoadContent(assetsDir) && m_pause.LoadContent(assetsDir) && m_getItem.LoadContent(assetsDir) && m_bossRoom.LoadContent(assetsDir) && m_credits.LoadContent(assetsDir)
-			&& m_court.LoadContent(assetsDir) && m_dialogue.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir);
+			&& m_court.LoadContent(assetsDir) && m_dialogue.LoadContent(assetsDir) && m_smith.LoadContent(assetsDir) && m_enchant.LoadContent(assetsDir)
+			&& m_ending.LoadContent(assetsDir);
 		Save::Read(m_save, savePath);
+		/* Dev/test: RL_DEBUG_ENDING opens the enemy gallery directly. */
+		if (getenv("RL_DEBUG_ENDING") != nullptr)
+		{
+			m_ending.Open(assetsDir, m_save);
+			m_state = State::Ending;
+			return ok;
+		}
 		if (getenv("RL_DEBUG_LEVEL") == nullptr)
 		{
 			OpenTitle();
@@ -209,8 +217,10 @@ namespace RogueCastle
 		Save(false);
 		delete m_level;
 		m_level = nullptr;
-		m_credits.Open((int) m_save.familyTree.size());
-		m_state = State::Credits;
+		/* LoadingScreen(ScreenType.Ending): the enemy gallery walks
+		 * through before the credits (EndingRoomObj). */
+		m_ending.Open(m_assets.c_str(), m_save);
+		m_state = State::Ending;
 	}
 
 	void GameFlow::OnPlayerDeath()
@@ -339,6 +349,17 @@ namespace RogueCastle
 			{
 				Save();
 				m_state = State::Castle;
+			}
+			break;
+		case State::Ending:
+			/* The gallery: any button twice skips to the credits
+			 * (EndingRoomObj.Update). Debug: RL_DEBUG_ENDING_SKIP. */
+			if (getenv("RL_DEBUG_ENDING_SKIP") != nullptr)
+				pressed |= BTN_A;
+			if (m_ending.Update(pressed, dt))
+			{
+				m_credits.Open((int) m_save.familyTree.size());
+				m_state = State::Credits;
 			}
 			break;
 		case State::Credits:
@@ -640,6 +661,9 @@ namespace RogueCastle
 		case State::GameOver:
 			m_gameOver.Draw(frame);
 			break;
+		case State::Ending:
+			m_ending.Draw(frame);
+			break;
 		case State::Credits:
 			m_credits.Draw(frame);
 			break;
@@ -755,6 +779,7 @@ namespace RogueCastle
 		case State::Manor: Audio::PlayMusic("SkillTreeSong"); break;
 		case State::Shop: break;
 		case State::GameOver: break;
+		case State::Ending: break;   // EndSongDrums plays in EndingRoom::Open
 		case State::Credits: break;
 		case State::Castle:
 		{

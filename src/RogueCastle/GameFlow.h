@@ -18,6 +18,7 @@
 #include "Screens/PauseScreen.h"
 #include "Screens/TitleScreen.h"
 #include "Screens/GameOverScreen.h"
+#include "Rooms/EndingRoom.h"
 #include "Screens/EquipmentScreen.h"
 #include "Rooms/StartingRoom.h"
 #include "Rooms/BossRoom.h"
@@ -36,7 +37,7 @@ namespace RogueCastle
 	class GameFlow
 	{
 	public:
-		enum class State { Title, Lineage, Castle, Shop, GameOver, Manor, Credits };
+		enum class State { Title, Lineage, Castle, Shop, GameOver, Manor, Ending, Credits };
 
 		// savePath: e.g. "save.txt" next to the game
 		bool Init(const char *assetsDir, const char *savePath);
@@ -71,6 +72,7 @@ namespace RogueCastle
 		bool m_mapOpen = false;   /* Select in the castle */
 		GetItemScreen m_getItem;
 		BossRoom m_bossRoom;
+		EndingRoom m_ending;   /* the gallery after the last boss */
 		TraitEffects m_traitEffects;
 		float m_clonusTimer = 0, m_shakeTimer = 0;   // Clonus
 		bool m_creditsFromTitle = false;

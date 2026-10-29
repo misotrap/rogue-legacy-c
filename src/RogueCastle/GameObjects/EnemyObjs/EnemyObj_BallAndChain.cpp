@@ -312,6 +312,13 @@ void EnemyObj_BallAndChain::ResetState()
 	EnemyObj::ResetState();
 }
 
+void EnemyObj_BallAndChain::HideBalls()
+{
+	/* EndingRoomObj.cs line 262: the gallery hides the flail balls. */
+	if (m_ball != nullptr) m_ball->Visible(false);
+	if (m_ball2 != nullptr) m_ball2->Visible(false);
+}
+
 void EnemyObj_BallAndChain::Kill(bool giveXP)
 {
 	/* EnemyObj_BallAndChain.cs line 407: each ball breaks loose as a

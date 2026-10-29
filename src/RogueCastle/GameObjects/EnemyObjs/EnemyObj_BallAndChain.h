@@ -20,6 +20,8 @@ public:
 	~EnemyObj_BallAndChain() override;
 	void ResetState() override;
 	void Kill(bool giveXP = true) override;
+	/* EndingRoomObj.cs line 262: the gallery hides the flail balls. */
+	void HideBalls();
 
 protected:
 	void InitializeEV() override;

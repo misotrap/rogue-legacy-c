@@ -11,6 +11,12 @@ MIYOO_FLAGS = -O3 -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=h
 rlc: $(SRC) $(shell find src -name '*.h')
 	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o $@ $(SRC) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm
 
+# A dev build next to the game: tests run on /tmp/rlc-dev/rlc (RL_SAVE) so
+# ./rlc keeps running while the sources change.
+dev: $(SRC) $(shell find src -name '*.h')
+	mkdir -p /tmp/rlc-dev
+	$(CXX) $(CXXFLAGS) $(shell sdl2-config --cflags) -o /tmp/rlc-dev/rlc $(SRC) src/platform_sdl.cpp $(shell sdl2-config --libs) -lm
+
 miyoo: $(SRC) $(shell find src -name '*.h')
 	mkdir -p build/miyoo
 	$(MIYOO_CXX) $(CXXFLAGS) $(MIYOO_FLAGS) -static-libstdc++ -static-libgcc -o build/miyoo/rlc $(SRC) src/platform_miyoo.cpp -lm
