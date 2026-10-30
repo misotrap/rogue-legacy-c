@@ -241,6 +241,27 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		m_diaryArrow->Flip(SpriteEffects::FlipHorizontally);   // DiaryRoomObj.Initialize
 		m_diaryArrow->ForceDraw(true);
 	}
+	/* The portrait rooms (PortraitRoomObj): the ancestor is random per
+	 * castle; the interaction zone is the room's centre-bottom
+	 * (PortraitRoomObj.Update). The frame and picture are drawn by the
+	 * room renderer (DecorationsFor). */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "7") continue;
+		bool hasPortrait = false;
+		for (const Levels::ObjData &o : r.objs)
+			if (o.name == "portrait") { hasPortrait = true; break; }
+		if (!hasPortrait) continue;
+		PortraitRoom p;
+		p.room = (int) i;
+		p.index = rand() % 9;   // CDGMath.RandomInt(0, 8)
+		p.zone = Rectangle((int) (r.x + r.width * 0.5f - 100), (int) (r.y + r.height - 300), 200, 200);
+		m_portraits.push_back(p);
+		m_roomRenderer.SetPortraitIndex(r, p.index);
+		if (rl_trace())
+			fprintf(stderr, "portrait in room %d: ancestor %d\n", (int) i, p.index);
+	}
 
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
@@ -350,12 +371,12 @@ bool ProceduralLevelScreen::DebugBonusSpawn(int tag, float &x, float &y)
 	return false;
 }
 
-bool ProceduralLevelScreen::TakeDiaryRequest(int &entryIndex)
+bool ProceduralLevelScreen::TakeSpecialDialogue(std::string &name)
 {
-	if (m_diaryRequest < 0)
+	if (m_specialDialogue.empty())
 		return false;
-	entryIndex = m_diaryRequest;
-	m_diaryRequest = -1;
+	name = m_specialDialogue;
+	m_specialDialogue.clear();
 	return true;
 }
 
@@ -462,14 +483,16 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		bool touching = playerBounds.Intersects(b);
 		bool maxed = m_diaryEntry != nullptr && *m_diaryEntry >= LevelEV::TOTAL_JOURNAL_ENTRIES - 1;
 		d.arrowVisible = !maxed && (!d.used || touching);
-		if (!touching || !m_player->IsTouchingGround() || !upPressed || m_diaryRequest >= 0)
+		if (!touching || !m_player->IsTouchingGround() || !upPressed || !m_specialDialogue.empty())
 			continue;
 		/* DiaryRoomObj.cs line 71: the next entry is shown, the counter
 		 * moves on and the room is completed for this castle. The
 		 * journal list screen of the maxed diary is not ported. */
 		if (!d.used && !maxed && m_diaryEntry != nullptr)
 		{
-			m_diaryRequest = *m_diaryEntry;
+			char name[24];
+			snprintf(name, sizeof(name), "DiaryEntry%d", *m_diaryEntry);
+			m_specialDialogue = name;
 			(*m_diaryEntry)++;
 			d.used = true;
 		}

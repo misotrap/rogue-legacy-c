@@ -250,6 +250,30 @@ namespace RogueCastle
 			// LevelParser.cs line 205: the empty frames get a random painting
 			if (sprite == "CastleAssetFrame_Sprite")
 				sprite = "FramePicture" + std::to_string(1 + rand() % 16) + "_Sprite";
+			// PortraitRoomObj.Initialize: the giant frame of the portrait
+			// rooms, with the ancestor's picture inside (random per castle)
+			if (o.name == "portrait" && SpriteSystem::SpriteLibrary::ContainsSprite("GiantPortrait_Sprite"))
+			{
+				auto it = m_portraitIndex.find(&room);
+				SpriteObj *frame = new SpriteObj("GiantPortrait_Sprite");
+				frame->X(o.x);
+				frame->Y(o.y);
+				frame->Scale(Vector2(2, 2));
+				frame->Flip(o.flip ? SpriteEffects::FlipHorizontally : SpriteEffects::None);
+				(o.bgLayer ? d.back : d.front).push_back(frame);
+				char portrait[24];
+				snprintf(portrait, sizeof(portrait), "Portrait%d_Sprite",
+					it != m_portraitIndex.end() ? it->second : 0);
+				if (SpriteSystem::SpriteLibrary::ContainsSprite(portrait))
+				{
+					SpriteObj *picture = new SpriteObj(portrait);
+					picture->X(o.x);
+					picture->Y(o.y);
+					picture->Scale(Vector2(0.95f, 0.95f));
+					(o.bgLayer ? d.back : d.front).push_back(picture);
+				}
+				continue;
+			}
 			// LevelParser.cs line 360: the garden's floating rocks bob forever
 			// (Amplitude -50..50, HoverSpeed -2..2). The starting position is
 			// stored after placement (ProceduralLevelScreen.cs line 942).

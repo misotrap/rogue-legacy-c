@@ -609,14 +609,13 @@ namespace RogueCastle
 				Audio::PlaySound("Map_On");
 				break;
 			}
-			/* The diary rooms: Up next to the diary reads the next
-			 * journal entry (DiaryRoomObj.cs line 71). */
-			int diaryEntry = -1;
-			if (m_level->TakeDiaryRequest(diaryEntry))
+			/* The bonus rooms' dialogues: the diary's journal entry
+			 * (DiaryRoomObj.cs line 71), the portrait rooms' ancestor
+			 * stories (PortraitRoomObj.Update)... */
+			std::string specialTalk;
+			if (m_level->TakeSpecialDialogue(specialTalk))
 			{
-				char name[24];
-				snprintf(name, sizeof(name), "DiaryEntry%d", diaryEntry);
-				m_dialogue.Open(name, m_save.hero.isFemale);
+				m_dialogue.Open(specialTalk.c_str(), m_save.hero.isFemale);
 				Save();
 			}
 			/* Clonus (ProceduralLevelScreen.cs line 1603): every 12-35 s,

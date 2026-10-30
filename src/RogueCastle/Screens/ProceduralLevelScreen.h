@@ -46,11 +46,9 @@ public:
 	bool TakeTeleporterRequest();
 	/* MapObj.TeleportPlayer: the hero lands on the destination room's pad. */
 	void TeleportToRoom(int roomIndex);
-	/* DiaryRoomObj (Bonus Tag 6): Up next to the diary reads the next
-	 * journal entry. GameFlow opens the dialogue, then clears the
-	 * request; the entry counter has already moved on (the C# shows
-	 * entry m_diaryIndex then DiaryEntry++, DiaryRoomObj.cs line 71). */
-	bool TakeDiaryRequest(int &entryIndex);
+	/* The bonus rooms' dialogues (diary, portrait...): GameFlow opens
+	 * the pending one, if any. */
+	bool TakeSpecialDialogue(std::string &name);
 	/* ProjectileManager.cs line 258 (FireProjectile) for the player's
 	 * spells: position from the source anchor and flip, heading from the
 	 * angle degrees, the player tag. */
@@ -145,7 +143,12 @@ private:
 	};
 	std::vector<DiaryRoom> m_diaries;
 	int *m_diaryEntry = nullptr;
-	int m_diaryRequest = -1;
+	/* The portrait rooms (Bonus Tag 7): the ancestor shown (random per
+	 * castle, PortraitRoomObj.OnEnter) and the room's centre-bottom
+	 * interaction zone. */
+	struct PortraitRoom { int room; int index; Rectangle zone; };
+	std::vector<PortraitRoom> m_portraits;
+	std::string m_specialDialogue;
 	DS2DEngine::SpriteObj *m_diaryArrow = nullptr;
 	float m_elapsed = 0;
 	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */

@@ -57,6 +57,12 @@ namespace RogueCastle
 			std::vector<DS2DEngine::GameObj *> back, front;
 		};
 		std::map<const Levels::PlacedRoom *, Decorations> m_decorations;
+		/* The ancestor shown in each portrait room, chosen by the level
+		 * (one random per castle, like PortraitRoomObj.OnEnter). */
+		std::map<const Levels::PlacedRoom *, int> m_portraitIndex;
+	public:
+		void SetPortraitIndex(const Levels::PlacedRoom &room, int index) { m_portraitIndex[&room] = index; }
+	private:
 
 		static Art ArtFor(Levels::LevelType type);
 		Decorations &DecorationsFor(const Levels::PlacedRoom &room);
