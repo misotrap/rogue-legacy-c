@@ -11,6 +11,14 @@
 
 #define TICK (1.0 / 60.0)   /* fixed game step */
 
+/* Dev/test: F12 (platform_sdl) dumps the game state through this hook */
+static RogueCastle::GameFlow *s_flow = nullptr;
+void rlc_debug_dump(const char *path)
+{
+	if (s_flow != nullptr)
+		s_flow->DebugDump(path);
+}
+
 int main(int argc, char **argv)
 {
 	const char *assets = argc > 1 ? argv[1] : "assets";
@@ -25,6 +33,7 @@ int main(int argc, char **argv)
 
 	/* Heir choice -> castle -> death -> manor -> heir choice (GameFlow) */
 	RogueCastle::GameFlow flow;
+	s_flow = &flow;
 	/* Dev/test: RL_SAVE=<file> plays on another save (tests leave the real one alone) */
 	const char *savePath = getenv("RL_SAVE") != nullptr ? getenv("RL_SAVE") : "save.txt";
 	if (!flow.Init(assets, savePath))

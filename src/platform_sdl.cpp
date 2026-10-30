@@ -4,6 +4,7 @@
  * Escape = Menu (quit).
  */
 #include "platform.h"
+#include "gfx.h"
 #include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,12 +81,55 @@ uint32_t *plat_frame(void)
 
 void plat_present(void)
 {
+	/* Dev: the draw target must be the real frame here; a redirect left
+	 * over (the room cache build) means the frame was never completed. */
+	if (gfx_frame() != frame)
+	{
+		static const bool warned = []() { return getenv("RL_TRACE_TARGET") != nullptr; }();
+		if (warned)
+			fprintf(stderr, "target leaked at %.2f: gfx_frame=%p real=%p\n",
+				plat_time(), (void *) gfx_frame(), (void *) frame);
+	}
 	SDL_UpdateTexture(texture, NULL, frame, SCREEN_W * 4);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
+	/* RL_SHOT_SEQ=<n> (dev): n frames, one every 3rd present (~50 ms),
+	 * saved as <path>_0.._N.ppm; shotAt == -3 means the run is armed */
+	static int shotSeqLeft = 0, shotSeqIndex = 0, shotSeqTick = 0;
 	if (shotPath != NULL && shotAt >= 0.0 && plat_time() >= shotAt)
 	{
-		FILE *f = fopen(shotPath, "wb");
+		const char *seq = getenv("RL_SHOT_SEQ");
+		shotSeqLeft = seq != NULL ? atoi(seq) : 0;
+		shotSeqIndex = 0;
+		shotSeqTick = 0;
+		if (shotSeqLeft > 1)
+			shotAt = -3.0;   /* armed: plat_poll must not quit yet */
+		else
+		{
+			shotAt = -1.0;
+			FILE *f = fopen(shotPath, "wb");
+			if (f != NULL)
+			{
+				int i;
+				fputs("P6\n640 480\n255\n", f);
+				for (i = 0; i < SCREEN_W * SCREEN_H; i += 1)
+				{
+					uint32_t p = frame[i];
+					fputc((p >> 16) & 0xFF, f);
+					fputc((p >> 8) & 0xFF, f);
+					fputc(p & 0xFF, f);
+				}
+				fclose(f);
+			}
+			if (quitAfterShot) exit(0);
+		}
+	}
+	else if (shotAt == -3.0 && shotSeqLeft > 0 && ++shotSeqTick >= 3)
+	{
+		shotSeqTick = 0;
+		char path[512];
+		snprintf(path, sizeof(path), "%s_%d.ppm", shotPath, shotSeqIndex++);
+		FILE *f = fopen(path, "wb");
 		if (f != NULL)
 		{
 			int i;
@@ -99,8 +143,11 @@ void plat_present(void)
 			}
 			fclose(f);
 		}
-		shotAt = -1.0;
-		if (quitAfterShot) exit(0);
+		if (--shotSeqLeft == 0)
+		{
+			shotAt = -1.0;
+			if (quitAfterShot) exit(0);
+		}
 	}
 }
 
@@ -165,9 +212,32 @@ int plat_poll(uint32_t *buttons)
 			uint32_t bit = KeyBit(e.key.keysym.sym);
 			if (e.type == SDL_KEYDOWN) *buttons |= bit;
 			else *buttons &= ~bit;
+			/* Dev: F12 dumps the current frame to /tmp/live.ppm and the
+			 * diagnostics (camera, hero) to /tmp/live.txt */
+			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F12)
+			{
+				{
+					extern void rlc_debug_dump(const char *path);
+					rlc_debug_dump("/tmp/live.txt");
+				}
+				FILE *f = fopen("/tmp/live.ppm", "wb");
+				if (f != NULL)
+				{
+					int i;
+					fputs("P6\n640 480\n255\n", f);
+					for (i = 0; i < SCREEN_W * SCREEN_H; i += 1)
+					{
+						uint32_t px = frame[i];
+						fputc((px >> 16) & 0xFF, f);
+						fputc((px >> 8) & 0xFF, f);
+						fputc(px & 0xFF, f);
+					}
+					fclose(f);
+				}
+			}
 		}
 	}
-	if (quitAfterShot && shotAt < 0.0) return 0;
+	if (quitAfterShot && shotAt == -1.0) return 0;
 	return !(*buttons & BTN_MENU);
 }
 

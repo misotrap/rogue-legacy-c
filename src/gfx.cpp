@@ -1,5 +1,7 @@
 #include "gfx.h"
 #include "platform.h"
+#include <cstdio>
+#include <cstdlib>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,6 +131,12 @@ void gfx_clear(uint32_t color)
 
 void gfx_fill(int x, int y, int w, int h, uint32_t color)
 {
+	if (x == 0 && y == 0 && w >= SCREEN_W && h >= SCREEN_H)
+	{
+		static const int trace = getenv("RL_TRACE_FILL") != nullptr;
+		if (trace)
+			fprintf(stderr, "fill-all %08x at %.2f\n", color, plat_time());
+	}
 	int x0 = x < 0 ? 0 : x, y0 = y < 0 ? 0 : y;
 	int x1 = x + w > SCREEN_W ? SCREEN_W : x + w, y1 = y + h > SCREEN_H ? SCREEN_H : y + h;
 	int i, j;
