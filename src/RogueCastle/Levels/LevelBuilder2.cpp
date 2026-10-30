@@ -1035,8 +1035,8 @@ namespace Levels
 						o.y += RandomInt(-50, 50);
 						if (RandomInt(1, 100) > 70) continue; // 70% chance of the hole being visible
 					}
-					// GardenFloatingRock becomes a HoverObj in the original:
-					// its amplitude and speed are left to the game code.
+					// The swapped GardenFloatingRock sprite becomes a
+					// HoverObj in RoomRenderer::DecorationsFor.
 				}
 				if (swapped == "CastleAssetFrame_Sprite")
 					swapped = "FramePicture" + std::to_string(RandomInt(1, 16)) + "_Sprite";

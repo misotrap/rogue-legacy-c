@@ -79,7 +79,8 @@ namespace RogueCastle
 		const Levels::PlacedRoom *m_cacheRoom = nullptr;
 		bool m_cacheOpaque = false;
 		bool m_buildingCache = false;   // Draw leaves out the animated decorations
-		static bool Animated(const DS2DEngine::GameObj *o) { return o->TotalFrames() > 1 && o->IsAnimating(); }   // a still variant picked at random is not
+		// A still variant picked at random is not; a hovering rock moves anyway.
+		static bool Animated(const DS2DEngine::GameObj *o) { return o->IsHovering() || (o->TotalFrames() > 1 && o->IsAnimating()); }
 		// The two cloud layers, tinted once (blue night tints)
 		Texture m_clouds[2] = {};
 		int m_cloudsW = 0, m_cloudsH = 0;

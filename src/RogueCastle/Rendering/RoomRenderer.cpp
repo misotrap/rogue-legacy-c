@@ -1,4 +1,5 @@
 #include "RoomRenderer.h"
+#include "../GameObjects/HoverObj.h"
 #include "../../debugflags.h"
 #include <cstdio>
 #include <cstdlib>
@@ -249,7 +250,20 @@ namespace RogueCastle
 			// LevelParser.cs line 205: the empty frames get a random painting
 			if (sprite == "CastleAssetFrame_Sprite")
 				sprite = "FramePicture" + std::to_string(1 + rand() % 16) + "_Sprite";
-			if (SpriteSystem::SpriteLibrary::ContainsCharacter(sprite)) obj = new ObjContainer(sprite);
+			// LevelParser.cs line 360: the garden's floating rocks bob forever
+			// (Amplitude -50..50, HoverSpeed -2..2). The starting position is
+			// stored after placement (ProceduralLevelScreen.cs line 942).
+			if (sprite.find("GardenFloatingRock") != std::string::npos && SpriteSystem::SpriteLibrary::ContainsSprite(sprite))
+			{
+				HoverObj *hover = new HoverObj(sprite,
+					-50.0f + 100.0f * rand() / (float) RAND_MAX,   // CDGMath.RandomFloat(-50, 50)
+					-2.0f + 4.0f * rand() / (float) RAND_MAX);      // CDGMath.RandomFloat(-2, 2)
+				hover->SetStartingPos(Vector2(o.x, o.y));
+				if (rl_trace())
+					std::printf("hover created %s at (%.0f,%.0f) bg=%d\n", sprite.c_str(), o.x, o.y, (int) o.bgLayer);
+				obj = hover;
+			}
+			else if (SpriteSystem::SpriteLibrary::ContainsCharacter(sprite)) obj = new ObjContainer(sprite);
 			else if (SpriteSystem::SpriteLibrary::ContainsSprite(sprite)) obj = new SpriteObj(sprite);
 			else continue; // a sheet that is not loaded
 			obj->X(o.x);

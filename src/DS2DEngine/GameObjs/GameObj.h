@@ -130,6 +130,9 @@ public:
 	virtual int FindLabelIndex(const std::string &label) const { (void) label; return -1; }
 	virtual int TotalFrames() const { return 0; }
 	virtual bool IsAnimating() const { return false; }
+	/* A HoverObj (the garden's floating rocks): drawn live, never baked
+	 * into the room cache, whatever its frame count. */
+	virtual bool IsHovering() const { return false; }
 	virtual bool IsLooping() const { return false; }
 	virtual int CurrentFrame() const { return 0; }
 
