@@ -34,7 +34,8 @@ private:
 		ACTION_WALK_STOP,
 		ACTION_THROW_FAR,
 		ACTION_THROW_HIGH,
-		ACTION_JUMP_THROW
+		ACTION_JUMP_THROW,
+		ACTION_THROW_RAGE   /* the miniboss alone in its room rages (5 bones) */
 	};
 
 	/* Picks an action from a weighted list (RunLogicBlock percentages). */

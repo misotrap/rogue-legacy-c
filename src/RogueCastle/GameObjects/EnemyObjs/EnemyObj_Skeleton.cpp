@@ -191,6 +191,7 @@ void EnemyObj_Skeleton::StartAction(Action action)
 		break;
 	case ACTION_THROW_FAR:
 	case ACTION_THROW_HIGH:
+	case ACTION_THROW_RAGE:
 		/* throwBoneFarLS / throwBoneHighLS: face the target, windup, fire,
 		 * then the throw animation; tagged ATTACK so the cooldown runs. */
 		CurrentSpeed(0);
@@ -243,6 +244,7 @@ void EnemyObj_Skeleton::UpdateAction()
 	{
 	case ACTION_THROW_FAR:
 	case ACTION_THROW_HIGH:
+	case ACTION_THROW_RAGE:
 		if (m_actionPhase == 0 && !IsAnimating())
 		{
 			/* Windup done: the DelayLogicAction(AttackDelay) before the
@@ -252,8 +254,9 @@ void EnemyObj_Skeleton::UpdateAction()
 		}
 		else if (m_actionPhase == 1 && m_actionTimer <= 0)
 		{
-			ThrowBones(DifficultyType == EXPERT || DifficultyType == MINIBOSS ? 3 : 1,
-			           m_action == ACTION_THROW_FAR ? -72.0f : -85.0f);
+			int count = m_action == ACTION_THROW_RAGE ? 5
+			    : DifficultyType == EXPERT || DifficultyType == MINIBOSS ? 3 : 1;
+			ThrowBones(count, m_action == ACTION_THROW_HIGH ? -85.0f : -72.0f);
 			PlayAnimation("Attack", "End", false);
 			m_actionPhase = 2;
 		}
@@ -369,15 +372,21 @@ void EnemyObj_Skeleton::RunExpertLogic()
 
 void EnemyObj_Skeleton::RunMinibossLogic()
 {
-	/* The miniboss throws a fan of bones (throwBoneMiniBossLS). */
+	/* The miniboss throws a fan of bones (throwBoneMiniBossLS), and rages
+	 * with a 5-bone fan once it is alone in its room
+	 * (EnemyObj_Skeleton.cs RunMinibossLogic: ActiveEnemies > 1). */
 	static const Action acts[] = { ACTION_WALK_TOWARDS, ACTION_WALK_AWAY, ACTION_WALK_STOP,
-	                               ACTION_THROW_FAR, ACTION_THROW_HIGH };
+	                               ACTION_THROW_FAR, ACTION_THROW_RAGE };
+	int active = 2;
+	if (m_levelScreen != nullptr && m_levelScreen->CurrentRoom() != nullptr)
+		active = m_levelScreen->CurrentRoom()->ActiveEnemies();
 	switch (State)
 	{
 	default:
 	{
 		static const int w[] = { 0, 0, 10, 90, 0 };
-		PickAction(w, 5, acts);
+		static const int wRage[] = { 0, 0, 10, 0, 90 };
+		PickAction(active > 1 ? w : wRage, 5, acts);
 		break;
 	}
 	}
