@@ -503,6 +503,16 @@ namespace RogueCastle
 					m_architectAsking = false;
 					if (r == DialogueScreen::Result::Confirmed)
 					{
+						/* Console diagnosis (log.txt): the rebuild marks */
+						fprintf(stderr, "architect lock: confirmed, rebuilding the castle\n");
+						/* The rebuild (and the first room cache) takes seconds
+						 * on the console: show a black screen instead of the
+						 * frozen confirmation frame - the C# shows its
+						 * loading screen during ActivateArchitect
+						 * (LoadingScreen.cs line 234). */
+						gfx_begin(plat_frame());
+						gfx_clear(0xFF000000u);
+						plat_present();
 						/* ActivateArchitect / StopArchitectActivation: this castle
 						 * stays for the next heir; the gold fee applies until then */
 						/* the castle the last heir died in, rebuilt around the
@@ -519,9 +529,15 @@ namespace RogueCastle
 						StartCastle();
 						m_court.ResetToll(tollVisible);
 						m_level->Player()->Position(at);
+						/* The world's update is paused while the completion
+						 * dialogue is open: without this the fresh level's
+						 * camera stays at (0,0) and the dialogue floats over
+						 * an empty sky until it is dismissed. */
+						m_level->UpdateCamera();
 						Save();
 						Audio::PlaySound("Architect_Lever");
 						m_dialogue.Open("Castle Lock Complete Architect", m_save.hero.isFemale);
+						fprintf(stderr, "architect lock: new castle up, dialogue opened\n");
 					}
 				}
 				break;
@@ -946,7 +962,33 @@ namespace RogueCastle
 namespace RogueCastle
 {
 	// The hero stands in the castle's first room, the courtyard
-	bool GameFlow::InCourtyard() const
+	void GameFlow::DebugDump(const char *path)
+{
+	/* Dev: what F12 writes next to the frame - the state the reported
+	 * bugs are diagnosed from. */
+	FILE *f = fopen(path, "w");
+	if (f == nullptr) return;
+	fprintf(f, "state=%d level=%p valid=%d\n", (int) m_state, (void *) m_level,
+		m_level != nullptr && m_level->IsValid());
+	if (m_level != nullptr)
+	{
+		DS2DEngine::Camera2D *cam = m_level->Camera();
+		Vector2 p = cam->Position();
+		fprintf(f, "camera=(%.1f,%.1f) zoom=%.2f\n", p.X, p.Y, cam->Zoom());
+		Rectangle v = cam->Bounds();
+		fprintf(f, "view=[%d,%d %dx%d]\n", v.X, v.Y, v.Width, v.Height);
+		RoomObj *room = m_level->CurrentRoom();
+		fprintf(f, "currentRoom=%s\n", room != nullptr ? room->Name().c_str() : "(null)");
+		PlayerObj *hero = m_level->Player();
+		if (hero != nullptr)
+			fprintf(f, "hero=(%.1f,%.1f) state=%d\n", hero->X(), hero->Y(), hero->State);
+		fprintf(f, "courtyard=%d dialogue=%d architectAsking=%d\n",
+			(int) InCourtyard(), (int) m_dialogue.IsOpen(), (int) m_architectAsking);
+	}
+	fclose(f);
+}
+
+bool GameFlow::InCourtyard() const
 	{
 		if (m_level == nullptr || m_level->Player() == nullptr || m_level->Castle().rooms.empty()) return false;
 		const Levels::PlacedRoom &r = m_level->Castle().rooms[0];

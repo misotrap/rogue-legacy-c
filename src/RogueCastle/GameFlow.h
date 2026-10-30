@@ -44,6 +44,9 @@ namespace RogueCastle
 		// One 60 Hz step; buttons = BTN_* held
 		void Update(uint32_t buttons, double dt);
 		void Draw(uint32_t *frame, double drawElapsed);
+		/* Dev/test: F12 dumps the game state to a file (the console bug
+		 * reports) */
+		void DebugDump(const char *path);
 
 		void OnPlayerDeath();
 		// The last boss is dead: credits, then New Game+ (EnemyObj_LastBoss.SetPlayerData)
