@@ -62,6 +62,14 @@ public:
 	 * GameFlow, CompleteSpellSwap takes the spell and returns it. */
 	int TakeSpellSwap();
 	int CompleteSpellSwap(int roomIndex);
+	/* The elf's chest game (Bonus Tag 1): Up at the elf talks to him.
+	 * Phase 1 = the offer (confirm to pay 25% of the gold), 2 = the
+	 * choose reminder once paid, 3 = the game is over. PayChestGame
+	 * pays, shuffles the chests and opens the gate; false when the hero
+	 * has less than 4 gold. The Won/Lost talk goes through
+	 * TakeSpecialDialogue. */
+	bool TakeChestGameTalk(int &room, int &phase);
+	bool PayChestGame(int room);
 	/* The special item rooms (Bonus Tag 2): Up at the pedestal prays for
 	 * the item (the "Special Item Prayer" dialogue). GameFlow asks which
 	 * room, then TakeSpecialItem on confirm. */
@@ -200,6 +208,21 @@ private:
 	};
 	std::vector<SpellSwapRoom> m_spellSwaps;
 	int m_spellSwapRoom = -1;
+	/* The elf's chest game rooms (Bonus Tag 1, ChestBonusRoomObj). */
+	struct ChestGameRoom
+	{
+		int room = 0;
+		DS2DEngine::ObjContainer *elf = nullptr;      /* owned */
+		DS2DEngine::SpriteObj *elfIcon = nullptr;      /* the exclamation bubble */
+		DS2DEngine::SpriteObj *gate = nullptr;         /* the rising gate sprite */
+		TerrainObj *gateBlock = nullptr;              /* its collision, removed when paid */
+		float gateBaseY = 0;                          /* where the gate sits closed */
+		bool paid = false, completed = false;
+		bool elfTouching = false;
+		std::vector<ChestObj *> chests;               /* the room owns them */
+	};
+	std::vector<ChestGameRoom> m_chestGames;
+	int m_chestGameTalk = -1;
 	DS2DEngine::SpriteObj *m_itemIcon = nullptr;   /* the floating item */
 	uint8_t m_itemIconSprite = 0;
 	/* The jukebox rooms (Bonus Tag 11): Up plays the next song. */

@@ -449,6 +449,18 @@ namespace RogueCastle
 						Save();
 					}
 				}
+				if (m_chestGameAsking >= 0 && r != DialogueScreen::Result::Open)
+				{
+					int room = m_chestGameAsking;
+					m_chestGameAsking = -1;
+					if (r == DialogueScreen::Result::Confirmed && !m_level->PayChestGame(room))
+					{
+						/* PlayChestGame: not enough gold */
+						m_dialogue.Open("ChestBonusRoom1-NoMoney", m_save.hero.isFemale);
+					}
+					else if (r == DialogueScreen::Result::Confirmed)
+						Save();
+				}
 				if (m_specialItemRoom >= 0 && r != DialogueScreen::Result::Open)
 				{
 					int room = m_specialItemRoom;
@@ -640,6 +652,22 @@ namespace RogueCastle
 			{
 				m_dialogue.Open(specialTalk.c_str(), m_save.hero.isFemale);
 				Save();
+			}
+			/* The elf's chest game (ChestBonusRoomObj.HandleInput):
+			 * the offer with its confirm, the choose reminder once paid,
+			 * the end once a chest was opened. */
+			int gameRoom = -1, gamePhase = 0;
+			if (m_level->TakeChestGameTalk(gameRoom, gamePhase))
+			{
+				if (gamePhase == 1)
+				{
+					m_chestGameAsking = gameRoom;
+					m_dialogue.Open("ChestBonusRoom1-Start", m_save.hero.isFemale, "ConfirmTest1");
+				}
+				else if (gamePhase == 2)
+					m_dialogue.Open("ChestBonusRoom1-Choose", m_save.hero.isFemale);
+				else
+					m_dialogue.Open("ChestBonusRoom1-End", m_save.hero.isFemale);
 			}
 			/* The spell swap rooms (SpellSwapRoomObj.TakeItem): Up
 			 * swaps the hero's spell right away, then the GetItem screen

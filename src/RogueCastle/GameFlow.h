@@ -88,6 +88,7 @@ namespace RogueCastle
 		DialogueScreen m_dialogue;   /* over the castle while open */
 		bool m_architectAsking = false;
 		int m_specialItemRoom = -1;   /* the open dialogue ends on the take-item choice */
+		int m_chestGameAsking = -1;   /* the elf's chest game offer */
 		bool m_tollAsking = false;        /* the open dialogue ends on the toll choice */
 		OptionsScreen m_options;          /* SELECT in the pause and on the title */
 		bool m_optionsOpen = false, m_quit = false;

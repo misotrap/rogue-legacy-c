@@ -430,6 +430,67 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			}
 	}
 
+	/* The elf's chest game rooms (ChestBonusRoomObj, Bonus Tag 1): the
+	 * elf stands at the waypoint, the gate at "GatePosition" hides the
+	 * three silver chests until the game is paid for. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "1") continue;
+		float elfX = 0, floorY = 0, gateX = 0, gateBottom = 0;
+		bool haveElf = false, haveFloor = false, haveGate = false;
+		for (const Levels::ObjData &o : r.objs)
+		{
+			if (o.type == "EnemyOrbObj" && o.isWaypoint) { elfX = o.x; haveElf = true; }
+			if (o.type == "CollHullObj" && o.name == "Floor") { floorY = o.y; haveFloor = true; }
+			if (o.type == "CollHullObj" && o.name == "GatePosition") { gateX = o.x; gateBottom = o.y + o.height; haveGate = true; }
+		}
+		if (!haveElf || !haveFloor || !haveGate) continue;
+		/* The elf's sheet is the blacksmith UI one (the shop elves). */
+		if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Elf_Character"))
+			SpriteSystem::SpriteLibrary::LoadSheet(assets, "blacksmithUISpritesheet");
+		if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Elf_Character")) continue;
+		ChestGameRoom g;
+		g.room = (int) i;
+		g.elf = new DS2DEngine::ObjContainer("Elf_Character");
+		g.elf->Scale(Vector2(2, 2));
+		g.elf->Flip(r.reversed ? SpriteEffects::None : SpriteEffects::FlipHorizontally);
+		g.elf->X(elfX);
+		g.elf->Y(floorY - 2);
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("ExclamationBubble_Sprite"))
+		{
+			g.elfIcon = new DS2DEngine::SpriteObj("ExclamationBubble_Sprite");
+			g.elfIcon->Scale(Vector2(2, 2));
+			g.elfIcon->ForceDraw(true);
+		}
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("CastleEntranceGate_Sprite"))
+		{
+			g.gate = new DS2DEngine::SpriteObj("CastleEntranceGate_Sprite");
+			/* The gate's anchor is (0.5, 0.8): X centres it on the
+			 * position, Y puts its bottom on the floor line. */
+			g.gate->X(gateX);
+			g.gateBaseY = gateBottom - 0.8f * 181;
+			g.gate->Y(g.gateBaseY);
+			/* The solid block, the sprite's size (49x181). */
+			g.gateBlock = new TerrainObj(49, 181);
+			g.gateBlock->Populate((int) (gateX - 24.5f), (int) g.gateBaseY, 49, 181, true, true, true, true);
+			m_physicsManager.AddObject(g.gateBlock);
+			m_castleTerrain.push_back(g.gateBlock);
+		}
+		/* OnEnter: silver, empty and locked until the game is paid. */
+		for (ChestObj *chest : m_roomList[i]->ChestList())
+		{
+			chest->SetChestType(ChestType::Silver);
+			chest->IsEmpty = true;
+			chest->IsLocked = true;
+			g.chests.push_back(chest);
+		}
+		m_chestGames.push_back(g);
+		if (rl_trace())
+			fprintf(stderr, "chest game in room %d: elf (%.0f,%.0f), %d chests\n",
+				(int) i, elfX, floorY, (int) g.chests.size());
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -513,6 +574,14 @@ ProceduralLevelScreen::~ProceduralLevelScreen()
 	delete m_objPlate;
 	for (TeleporterObj *teleporter : m_teleporterList)
 		delete teleporter;
+	for (RandomTeleportRoom &t : m_randomTeleports)
+		delete t.pad;
+	for (ChestGameRoom &g : m_chestGames)
+	{
+		delete g.elf;
+		delete g.elfIcon;
+		delete g.gate;
+	}
 	delete m_diaryArrow;
 	delete m_itemIcon;
 }
@@ -586,6 +655,67 @@ void ProceduralLevelScreen::RandomTeleport()
 			fprintf(stderr, "random teleport -> %s at (%.0f,%.0f)\n", dest->Name().c_str(), m_player->X(), m_player->Y());
 		break;
 	}
+}
+
+bool ProceduralLevelScreen::TakeChestGameTalk(int &room, int &phase)
+{
+	if (m_chestGameTalk < 0) return false;
+	room = m_chestGameTalk;
+	m_chestGameTalk = -1;
+	for (ChestGameRoom &g : m_chestGames)
+		if (g.room == room)
+		{
+			phase = g.completed ? 3 : g.paid ? 2 : 1;
+			return true;
+		}
+	return false;
+}
+
+bool ProceduralLevelScreen::PayChestGame(int room)
+{
+	/* PlayChestGame: the hero pays 25% of his gold (ID = 1), the chests
+	 * are shuffled - one holds three times the price - and the gate
+	 * opens. */
+	for (ChestGameRoom &g : m_chestGames)
+	{
+		if (g.room != room || m_player == nullptr || m_player->Stats() == nullptr) continue;
+		int gold = m_player->Stats()->Gold;
+		if (gold < 4) return false;
+		int goldPaid = (int) (gold * 0.25f);
+		m_player->Stats()->Gold -= goldPaid;
+		g.paid = true;
+		/* ShuffleChests: one random chest holds 3x the gold paid, the
+		 * others stay empty; the glasses show the winner in gold. */
+		int winner = rand() % g.chests.size();
+		for (size_t c = 0; c < g.chests.size(); c++)
+		{
+			ChestObj *chest = g.chests[c];
+			chest->ForcedItemType = ItemDropType::Coin;
+			chest->IsEmpty = c != (size_t) winner;
+			if (c == (size_t) winner)
+				chest->ForcedAmount = goldPaid * 3.0f;
+			chest->IsLocked = false;
+			chest->TextureColor(Color(255, 255, 255));
+			if (c == (size_t) winner && m_player->Stats()->SpecialItem == 8 /* Glasses */)
+				chest->TextureColor(Color(255, 215, 0));
+		}
+		char buf[32];
+		snprintf(buf, sizeof(buf), "-%d %s", goldPaid, Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_4"));
+		AddPopup(buf, m_player->X(), (float) m_player->Bounds().Top(), 0xFFFFFF00u /* Yellow */);
+		/* The gate opens: its collision leaves the physics world. */
+		if (g.gateBlock != nullptr)
+		{
+			m_physicsManager.RemoveObject(g.gateBlock);
+			for (size_t i = 0; i < m_castleTerrain.size(); i++)
+				if (m_castleTerrain[i] == g.gateBlock)
+				{
+					m_castleTerrain.erase(m_castleTerrain.begin() + i);
+					break;
+				}
+		}
+		return true;
+	}
+	return false;
 }
 
 int ProceduralLevelScreen::TakeSpellSwap()
@@ -886,6 +1016,50 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 			&& playerBounds.Intersects(sw.bounds) && m_player->IsTouchingGround();
 		if (sw.arrowVisible && upPressed && m_spellSwapRoom < 0)
 			m_spellSwapRoom = sw.room;
+	}
+
+	/* The elf's chest game: while the game is on the hero stays in the
+	 * room, and the first opened chest ends it (ChestBonusRoomObj.Update).
+	 * Up at the elf talks to him (HandleInput). */
+	for (ChestGameRoom &g : m_chestGames)
+	{
+		if (m_roomList[g.room] != m_currentRoom || m_player == nullptr)
+		{
+			g.elfTouching = false;
+			continue;
+		}
+		const Levels::PlacedRoom &r = m_castle.rooms[g.room];
+		if (g.paid && !g.completed)
+		{
+			/* The hero cannot leave while the game is on */
+			if (!r.reversed && m_player->X() < r.x + 50) m_player->X(r.x + 50);
+			else if (r.reversed && m_player->X() > r.Right() - 50) m_player->X(r.Right() - 50);
+			int open = 0;
+			bool lost = false;
+			for (ChestObj *chest : g.chests)
+			{
+				if (chest->IsOpen()) open++;
+				if (chest->IsEmpty && chest->IsOpen()) lost = true;
+			}
+			if (open >= 1)
+			{
+				for (ChestObj *chest : g.chests) chest->IsLocked = true;
+				g.completed = true;
+				if (m_specialDialogue.empty())
+					m_specialDialogue = lost ? "ChestBonusRoom1-Lost" : "ChestBonusRoom1-Won";
+			}
+		}
+		/* The gate rises once the game is paid for (Tween.By Y -height) */
+		if (g.paid && g.gate != nullptr && g.gate->Y() > g.gateBaseY - 181)
+		{
+			g.gate->Y(g.gate->Y() - (float) (181 * gameTime->ElapsedGameTime));
+			if (g.gate->Y() < g.gateBaseY - 181) g.gate->Y(g.gateBaseY - 181);
+		}
+		/* The elf's talk icon, and Up talking to him */
+		Rectangle elfBounds = g.elf != nullptr ? g.elf->Bounds() : Rectangle();
+		g.elfTouching = g.elf != nullptr && playerBounds.Intersects(elfBounds);
+		if (g.elfTouching && m_player->IsTouchingGround() && upPressed && m_chestGameTalk < 0)
+			m_chestGameTalk = g.room;
 	}
 
 	/* The random teleport pads: the arrow while the hero stands on one,
@@ -1292,6 +1466,19 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		room->Draw(camera);
 	for (TeleporterObj *teleporter : m_teleporterList)
 		teleporter->Draw(camera);
+	/* The elf's chest game: the elf and his talk bubble, the gate. */
+	for (ChestGameRoom &g : m_chestGames)
+	{
+		if (g.elf != nullptr) g.elf->Draw(camera);
+		if (g.elfIcon != nullptr && g.elfTouching)
+		{
+			Rectangle b = g.elf->Bounds();
+			g.elfIcon->Position(Vector2(b.X + b.Width * 0.5f,
+				b.Y - 50 + sinf(m_elapsed * 20) * 2));
+			g.elfIcon->Draw(camera);
+		}
+		if (g.gate != nullptr) g.gate->Draw(camera);
+	}
 	/* The random teleport pads (violet), with the same floating arrow
 	 * while the hero stands on one. */
 	m_randomArrow = false;
