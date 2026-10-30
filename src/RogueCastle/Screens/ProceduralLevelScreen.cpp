@@ -34,6 +34,27 @@ namespace RogueCastle
 
 using namespace DS2DEngine;
 
+/* The object's world bounds with its sprite's real anchor (X/Y is the
+ * anchor position, and the anchor is not always centred: the healing
+ * fountain's sits at its bottom). */
+static Rectangle SpriteBounds(const Levels::ObjData &o)
+{
+	Rectangle b;
+	DS2DEngine::SpriteObj *spr = new DS2DEngine::SpriteObj(o.sprite);
+	if (spr->SpriteRect().Width > 0)
+	{
+		spr->X(o.x);
+		spr->Y(o.y);
+		spr->Scale(Vector2(o.scaleX, o.scaleY));
+		b = spr->Bounds();
+	}
+	else
+		b = Rectangle((int) (o.x - o.width * 0.5f), (int) (o.y - o.height * 0.5f),
+			(int) o.width, (int) o.height);
+	delete spr;
+	return b;
+}
+
 ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
                                              std::vector<uint8_t> *chestFlags, int timesCastleBeaten,
                                              int *diaryEntry)
@@ -225,8 +246,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			{
 				DiaryRoom d;
 				d.room = (int) i;
-				d.bounds = Rectangle((int) (o.x - o.width * 0.5f), (int) (o.y - o.height * 0.5f),
-					(int) o.width, (int) o.height);
+				d.bounds = SpriteBounds(o);
 				d.x = o.x;
 				d.y = o.y;
 				m_diaries.push_back(d);
@@ -261,6 +281,30 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		m_roomRenderer.SetPortraitIndex(r, p.index);
 		if (rl_trace())
 			fprintf(stderr, "portrait in room %d: ancestor %d\n", (int) i, p.index);
+	}
+
+	/* The vita chambers (VitaChamberRoomObj, Bonus Tag 5): the
+	 * "fountain" object heals once per castle. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "5") continue;
+		for (const Levels::ObjData &o : r.objs)
+			if (o.name == "fountain")
+			{
+				VitaRoom v;
+				v.room = (int) i;
+				v.bounds = SpriteBounds(o);
+				v.bounds.X -= 50;   /* the C# widens the X bounds by 50/100 */
+				v.bounds.Width += 100;
+				v.x = o.x;
+				v.y = o.y;
+				v.used = false;
+				m_vitas.push_back(v);
+				if (rl_trace())
+					fprintf(stderr, "vita chamber in room %d at (%.0f,%.0f)\n", (int) i, o.x, o.y);
+				break;
+			}
 	}
 
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
@@ -496,6 +540,53 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 			(*m_diaryEntry)++;
 			d.used = true;
 		}
+	}
+
+	/* The portraits: Up under the giant frame tells the ancestor's
+	 * story (PortraitRoomObj.Update). */
+	if (upPressed && m_player != nullptr && m_player->IsTouchingGround())
+		for (PortraitRoom &p : m_portraits)
+		{
+			if (m_roomList[p.room] != m_currentRoom) continue;
+			if (playerBounds.Intersects(p.zone) && m_specialDialogue.empty())
+			{
+				char name[28];
+				snprintf(name, sizeof(name), "PortraitRoomText%d", p.index);
+				m_specialDialogue = name;
+			}
+		}
+
+	/* The vita chambers: Up at the fountain restores 30% of the hero's
+	 * health and mana (VitaChamberRoomObj.Update), then it dries out. */
+	for (VitaRoom &v : m_vitas)
+	{
+		if (m_roomList[v.room] != m_currentRoom || m_player == nullptr || v.used)
+		{
+			v.arrowVisible = false;
+			continue;
+		}
+		bool touching = playerBounds.Intersects(v.bounds);
+		v.arrowVisible = touching && m_player->IsTouchingGround();
+		if (rl_trace() && v.arrowVisible)
+			fprintf(stderr, "vita arrow: player=(%.0f,%.0f)\\n", m_player->X(), m_player->Y());
+		if (!v.arrowVisible || !upPressed)
+			continue;
+		/* GameEV.ROOM_VITA_CHAMBER_REGEN_AMOUNT */
+		int healthGain = (int) (m_player->MaxHealth() * GameEV::ROOM_VITA_CHAMBER_REGEN_AMOUNT);
+		int manaGain = (int) (m_player->MaxMana() * GameEV::ROOM_VITA_CHAMBER_REGEN_AMOUNT);
+		m_player->CurrentHealth += healthGain;
+		m_player->CurrentMana += manaGain;
+		Audio::PlaySound("Collect_Mana");
+		if (rl_trace())
+			fprintf(stderr, "vita heal: +%d hp +%d mp\n", healthGain, manaGain);
+		char buf[48];
+		snprintf(buf, sizeof(buf), "+%d %s", healthGain, Text::Loc::Get("LOC_ID_ITEM_DROP_OBJ_2"));
+		AddPopup(buf, m_player->X(), (float) playerBounds.Top() - 30, 0xFF7CFC00u /* LawnGreen */);
+		snprintf(buf, sizeof(buf), "+%d %s", manaGain, Text::Loc::Get("LOC_ID_ITEM_DROP_OBJ_3"));
+		AddPopup(buf, m_player->X(), (float) playerBounds.Top(), 0xFF6495EDu /* CornflowerBlue */);
+		v.used = true;
+		v.arrowVisible = false;
+		m_roomRenderer.SetFountainTint(m_castle.rooms[v.room], 0xFF646464u /* (100,100,100) */);
 	}
 
 	/* m_projectileManager.Update(gameTime): move the projectiles and
@@ -869,15 +960,24 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		room->Draw(camera);
 	for (TeleporterObj *teleporter : m_teleporterList)
 		teleporter->Draw(camera);
-	/* The diaries' bubble (DiaryRoomObj.cs line 65), swaying above. */
+	/* The diaries' and fountains' bubble (DiaryRoomObj.cs line 65,
+	 * VitaChamberRoomObj.Update), swaying above. */
 	if (m_diaryArrow != nullptr)
+	{
+		float sway = sinf(m_elapsed * 20) * 2;
 		for (DiaryRoom &d : m_diaries)
 			if (d.arrowVisible)
 			{
-				float sway = sinf(m_elapsed * 20) * 2;
 				m_diaryArrow->Position(Vector2(d.x, d.y - m_diaryArrow->SpriteRect().Height - 50 + sway));
 				m_diaryArrow->Draw(camera);
 			}
+		for (VitaRoom &v : m_vitas)
+			if (v.arrowVisible)
+			{
+				m_diaryArrow->Position(Vector2(v.x, v.y - 150 + sway));
+				m_diaryArrow->Draw(camera);
+			}
+	}
 	if (rl_trace())
 	{
 		static int frames = 0;

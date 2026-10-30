@@ -50,6 +50,7 @@ namespace RogueCastle
 			for (GameObj *o : entry.second.front) delete o;
 		}
 		m_decorations.clear();
+		m_fountains.clear();   // those sprites were part of the decorations
 	}
 
 	bool RoomRenderer::LoadContent(const char *assetsDir)
@@ -246,6 +247,7 @@ namespace RogueCastle
 			bool rotatedContainer = (o.type == "ObjContainer" || o.type == "PhysicsObjContainer") && o.rotation != 0 && !o.breakable;
 			if (!plain && !rotatedContainer) continue;
 			GameObj *obj;
+			DS2DEngine::SpriteObj *fountainObj = nullptr;   // the "fountain" decoration, if any
 			std::string sprite = o.sprite;
 			// LevelParser.cs line 205: the empty frames get a random painting
 			if (sprite == "CastleAssetFrame_Sprite")
@@ -288,8 +290,19 @@ namespace RogueCastle
 				obj = hover;
 			}
 			else if (SpriteSystem::SpriteLibrary::ContainsCharacter(sprite)) obj = new ObjContainer(sprite);
-			else if (SpriteSystem::SpriteLibrary::ContainsSprite(sprite)) obj = new SpriteObj(sprite);
+			else if (SpriteSystem::SpriteLibrary::ContainsSprite(sprite))
+			{
+				obj = fountainObj = new SpriteObj(sprite);
+			}
 			else continue; // a sheet that is not loaded
+			if (o.name == "fountain")
+			{
+				m_fountains[&room] = fountainObj;
+				auto tint = m_fountainTint.find(&room);
+				if (tint != m_fountainTint.end())
+					obj->TextureColor(Color(tint->second >> 16 & 255,
+						tint->second >> 8 & 255, tint->second & 255));
+			}
 			obj->X(o.x);
 			obj->Y(o.y);
 			obj->Scale(Vector2(o.scaleX, o.scaleY));

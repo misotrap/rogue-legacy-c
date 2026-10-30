@@ -12,6 +12,7 @@
 
 #include "../../DS2DEngine/Camera2D.h"
 #include "../../DS2DEngine/GameObjs/GameObj.h"
+#include "../../DS2DEngine/GameObjs/SpriteObj.h"
 #include "../Levels/RoomData.h"
 
 #include <map>
@@ -60,8 +61,19 @@ namespace RogueCastle
 		/* The ancestor shown in each portrait room, chosen by the level
 		 * (one random per castle, like PortraitRoomObj.OnEnter). */
 		std::map<const Levels::PlacedRoom *, int> m_portraitIndex;
+		/* The vita chambers' fountains, to grey them out once used
+		 * (VitaChamberRoomObj.OnEnter). */
+		std::map<const Levels::PlacedRoom *, DS2DEngine::SpriteObj *> m_fountains;
+		std::map<const Levels::PlacedRoom *, uint32_t> m_fountainTint;
 	public:
 		void SetPortraitIndex(const Levels::PlacedRoom &room, int index) { m_portraitIndex[&room] = index; }
+		void SetFountainTint(const Levels::PlacedRoom &room, uint32_t colour)
+		{
+			m_fountainTint[&room] = colour;
+			auto it = m_fountains.find(&room);
+			if (it != m_fountains.end() && it->second != nullptr)
+				it->second->TextureColor(Color(colour >> 16 & 255, colour >> 8 & 255, colour & 255));
+		}
 	private:
 
 		static Art ArtFor(Levels::LevelType type);

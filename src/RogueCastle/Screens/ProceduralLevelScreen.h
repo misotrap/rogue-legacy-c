@@ -148,6 +148,9 @@ private:
 	 * interaction zone. */
 	struct PortraitRoom { int room; int index; Rectangle zone; };
 	std::vector<PortraitRoom> m_portraits;
+	/* The vita chambers (Bonus Tag 5): the "fountain", grey once used. */
+	struct VitaRoom { int room; Rectangle bounds; float x, y; bool used; bool arrowVisible; };
+	std::vector<VitaRoom> m_vitas;
 	std::string m_specialDialogue;
 	DS2DEngine::SpriteObj *m_diaryArrow = nullptr;
 	float m_elapsed = 0;
