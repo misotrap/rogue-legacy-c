@@ -3,6 +3,7 @@
 #include "../../DS2DEngine/Consts.h"
 #include "../../DS2DEngine/CollisionMath.h"
 #include "../EVs/GameEV.h"
+#include "../../debugflags.h"
 #include "../Screens/ProceduralLevelScreen.h"
 #include "EnemyObjs/EnemyObj.h"
 #include "../../Audio/Audio.h"

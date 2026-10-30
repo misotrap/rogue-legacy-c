@@ -989,9 +989,23 @@ void PlayerObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox,
 	    || collisionResponseType == Consts::COLLISIONRESPONSE_SECONDBOXHIT)
 	{
 		IPhysicsObj *otherParent = otherBox->PhysicsParent();
-		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 3
-		    && otherParent->Reflect(thisBox->Type(), IsAirAttacking, State == STATE_BLOCKING))
-			return;
+		if (otherParent != nullptr && otherParent->CollisionTypeTag() == 3)
+		{
+			if (otherParent->Reflect(thisBox->Type(), IsAirAttacking, State == STATE_BLOCKING))
+				return;
+			/* EnergonProjectileObj.cs line 60: an Energon shot never
+			 * damages the hero - a body touch without the matching
+			 * move (sword, block, down strike) just spends it */
+			if (otherParent->IsSpellProjectile() && thisBox->Type() == Consts::BODY_HITBOX)
+			{
+				ProjectileObj *shot = static_cast<ProjectileObj *>(otherParent);
+				if (shot->EnergonType >= 0)
+				{
+					shot->KillProjectile();
+					return;
+				}
+			}
+		}
 	}
 	/* PlayerObj.cs line 2053: an enemy weapon touching the player's body
 	 * hits (blocking comes with the Knight2 class). */

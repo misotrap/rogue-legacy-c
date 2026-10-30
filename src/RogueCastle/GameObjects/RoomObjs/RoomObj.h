@@ -44,6 +44,9 @@ public:
 	int Width() const { return m_width; }
 	int Height() const { return m_height; }
 	int LinkedRoom() const { return m_linkedRoom; }
+	/* The challenge room this entrance's boss door leads to once the
+	 * rematch is paid for (-1 = none). */
+	int ChallengeRoom() const { return m_challengeRoom; }
 
 	/* DoorObj: x/y in castle coordinates. */
 	struct DoorInfo
@@ -80,6 +83,10 @@ public:
 	const std::vector<class BreakableObj *> &BreakableObjList() const { return m_breakableList; }
 	const std::vector<class ChestObj *> &ChestList() const { return m_chestList; }
 	const std::vector<class EnemyObj *> &EnemyList() const { return m_enemyList; }
+	/* Dev/test: the RL_DEBUG_ENEMY fallback spawn joins the room's lists
+	 * (the container animates in Draw: an undrawn enemy never acts) */
+	void DevAddEnemy(class EnemyObj *e) { m_enemyList.push_back(e); }
+	void DevAddDrawable(DS2DEngine::GameObj *o) { m_drawableList.push_back(o); }
 	int ActiveEnemies() const;
 	/* RoomObj.Level: the room counter used by the chest level and the
 	 * enemy difficulty (ProceduralLevelScreen.cs line 886). */
@@ -100,6 +107,7 @@ private:
 	float m_x = 0, m_y = 0;
 	int m_width = 0, m_height = 0;
 	int m_linkedRoom = -1;
+	int m_challengeRoom = -1;
 	std::vector<TerrainObj *> m_terrainList;
 	std::vector<Slope> m_slopeList;
 	std::vector<Hazard> m_hazardList;

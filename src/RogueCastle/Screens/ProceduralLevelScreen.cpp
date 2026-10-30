@@ -767,6 +767,55 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	}
 	m_player->UpdateCollisionBoxes();
 
+	/* Dev/test: RL_DEBUG_ENEMY=<EnemyType value> spawns the hero on the
+	 * first enemy of that type, to test it without hunting one. */
+	if (const char *debugEnemy = getenv("RL_DEBUG_ENEMY"))
+	{
+		uint8_t type = (uint8_t) atoi(debugEnemy);
+		bool found = false;
+		for (RoomObj *room : m_roomList)
+		{
+			for (EnemyObj *enemy : room->EnemyList())
+			{
+				if (enemy->Type != type)
+					continue;
+				m_player->X(enemy->X());
+				m_player->Y(enemy->Y() - 200);
+				m_player->ForceInvincible = true;   /* dev: keep the room's enemies out of the test */
+				if (rl_trace())
+					fprintf(stderr, "debug enemy %d at (%.0f,%.0f) room %s\n",
+						(int) type, enemy->X(), enemy->Y(), room->Name().c_str());
+				found = true;
+				break;
+			}
+			if (found) break;
+		}
+		if (!found)
+		{
+			/* Dev: some types (the Energon) are not in any area pool -
+			 * build one beside the hero instead. */
+			EnemyObj *spawn = RoomObj::CreateEnemyOfType(type, 0, m_player);
+			if (spawn != nullptr)
+			{
+				spawn->Position(Vector2(m_player->X() + 300, m_player->Y() - 120));
+				spawn->Initialize();
+				spawn->InitialLogicDelay(0);
+				spawn->SetPlayerTarget(m_player);
+				spawn->SetLevelScreen(this);
+				spawn->SetTerrain(&m_allTerrain);
+				m_physicsManager.AddObject(spawn);
+				if (!m_roomList.empty())
+				{
+					m_roomList[0]->DevAddEnemy(spawn);
+					m_roomList[0]->DevAddDrawable(spawn);
+				}
+				if (rl_trace())
+					fprintf(stderr, "debug enemy %d spawned at (%.0f,%.0f)\n",
+						(int) type, spawn->X(), spawn->Y());
+			}
+		}
+	}
+
 	/* Dev/test: RL_DEBUG_LOOT drops one of every loot type on the hero,
 	 * to test ItemDropObj without hunting an enemy first. */
 	if (getenv("RL_DEBUG_LOOT") != nullptr)

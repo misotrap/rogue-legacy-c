@@ -259,6 +259,12 @@ void EnemyObj_Energon::FireProjectile()
 	shot->Orientation = angle;
 	shot->Opacity(0.8f);
 	shot->Flip(Flip());
+	/* EnergonProjectileObj's frames carry a weapon AND a body box over the
+	 * same rect: the hero's sword pairs with the body box to send it back
+	 * (the port's projectiles only get a synthetic weapon box). */
+	for (DS2DEngine::CollisionBox *box : shot->CollisionBoxes())
+		if (box->Type() == Consts::WEAPON_HITBOX)
+			shot->AddCollisionBox(box->X(), box->Y(), box->Width(), box->Height(), Consts::BODY_HITBOX);
 }
 
 void EnemyObj_Energon::PickAction(const int *weights, int count, const Action *actions)
