@@ -360,6 +360,30 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			}
 	}
 
+	/* The random teleport rooms (RandomTeleportRoomObj, Bonus Tag 3):
+	 * the template's faux "teleporter" sprite becomes a violet pad. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "3") continue;
+		for (const Levels::ObjData &o : r.objs)
+			if (o.name == "teleporter" && SpriteSystem::SpriteLibrary::ContainsSprite("TeleporterBase_Sprite"))
+			{
+				RandomTeleportRoom t;
+				t.room = (int) i;
+				t.pad = new DS2DEngine::SpriteObj("TeleporterBase_Sprite");
+				t.pad->X(o.x);
+				t.pad->Y(o.y);
+				/* Color.PaleVioletRed (RandomTeleportRoomObj.Initialize) */
+				t.pad->TextureColor(Color(199, 21, 133));
+				t.pad->ForceDraw(true);
+				m_randomTeleports.push_back(t);
+				if (rl_trace())
+					fprintf(stderr, "random teleport in room %d at (%.0f,%.0f)\n", (int) i, o.x, o.y);
+				break;
+			}
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -477,6 +501,46 @@ static const char *const JUKEBOX_TITLES[] = { "Pistol Shrimp", "The Grim Outdoor
 	"Lamprey", "Broadside of the Broadsword", "Mincemeat", "Trilobyte", "Poot-yan",
 	"SeaSawHorse (Legacy)", "SeaSawHorse (Manor)", "Rogue Legacy", "The Fish and the Whale",
 	"Rotten Legacy", "Whale. Shark.", "Whale. Shark. (Drums)" };
+
+void ProceduralLevelScreen::RandomTeleport()
+{
+	/* RandomTeleportRoomObj.TeleportPlayer: any ordinary room with two
+	 * doors or more; the hero lands at its first left/right/bottom
+	 * door. */
+	if (m_player == nullptr)
+		return;
+	static const char *const skipped[] = { "Boss", "Start", "Ending", "Compass", "ChallengeBoss",
+		"Throne", "Tutorial", "EntranceBoss", "Bonus", "Linker", "Secret", "CastleEntrance" };
+	RoomObj *dest = nullptr;
+	for (int tries = 0; tries < 500 && dest == nullptr; tries++)
+	{
+		RoomObj *room = m_roomList[rand() % m_roomList.size()];
+		bool skip = room->DoorList().size() < 2;
+		for (const char *name : skipped)
+			if (room->Name() == name) skip = true;
+		if (skip) continue;
+		dest = room;
+	}
+	if (dest == nullptr)
+		return;
+	for (const RoomObj::DoorInfo &d : dest->DoorList())
+	{
+		if (d.pos != Levels::DoorPos::Left && d.pos != Levels::DoorPos::Right
+		    && d.pos != Levels::DoorPos::Bottom)
+			continue;
+		float x = d.x + d.width * 0.5f;
+		float bottom = d.pos == Levels::DoorPos::Bottom ? d.y : d.y + d.height;
+		Audio::PlaySound("Teleport_Disappear");
+		Rectangle feet = m_player->TerrainBounds();
+		m_player->X(x);
+		m_player->Y(bottom - (feet.Bottom() - m_player->Y()) - 1);
+		
+		Audio::PlaySound("Teleport_Reappear");
+		if (rl_trace())
+			fprintf(stderr, "random teleport -> %s at (%.0f,%.0f)\n", dest->Name().c_str(), m_player->X(), m_player->Y());
+		break;
+	}
+}
 
 int ProceduralLevelScreen::TakeSpecialItemPrayer()
 {
@@ -713,6 +777,20 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 			&& playerBounds.Intersects(item.bounds) && m_player->IsTouchingGround();
 		if (item.arrowVisible && upPressed && m_specialItemPrayer < 0)
 			m_specialItemPrayer = item.room;
+	}
+
+	/* The random teleport pads: the arrow while the hero stands on one,
+	 * Up throws him into a random ordinary room. */
+	for (RandomTeleportRoom &t : m_randomTeleports)
+	{
+		if (m_roomList[t.room] != m_currentRoom || m_player == nullptr)
+			continue;
+		if (t.pad->Bounds().Intersects(playerBounds) && m_player->IsTouchingGround())
+		{
+			m_randomArrow = true;   /* drawn like the teleporters' arrow */
+			if (upPressed)
+				RandomTeleport();
+		}
 	}
 
 	/* The jukebox: Up plays the next song (JukeboxBonusRoom.Update),
@@ -1105,6 +1183,20 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		room->Draw(camera);
 	for (TeleporterObj *teleporter : m_teleporterList)
 		teleporter->Draw(camera);
+	/* The random teleport pads (violet), with the same floating arrow
+	 * while the hero stands on one. */
+	m_randomArrow = false;
+	for (RandomTeleportRoom &t : m_randomTeleports)
+	{
+		t.pad->Draw(camera);
+		if (m_randomArrow && m_diaryArrow != nullptr)
+		{
+			m_randomArrow = false;   /* only the touched room's */
+			Rectangle b = t.pad->Bounds();
+			m_diaryArrow->Position(Vector2(b.X + b.Width * 0.5f, b.Y - 50 + sinf(m_elapsed * 20) * 2));
+			m_diaryArrow->Draw(camera);
+		}
+	}
 	/* The diaries' and fountains' bubble (DiaryRoomObj.cs line 65,
 	 * VitaChamberRoomObj.Update), swaying above. */
 	if (m_diaryArrow != nullptr)

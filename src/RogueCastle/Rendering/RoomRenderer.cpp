@@ -242,6 +242,9 @@ namespace RogueCastle
 		for (const Levels::ObjData &o : room.objs)
 		{
 			if (o.sprite.empty()) continue;
+			// The random teleport rooms' faux pad: the level draws the real
+			// violet one (RandomTeleportRoomObj.Initialize)
+			if (o.name == "teleporter") continue;
 			bool plain = o.type == "SpriteObj" || o.type == "PhysicsObj";
 			// RoomObj builds the containers, except the rotated ones
 			bool rotatedContainer = (o.type == "ObjContainer" || o.type == "PhysicsObjContainer") && o.rotation != 0 && !o.breakable;

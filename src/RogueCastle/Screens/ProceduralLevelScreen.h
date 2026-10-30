@@ -53,6 +53,10 @@ public:
 	 * area music while the hero stays in the room (JukeboxBonusRoom);
 	 * nullptr outside or before the first Up. */
 	const char *JukeboxSong();
+	/* The random teleport rooms (Bonus Tag 3): Up on the violet pad
+	 * throws the hero into a random ordinary room
+	 * (RandomTeleportRoomObj.TeleportPlayer). */
+	void RandomTeleport();
 	/* The special item rooms (Bonus Tag 2): Up at the pedestal prays for
 	 * the item (the "Special Item Prayer" dialogue). GameFlow asks which
 	 * room, then TakeSpecialItem on confirm. */
@@ -174,6 +178,10 @@ private:
 	};
 	std::vector<SpecialItemRoom> m_specialItems;
 	int m_specialItemPrayer = -1;
+	/* The random teleport rooms (Bonus Tag 3): the violet pad. */
+	struct RandomTeleportRoom { int room; DS2DEngine::SpriteObj *pad; };
+	std::vector<RandomTeleportRoom> m_randomTeleports;
+	bool m_randomArrow = false;   /* the touched pad shows the arrow */
 	DS2DEngine::SpriteObj *m_itemIcon = nullptr;   /* the floating item */
 	uint8_t m_itemIconSprite = 0;
 	/* The jukebox rooms (Bonus Tag 11): Up plays the next song. */
