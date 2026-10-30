@@ -76,6 +76,11 @@ public:
 	int TakeCarnivalTalk();
 	bool CarnivalCompleted(int room);
 	void BeginCarnival(int room);
+	/* The second shooting gallery (Bonus Tag 9, CarnivalShoot2BonusRoom):
+	 * 100 bullseyes in a 10x10 grid, five axes. Same flow as the first. */
+	int TakeCarnival2Talk();
+	bool Carnival2Completed(int room);
+	void BeginCarnival2(int room);
 	/* The special item rooms (Bonus Tag 2): Up at the pedestal prays for
 	 * the item (the "Special Item Prayer" dialogue). GameFlow asks which
 	 * room, then TakeSpecialItem on confirm. */
@@ -266,6 +271,32 @@ private:
 	void CarnivalActivateTarget(CarnivalRoom &c, const Levels::PlacedRoom &r);
 	void CarnivalEndGame(CarnivalRoom &c, bool won);
 	int m_carnivalTalk = -1;
+	/* The second gallery (Bonus Tag 9): the 10x10 bullseye grid. */
+	struct Carnival2Room
+	{
+		int room = 0;
+		DS2DEngine::ObjContainer *clown = nullptr;       /* owned */
+		DS2DEngine::SpriteObj *clownIcon = nullptr;
+		DS2DEngine::SpriteObj *gate = nullptr;            /* rises when the game begins */
+		TerrainObj *gateBlock = nullptr;                  /* its collision */
+		float gateBaseY = 0;
+		Rectangle grid;                                   /* the "Boundary" terrain */
+		std::vector<class BreakableObj *> targets;       /* owned, 10x10 */
+		bool playing = false, completed = false, clownTouching = false;
+		bool gateOpen = false;
+		int axesThrown = 0;
+		uint8_t storedSpell = 0;
+		float storedMana = 0;
+		float revealTime = -1;    /* the targets' fade-in, -1 hidden */
+		float hideTime = -1;     /* the fade-out after the game */
+		float resultTime = -1;   /* the results text */
+		int destroyed = 0;
+		ChestObj *rewardChest = nullptr;   /* the level's chest list opens it */
+		DS2DEngine::SpriteObj *axeIcons[5] = {};
+	};
+	std::vector<Carnival2Room> m_carnivals2;
+	void Carnival2EndGame(Carnival2Room &c);
+	int m_carnival2Talk = -1;
 	/* While the shooting gallery runs: the camera glides to m_cameraTargetX */
 	bool m_cameraOverride = false;
 	float m_cameraTargetX = 0;

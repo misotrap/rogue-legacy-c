@@ -613,6 +613,107 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			fprintf(stderr, "carnival in room %d: line %.0f, %d targets\n", (int) i, lineX, (int) c.targets.size());
 	}
 
+	/* The second shooting gallery (CarnivalShoot2BonusRoom, Bonus Tag 9):
+	 * a 10x10 grid of small bullseyes inside the "Boundary", behind a
+	 * gate, five axes to break as many as possible. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "9") continue;
+		float clownX = 0, floorY = 0, gateX = 0, gateBottom = 0;
+		Rectangle grid;
+		bool haveClown = false, haveFloor = false, haveGate = false, haveGrid = false;
+		for (const Levels::ObjData &o : r.objs)
+		{
+			if (o.type == "EnemyOrbObj" && o.isWaypoint) { clownX = o.x; haveClown = true; }
+			if (o.type == "CollHullObj" && o.name == "Floor") { floorY = o.y; haveFloor = true; }
+			if (o.type == "CollHullObj" && o.name == "GatePosition") { gateX = o.x; gateBottom = o.y + o.height; haveGate = true; }
+			if (o.type == "CollHullObj" && o.name == "Boundary")
+			{
+				grid = Rectangle((int) o.x, (int) o.y, (int) o.width, (int) o.height);
+				haveGrid = true;
+			}
+		}
+		if (!haveClown || !haveFloor || !haveGate || !haveGrid) continue;
+		if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Clown_Character"))
+		{
+			SpriteSystem::SpriteLibrary::LoadSheet(assets, "blacksmithUISpritesheet");
+			if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Clown_Character")) continue;
+		}
+		Carnival2Room c;
+		c.room = (int) i;
+		c.grid = grid;
+		c.clown = new DS2DEngine::ObjContainer("Clown_Character");
+		c.clown->Scale(Vector2(2, 2));
+		c.clown->Flip(r.reversed ? SpriteEffects::None : SpriteEffects::FlipHorizontally);
+		c.clown->X(clownX);
+		c.clown->Y(floorY - 2);
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("ExclamationBubble_Sprite"))
+		{
+			c.clownIcon = new DS2DEngine::SpriteObj("ExclamationBubble_Sprite");
+			c.clownIcon->Scale(Vector2(2, 2));
+			c.clownIcon->ForceDraw(true);
+		}
+		/* The gate hides the grid (CastleEntranceGate, 49x181, the
+		 * GatePosition is 120x240 so two side by side cover it) */
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("CastleEntranceGate_Sprite"))
+		{
+			c.gate = new DS2DEngine::SpriteObj("CastleEntranceGate_Sprite");
+			c.gate->X(gateX);
+			c.gateBaseY = gateBottom - 240;
+			c.gate->Y(c.gateBaseY);
+			c.gate->Scale(Vector2(2, 2));   /* 98x362 world, covers the opening */
+			c.gateBlock = new TerrainObj(240, 240);
+			c.gateBlock->Populate((int) (gateX - 120), (int) (gateBottom - 240), 240, 240,
+				true, true, true, true);
+			m_physicsManager.AddObject(c.gateBlock);
+			m_castleTerrain.push_back(c.gateBlock);
+		}
+		/* The 10x10 grid of bullseyes, hidden until the game begins */
+		if (SpriteSystem::SpriteLibrary::ContainsCharacter("Target2_Character"))
+		{
+			const float arraySize = 10;
+			float xDiff = grid.Width / arraySize, yDiff = grid.Height / arraySize;
+			for (int t = 0; t < 100; t++)
+			{
+				BreakableObj *target = new BreakableObj("Target2_Character");
+				target->Scale(Vector2(1.6f, 1.6f));
+				target->Visible(false);
+				target->Opacity(0);
+				target->DropItem = false;
+				target->HitBySpellsOnly = true;
+				target->SetLevelScreen(this);
+				target->X(grid.X + 40 + (t % 10) * xDiff);
+				target->Y(grid.Y + (t / 10) * yDiff);
+				m_physicsManager.AddObject(target);
+				c.targets.push_back(target);
+			}
+		}
+		/* The reward chest beside the clown */
+		ChestObj *chest = new ChestObj();
+		chest->SetChestType(ChestType::Gold);
+		chest->SetLevelScreen(this);
+		chest->ChestIndex = -1;
+		chest->Level = m_roomList[i]->Level / LevelEV::ROOM_LEVEL_MOD;
+		chest->X(r.reversed ? clownX - 150 : clownX + 100);
+		chest->Y(floorY - 66);
+		chest->Visible(false);
+		m_chestList.push_back(chest);
+		c.rewardChest = chest;
+		/* The five axe icons */
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("SpellAxe_Sprite"))
+			for (int a = 0; a < 5; a++)
+			{
+				c.axeIcons[a] = new DS2DEngine::SpriteObj("SpellAxe_Sprite");
+				c.axeIcons[a]->Scale(Vector2(2, 2));
+				c.axeIcons[a]->ForceDraw(true);
+			}
+		m_carnivals2.push_back(c);
+		if (rl_trace())
+			fprintf(stderr, "carnival2 in room %d: grid (%d,%d,%d,%d), %d targets\n",
+				(int) i, grid.X, grid.Y, grid.Width, grid.Height, (int) c.targets.size());
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -716,6 +817,20 @@ ProceduralLevelScreen::~ProceduralLevelScreen()
 		delete c.rewardChest;
 		for (int d = 0; d < 12; d++) delete c.daggers[d];
 		for (int t = 0; t < 8; t++) delete c.targetIcons[t];
+	}
+	for (Carnival2Room &c : m_carnivals2)
+	{
+		delete c.clown;
+		delete c.clownIcon;
+		delete c.gate;
+		delete c.gateBlock;
+		for (BreakableObj *target : c.targets)
+		{
+			m_physicsManager.RemoveObject(target);
+			delete target;
+		}
+		/* the reward chest belongs to m_chestList, not a room */
+		for (int a = 0; a < 5; a++) delete c.axeIcons[a];
 	}
 	delete m_diaryArrow;
 	delete m_itemIcon;
@@ -849,6 +964,104 @@ void ProceduralLevelScreen::CarnivalEndGame(CarnivalRoom &c, bool won)
 	}
 	else if (m_specialDialogue.empty())
 		m_specialDialogue = "CarnivalRoom1-Fail";
+}
+
+void ProceduralLevelScreen::Carnival2EndGame(Carnival2Room &c)
+{
+	/* EndGame / EndGame2 / GiveReward: the targets fade out, the results
+	 * show, the gold is (destroyed / 2) * 10, the gate opens and the
+	 * spell and mana come back; the reward if 10 or fewer remain. */
+	c.playing = false;
+	c.completed = true;
+	c.hideTime = 0;
+	int gold = (int) (c.destroyed / 2.0f) * 10;
+	if (m_player != nullptr && m_player->Stats() != nullptr)
+	{
+		m_player->Stats()->hero.spell = c.storedSpell;
+		m_player->CurrentMana = c.storedMana;
+		m_player->Stats()->Gold += gold;
+		char buf[32];
+		snprintf(buf, sizeof(buf), "+%d %s", gold, Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_4"));
+		AddPopup(buf, m_player->X(), (float) m_player->Bounds().Top(), 0xFFFFFF00u /* Yellow */);
+	}
+	c.gateOpen = true;
+	if (c.gateBlock != nullptr)
+	{
+		m_physicsManager.RemoveObject(c.gateBlock);
+		for (size_t i = 0; i < m_castleTerrain.size(); i++)
+			if (m_castleTerrain[i] == c.gateBlock)
+			{
+				m_castleTerrain.erase(m_castleTerrain.begin() + i);
+				break;
+			}
+	}
+	int remaining = (int) c.targets.size() - c.destroyed;
+	if (remaining <= 10)
+	{
+		if (m_specialDialogue.empty())
+			m_specialDialogue = "CarnivalRoom2-Reward";
+		if (c.rewardChest != nullptr) c.rewardChest->Visible(true);
+	}
+	else if (m_specialDialogue.empty())
+		m_specialDialogue = "CarnivalRoom2-Fail";
+}
+
+int ProceduralLevelScreen::TakeCarnival2Talk()
+{
+	int room = m_carnival2Talk;
+	m_carnival2Talk = -1;
+	return room;
+}
+
+bool ProceduralLevelScreen::Carnival2Completed(int room)
+{
+	for (Carnival2Room &c : m_carnivals2)
+		if (c.room == room)
+			return c.completed;
+	return true;
+}
+
+void ProceduralLevelScreen::BeginCarnival2(int room)
+{
+	/* BeginGame: the gate opens (the axes fly over the grid), the hero
+	 * casts axes with a full mana bar, and the grid fades in. */
+	for (Carnival2Room &c : m_carnivals2)
+	{
+		if (c.room != room || m_player == nullptr) continue;
+		c.playing = true;
+		c.axesThrown = 0;
+		c.revealTime = 0;
+		c.hideTime = -1;
+		c.resultTime = -1;
+		for (int a = 0; a < 5; a++)
+			if (c.axeIcons[a] != nullptr) c.axeIcons[a]->Visible(true);
+		for (BreakableObj *target : c.targets)
+		{
+			target->Broken = false;
+			target->Visible(true);
+			target->Opacity(0);
+		}
+		if (m_player->Stats() != nullptr)
+		{
+			c.storedSpell = m_player->Stats()->hero.spell;
+			c.storedMana = m_player->CurrentMana;
+			m_player->Stats()->hero.spell = SpellType::Axe;
+		}
+		m_player->CurrentMana = m_player->MaxMana();
+		/* the gate rises, its collision leaves the physics world */
+		c.gateOpen = true;
+		if (c.gateBlock != nullptr)
+		{
+			m_physicsManager.RemoveObject(c.gateBlock);
+			for (size_t i = 0; i < m_castleTerrain.size(); i++)
+				if (m_castleTerrain[i] == c.gateBlock)
+				{
+					m_castleTerrain.erase(m_castleTerrain.begin() + i);
+					break;
+				}
+		}
+		break;
+	}
 }
 
 bool ProceduralLevelScreen::CarnivalCompleted(int room)
@@ -1417,6 +1630,68 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 			m_carnivalTalk = c.room;
 	}
 
+	/* The second gallery: five axes into the 10x10 grid (HandleInput and
+	 * Update of CarnivalShoot2BonusRoom). */
+	for (Carnival2Room &c : m_carnivals2)
+	{
+		if (m_roomList[c.room] != m_currentRoom || m_player == nullptr)
+		{
+			c.clownTouching = false;
+			continue;
+		}
+		/* the axes: each spell press throws one, mana refilled */
+		if (c.playing && Game::GlobalInput.JustPressed(PLAYER_SPELL) && m_player->SpellCastDelay() <= 0)
+		{
+			c.axesThrown++;
+			m_player->CurrentMana = m_player->MaxMana();
+			if (c.axesThrown <= 5 && c.axeIcons[5 - c.axesThrown] != nullptr)
+				c.axeIcons[5 - c.axesThrown]->Visible(false);
+			if (c.axesThrown > 5 && m_player->Stats() != nullptr)
+				m_player->Stats()->hero.spell = 0;
+		}
+		/* the targets' fade-in (staggered, BeginGame) and fade-out (EndGame) */
+		if (c.revealTime >= 0)
+		{
+			c.revealTime += (float) gameTime->ElapsedGameTime;
+			for (size_t t = 0; t < c.targets.size(); t++)
+			{
+				float alpha = (c.revealTime - (float) t * 0.01f) / 0.5f;
+				if (c.hideTime >= 0)
+					alpha = 1 - c.hideTime / 0.5f;
+				if (alpha < 0) alpha = 0;
+				if (alpha > 1) alpha = 1;
+				c.targets[t]->Opacity(alpha);
+			}
+		}
+		if (c.hideTime >= 0)
+			c.hideTime += (float) gameTime->ElapsedGameTime;
+		if (c.resultTime >= 0)
+			c.resultTime += (float) gameTime->ElapsedGameTime;
+		/* the gate rises when the game begins */
+		if (c.gateOpen && c.gate != nullptr && c.gate->Y() > c.gateBaseY - 362)
+		{
+			c.gate->Y(c.gate->Y() - (float) (362 * gameTime->ElapsedGameTime));
+			if (c.gate->Y() < c.gateBaseY - 362) c.gate->Y(c.gateBaseY - 362);
+		}
+		/* count the destroyed targets; end the game */
+		c.destroyed = 0;
+		for (BreakableObj *target : c.targets)
+			if (target->Broken) c.destroyed++;
+		bool projectilesFlying = false;
+		for (ProjectileObj *proj : m_projectiles)
+			if (!proj->IsKilled && proj->SourcePlayer != nullptr) projectilesFlying = true;
+		if (c.playing && c.revealTime > 1
+		    && ((c.axesThrown >= 5 && !projectilesFlying) || c.destroyed >= 100))
+			Carnival2EndGame(c);
+		if (c.hideTime >= 0.5f && c.resultTime < 0)
+			c.resultTime = 0;   /* the results show once the targets faded */
+		/* the clown: the offer, or the end talk */
+		Rectangle clownBounds = c.clown != nullptr ? c.clown->Bounds() : Rectangle();
+		c.clownTouching = c.clown != nullptr && playerBounds.Intersects(clownBounds);
+		if (c.clownTouching && m_player->IsTouchingGround() && upPressed && m_carnival2Talk < 0)
+			m_carnival2Talk = c.room;
+	}
+
 	/* The random teleport pads: the arrow while the hero stands on one,
 	 * Up throws him into a random ordinary room. */
 	for (RandomTeleportRoom &t : m_randomTeleports)
@@ -1866,6 +2141,50 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 				c.daggers[d]->Y(baseY - 30 + (d / 6) * 20);
 				c.daggers[d]->Draw(camera);
 			}
+	}
+	/* The second gallery: the clown, the grid, the gate, the axe
+	 * counters and the results. */
+	for (Carnival2Room &c : m_carnivals2)
+	{
+		if (c.clown != nullptr) c.clown->Draw(camera);
+		if (c.clownIcon != nullptr && c.clownTouching)
+		{
+			Rectangle b = c.clown->Bounds();
+			c.clownIcon->Position(Vector2(b.X + b.Width * 0.5f,
+				b.Y - 50 + sinf(m_elapsed * 20) * 2));
+			c.clownIcon->Draw(camera);
+		}
+		if (c.gate != nullptr) c.gate->Draw(camera);
+		for (BreakableObj *target : c.targets)
+			if (target->Visible()) target->Draw(camera);
+		if (c.rewardChest != nullptr && c.rewardChest->Visible()) c.rewardChest->Draw(camera);
+		const Levels::PlacedRoom &r = m_castle.rooms[c.room];
+		/* the five axe icons at the room's bottom right */
+		float ax = r.reversed ? r.x + 900 : r.Right() - 200;
+		for (int a = 0; a < 5; a++)
+			if (c.axeIcons[a] != nullptr && c.axeIcons[a]->Visible())
+			{
+				c.axeIcons[a]->X(ax - (5 - a) * 50);
+				c.axeIcons[a]->Y(r.y + r.height - 60);
+				c.axeIcons[a]->Draw(camera);
+			}
+		/* the results (EndGame2): destroyed / remaining / reward */
+		if (c.resultTime >= 0)
+		{
+			uint32_t a = c.resultTime < 0.5f ? (uint32_t) (c.resultTime / 0.5f * 255) : 255;
+			int remaining = (int) c.targets.size() - c.destroyed;
+			int gold = (int) (c.destroyed / 2.0f) * 10;
+			char line[48];
+			float x = r.reversed ? (r.x + 300 - 660) * 0.5f + SCREEN_W / 2 : (r.Right() - 1000 - 660) * 0.5f + SCREEN_W / 2;
+			float y = (r.y + 200 - 360) * 0.5f + 240;
+			snprintf(line, sizeof(line), "%s: %d", Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_1"), c.destroyed);
+			m_objFont.DrawOutlined(gfx_frame(), line, x, y, 0.25f, a | 0x00FFFFFFu, a | 0xFF000000u, 1);
+			snprintf(line, sizeof(line), "%s: %d", Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_2"), remaining);
+			m_objFont.DrawOutlined(gfx_frame(), line, x, y + 50, 0.25f, a | 0x00FFFFFFu, a | 0xFF000000u, 1);
+			snprintf(line, sizeof(line), "%s: %d %s", Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_3"),
+				gold, Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_4"));
+			m_objFont.DrawOutlined(gfx_frame(), line, x, y + 100, 0.25f, a | 0x00FFFFFFu, a | 0xFF000000u, 1);
+		}
 	}
 	/* The elf's chest game: the elf and his talk bubble, the gate. */
 	for (ChestGameRoom &g : m_chestGames)

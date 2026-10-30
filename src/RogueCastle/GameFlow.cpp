@@ -456,6 +456,13 @@ namespace RogueCastle
 					if (r == DialogueScreen::Result::Confirmed)
 						m_level->BeginCarnival(room);
 				}
+				if (m_carnival2Asking >= 0 && r != DialogueScreen::Result::Open)
+				{
+					int room = m_carnival2Asking;
+					m_carnival2Asking = -1;
+					if (r == DialogueScreen::Result::Confirmed)
+						m_level->BeginCarnival2(room);
+				}
 				if (m_chestGameAsking >= 0 && r != DialogueScreen::Result::Open)
 				{
 					int room = m_chestGameAsking;
@@ -670,6 +677,19 @@ namespace RogueCastle
 				{
 					m_carnivalAsking = carnivalRoom;
 					m_dialogue.Open("CarnivalRoom1-Start", m_save.hero.isFemale, "ConfirmTest1");
+				}
+				else
+					m_dialogue.Open("CarnivalRoom1-End", m_save.hero.isFemale);
+			}
+			/* The second gallery (CarnivalShoot2BonusRoom): the offer with
+			 * its confirm, the end talk once done. */
+			int carnival2Room = m_level->TakeCarnival2Talk();
+			if (carnival2Room >= 0)
+			{
+				if (!m_level->Carnival2Completed(carnival2Room))
+				{
+					m_carnival2Asking = carnival2Room;
+					m_dialogue.Open("CarnivalRoom2-Start", m_save.hero.isFemale, "ConfirmTest1");
 				}
 				else
 					m_dialogue.Open("CarnivalRoom1-End", m_save.hero.isFemale);
