@@ -334,5 +334,17 @@ the map/minimap and the options; the game code below is yours.
    (boss portraits) before the credits.
 7. **Armour colours**: PlayerObj.UpdateEquipmentColours (TextureColor of the
    equipped parts; keep it out of the damage blink at line ~165).
-8. Quick drop option, special rooms (bonus, challenge, carnival), garden
-   HoverObj rocks.
+8. Quick drop option, garden HoverObj rocks (done), the special rooms.
+   Done (Vibe, one commit each, test with `RL_DEBUG_BONUS=<tag>`, which
+   spawns the hero in the first bonus room of that BonusRoomTypes tag):
+   the diary (6, journal entries, save.DiaryEntry), the portraits (7,
+   a random ancestor and its story), the vita chamber (5, +30% hp/mp,
+   the fountain dries out), the jukebox (11, the 16 songs, "Now
+   Playing"), the pedestal's special item (2, "Special Item Prayer",
+   GetItem's SpecialItem case). The level's pending-dialogue queue
+   (TakeSpecialDialogue) and SetDecorationTint (the room renderer
+   greys the used fountain/pedestal) are the shared plumbing. Left:
+   RandomTeleport (3), SpellSwap (4), PickChest (1), Arena (10),
+   CarnivalShoot1/2 (8/9), the donation box of the challenge rooms
+   (needs the challenge-boss linkage), and the journal-list screen of
+   a maxed diary.
