@@ -11,19 +11,14 @@
 namespace RogueCastle
 {
 
-/* The floor under the unfolded plate: an ordinary one-way platform
- * (open underneath), switched on and off with the plate */
+/* The floor under the folding platform's parts: the C# platform is a
+ * WALL box (CollisionType_WALL, all four sides) followed frame by frame,
+ * so the plate blocks from below and from the sides too. */
 class PlatformFloor : public TerrainObj
 {
 public:
 	PlatformFloor() : TerrainObj(1, 1) {}
-	bool Enabled = false;
 	bool IsStatic() const override { return false; }
-	bool IsCollidable() const override { return Enabled; }
-	bool CollidesTop() const override { return Enabled; }
-	bool CollidesBottom() const override { return false; }
-	bool CollidesLeft() const override { return false; }
-	bool CollidesRight() const override { return false; }
 };
 
 class EnemyObj_Platform : public EnemyObj
@@ -44,7 +39,6 @@ protected:
 
 private:
 	PlatformFloor *m_floor = new PlatformFloor();
-	float m_extendTime = 0;   // since the hit: the floor is there once the plate is out
 	bool m_isExtended = false;
 	void UpdateFloor(float dt);
 	bool m_blinkedWarning = false;

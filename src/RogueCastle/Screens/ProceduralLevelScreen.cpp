@@ -742,6 +742,29 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			m_player->Y(py);
 		}
 	}
+	/* Dev/test: RL_DEBUG_PLATFORM=1 spawns the hero on the first folding
+	 * platform of the castle, to test it without hunting one. */
+	if (getenv("RL_DEBUG_PLATFORM") != nullptr)
+	{
+		bool found = false;
+		for (RoomObj *room : m_roomList)
+		{
+			for (EnemyObj *enemy : room->EnemyList())
+			{
+				if (enemy->Type != EnemyType::Platform)
+					continue;
+				m_player->X(enemy->X());
+				m_player->Y(enemy->Y() - 120);
+				m_player->ForceInvincible = true;   /* dev: keep the room's enemies out of the test */
+				if (rl_trace())
+					fprintf(stderr, "debug platform at (%.0f,%.0f) room %s\n",
+						enemy->X(), enemy->Y(), room->Name().c_str());
+				found = true;
+				break;
+			}
+			if (found) break;
+		}
+	}
 	m_player->UpdateCollisionBoxes();
 
 	/* Dev/test: RL_DEBUG_LOOT drops one of every loot type on the hero,

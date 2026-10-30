@@ -53,18 +53,35 @@ bool EnemyObj_Platform::PlatformsOpen() const
 
 void EnemyObj_Platform::UpdateFloor(float dt)
 {
-	// The plate's top, once fully out (5 frames at 30 per second)
-	m_extendTime = m_isExtended ? m_extendTime + dt : 0;
-	m_floor->Enabled = m_isExtended && (m_extendTime >= 0.17f || PlatformsOpen());
-	if (m_floor->Enabled && NumChildren() > 0)
-	{
-		// The plate's bounds are relative to the platform
-		Rectangle plate = GetChildAt(0)->Bounds();
-		Rectangle b((int) X() + plate.X, (int) Y() + plate.Y, plate.Width, plate.Height);
-		Rectangle now = m_floor->TerrainBounds();
-		if (now.X != b.X || now.Y != b.Y || now.Width != b.Width)
-			m_floor->Populate(b.X, b.Y, b.Width, 20, true, false, false, false);
-	}
+	/* The C# platform is a WALL box made of its parts (plate + button),
+	 * followed frame by frame by the animation, and the hero is grounded
+	 * on it folded or extended (EnemyObj_Platform.cs: CollisionType_WALL,
+	 * no separate floor object). The floor here follows the same box, so
+	 * jumping works standing on the folded mount too, and the plate
+	 * grows and shrinks with the folding animation. */
+	(void) dt;
+	if (NumChildren() < 2)
+		return;
+	/* plate and button are parent-relative; TerrainBounds is absolute */
+	Rectangle plate = GetChildAt(0)->Bounds();
+	Rectangle button = GetChildAt(1)->Bounds();
+	Rectangle own = TerrainBounds();   /* the R-hitbox part (the mount column folded) */
+	own.X -= (int) X();
+	own.Y -= (int) Y();
+	int left = plate.X < button.X ? plate.X : button.X;
+	if (own.Width > 0 && own.X < left) left = own.X;
+	int right = (plate.X + plate.Width > button.X + button.Width)
+	    ? plate.X + plate.Width : button.X + button.Width;
+	if (own.Width > 0 && own.X + own.Width > right) right = own.X + own.Width;
+	int top = plate.Y < button.Y ? plate.Y : button.Y;
+	if (own.Height > 0 && own.Y < top) top = own.Y;
+	int bottom = (plate.Y + plate.Height > button.Y + button.Height)
+	    ? plate.Y + plate.Height : button.Y + button.Height;
+	if (own.Height > 0 && own.Y + own.Height > bottom) bottom = own.Y + own.Height;
+	Rectangle b((int) X() + left, (int) Y() + top, right - left, bottom - top);
+	Rectangle now = m_floor->TerrainBounds();
+	if (now.X != b.X || now.Y != b.Y || now.Width != b.Width || now.Height != b.Height)
+		m_floor->Populate(b.X, b.Y, b.Width, b.Height, true, true, true, true);
 }
 
 void EnemyObj_Platform::UpdateEnemy(GameTime *gameTime)
@@ -141,7 +158,6 @@ void EnemyObj_Platform::ResetState()
 	m_retractCounter = 0;
 	m_warningBlinks = 0;
 	m_foldTimer = 0;
-	m_floor->Enabled = false;
 	EnemyObj::ResetState();
 	StopAnimation();
 }
