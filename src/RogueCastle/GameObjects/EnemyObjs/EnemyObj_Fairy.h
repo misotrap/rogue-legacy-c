@@ -48,8 +48,14 @@ private:
 		return m_actionPhase >= m_endPhase && m_actionTimer <= 0;
 	}
 
-	/* EnemyObj_Fairy.cs line 21. */
+	/* EnemyObj_Fairy.cs lines 21, 45-48 (the miniboss's summons). */
 	float AttackDelay = 0.5f;
+	int m_numSummons = 22;
+	float m_summonTimer = 6;
+	float m_summonCounter = 6;
+	float m_summonTimerNeo = 3;
+	int m_numHits = 1;
+	void CreateFairy(EnemyDifficulty difficulty);
 };
 
 } // namespace RogueCastle

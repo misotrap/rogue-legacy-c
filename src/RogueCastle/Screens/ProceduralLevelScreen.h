@@ -131,6 +131,9 @@ public:
 	PlayerObj *Player() const { return m_player; }
 	const Levels::Castle &Castle() const { return m_castle; }
 	RoomObj *CurrentRoom() const { return m_currentRoom; }
+	/* The castle's New Game+ count, for the enemy variants (the fairy's
+	 * summoned fairies are advanced from the first beating on). */
+	int TimesCastleBeaten() const { return m_timesCastleBeaten; }
 	const std::vector<RoomObj *> &RoomList() const { return m_roomList; }
 	DS2DEngine::Camera2D *Camera() { return &m_camera; }
 	bool IsValid() const { return m_valid; }
@@ -331,6 +334,7 @@ private:
 	std::vector<Slope> m_allSlopes;
 	std::vector<Hazard> m_allHazards;
 	RoomObj *m_currentRoom = nullptr;
+	int m_timesCastleBeaten = 0;
 	bool m_timeStopped = false;  /* the time stop spell (a flag: it lasts
 	                              while the hero's mana pays the drain) */
 	PlayerObj *m_player = nullptr;

@@ -271,10 +271,68 @@ void EnemyObj_Fairy::UpdateAction()
 	}
 }
 
+void EnemyObj_Fairy::CreateFairy(EnemyDifficulty difficulty)
+{
+	/* CreateFairy (line 625): a fairy appears on the miniboss, no loot,
+	 * facing the hero. */
+	if (m_levelScreen == nullptr)
+		return;
+	const char *names[] = { "BASIC", "ADVANCED", "EXPERT", "MINIBOSS" };
+	EnemyObj *fairy = m_levelScreen->AddEnemyToCurrentRoom(EnemyType::Fairy, Position(),
+	                                                       names[(int) difficulty]);
+	if (fairy == nullptr)
+		return;
+	fairy->DropsItem = false;
+	fairy->GivesLichHealth = false;
+	/* CreateFairy: it flies away from the hero (Orientation 0/180) */
+	if (m_target != nullptr)
+		fairy->Heading(Vector2(m_target->X() < fairy->X() ? 1.0f : -1.0f, 0.0f));
+}
+
 void EnemyObj_Fairy::UpdateEnemy(GameTime *gameTime)
 {
-	(void) gameTime;
+	float elapsed = (float) gameTime->ElapsedGameTime;
+
+	/* Alexander's summons (line 569): every cycle two fairies join the
+	 * room while it holds fewer than m_numSummons of them; the Neo
+	 * variant (New Game+) summons every 3 s instead of 6. */
+	if (DifficultyType == MINIBOSS && !IsPaused)
+	{
+		if (m_summonCounter > 0)
+		{
+			m_summonCounter -= elapsed;
+			if (m_summonCounter <= 0)
+			{
+				m_summonCounter = m_summonTimer;
+				m_numHits--;
+				int active = m_numSummons + 2;   /* summon blocked while it reads over */
+				if (m_levelScreen != nullptr && m_levelScreen->CurrentRoom() != nullptr)
+					active = m_levelScreen->CurrentRoom()->ActiveEnemies();
+				if (!IsKilled && m_numHits <= 0 && active <= m_numSummons + 1)
+				{
+					/* New Game+ (TimesCastleBeaten > 0): advanced fairies */
+					EnemyDifficulty diff = m_levelScreen != nullptr
+					    && m_levelScreen->TimesCastleBeaten() > 0 ? ADVANCED : BASIC;
+					CreateFairy(diff);
+					CreateFairy(diff);
+					m_numHits = 1;
+				}
+			}
+		}
+
+		/* Keep Alexander inside the room (line 594). */
+		if (m_levelScreen != nullptr && m_levelScreen->CurrentRoom() != nullptr)
+		{
+			RoomObj *room = m_levelScreen->CurrentRoom();
+			Rectangle b = Bounds();
+			if (b.Right() > room->Bounds().Right()) X(X() - (b.Right() - room->Bounds().Right()));
+			if (b.Left() < room->Bounds().Left()) X(X() + (room->Bounds().Left() - b.Left()));
+			if (b.Bottom() > room->Bounds().Bottom()) Y(Y() - (b.Bottom() - room->Bounds().Bottom()));
+		}
+	}
+
 	UpdateAction();
+	(void) elapsed;
 }
 
 void EnemyObj_Fairy::RunBasicLogic()

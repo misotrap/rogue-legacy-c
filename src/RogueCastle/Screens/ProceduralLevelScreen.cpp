@@ -82,7 +82,7 @@ static Rectangle SpriteBounds(const Levels::ObjData &o)
 ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
                                              std::vector<uint8_t> *chestFlags, int timesCastleBeaten,
                                              int *diaryEntry)
-	: m_diaryEntry(diaryEntry), m_chestFlags(chestFlags)
+	: m_diaryEntry(diaryEntry), m_chestFlags(chestFlags), m_timesCastleBeaten(timesCastleBeaten)
 {
 	/* LoadContent: the sheets this level needs (AGENTS.md: only the
 	 * sheets the current area needs). */
@@ -802,6 +802,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			EnemyObj *spawn = RoomObj::CreateEnemyOfType(type, debugDiff, m_player);
 			if (spawn != nullptr)
 			{
+				m_player->ForceInvincible = true;   /* dev: keep the room's enemies out of the test */
 				spawn->Position(Vector2(m_player->X() + 300, m_player->Y() - 120));
 				spawn->Initialize();
 				spawn->InitialLogicDelay(0);
