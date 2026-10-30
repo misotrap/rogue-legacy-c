@@ -222,24 +222,32 @@ namespace RogueCastle
 			frame[i] = 0xFF000000u | (((c & 0xFF00FFu) * 77 >> 8) & 0xFF00FFu) | (((c & 0xFF00u) * 77 >> 8) & 0xFF00u);
 		}
 
-		// Map pixel (mx, my) -> screen: the player sits in the middle
-		if (!m_isTeleporter)
+		// Map pixel (mx, my) -> screen: the player sits in the middle.
+		// The teleporter screen draws the visited rooms too (MapObj always
+		// draws them; only the icon list is teleporter-only), centred on
+		// the selected destination.
+		if (m_isTeleporter && !m_dests.empty() && m_selectedTeleporter < (int) m_dests.size())
 		{
-			if (alzheimers)
-				m_font.DrawOutlined(frame, "?????", SCREEN_W / 2, SCREEN_H / 2 - 20, 0.8f, WHITE, BLACK, 2, Text::Align::Centre);
-			else
-				DrawRooms(castle, SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX,
-					SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY, 1);
+			const Levels::PlacedRoom &sel = castle.rooms[m_dests[m_selectedTeleporter]];
+			DrawRooms(castle, SCREEN_W * 0.5f - (sel.x + sel.width / 2.0f) / SCALE_X,
+				SCREEN_H * 0.5f - (sel.y + sel.height / 2.0f) / SCALE_Y, 1);
 		}
+		else if (alzheimers)
+			m_font.DrawOutlined(frame, "?????", SCREEN_W / 2, SCREEN_H / 2 - 20, 0.8f, WHITE, BLACK, 2, Text::Align::Centre);
+		else
+			DrawRooms(castle, SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX,
+				SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY, 1);
 
 		// Help texts at the bottom
 		std::string close = WithButton(Text::Loc::Get("LOC_ID_MAP_SCREEN_1_NEW"), "[Input:9]", "SELECT");
 		if (m_isTeleporter)
 		{
-			/* The selection screen: only the teleporter icons, centred on
-			 * the selected one, the title and the player marker
-			 * (MapObj DrawTeleportersOnly). */
+			/* The selection screen: the visited rooms behind, the
+			 * teleporter icons centred on the selected one, the title and
+			 * the player marker (MapObj DrawTeleportersOnly). */
 			DrawTeleporters(castle);
+			m_font.DrawOutlined(frame, "Gauche/Droite : choisir, A : voyager",
+				SCREEN_W / 2, SCREEN_H - 50, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
 			m_font.DrawOutlined(frame, close.c_str(), SCREEN_W / 2, SCREEN_H - 30, 0.26f, GOLD, BLACK, 1, Text::Align::Centre);
 		}
 		else
@@ -283,10 +291,11 @@ namespace RogueCastle
 			}
 		}
 	}
-	/* The teleporter selection (MapObj DrawTeleportersOnly): the visited
-	 * teleporter rooms' icons only, the screen centred on the selected
-	 * one (CentreAroundTeleporter), the title at the top and the player
-	 * marker on it (the C# draws a small red walking knight). */
+	/* The teleporter selection's icons (MapObj.DrawRenderTargets draws
+	 * only the teleporter icons in this mode), the screen centred on the
+	 * selected one (CentreAroundTeleporter), the title at the top and the
+	 * player marker on it (the C# draws a small red walking knight). The
+	 * visited rooms are drawn by Draw(). */
 	void MapScreen::DrawTeleporters(const Levels::Castle &castle)
 	{
 		if (m_dests.empty() || m_selectedTeleporter >= (int) m_dests.size())
