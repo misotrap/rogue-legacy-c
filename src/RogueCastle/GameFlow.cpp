@@ -88,6 +88,11 @@ namespace RogueCastle
 			m_save.CurrentHealth = (int) m_level->Player()->CurrentHealth;
 			m_save.CurrentMana = (int) m_level->Player()->CurrentMana;
 		}
+		/* SaveGameManager line 1093: the visited rooms of the current
+		 * castle, kept through the architect's lock. */
+		if (m_state == State::Castle && m_level != nullptr
+		    && m_map.VisitedSize() == m_level->Castle().rooms.size())
+			m_map.GetVisited(m_save.roomsVisited);
 		Save::Write(m_save, m_savePath.c_str());
 	}
 
@@ -164,6 +169,11 @@ namespace RogueCastle
 		m_bossRoom.Reset();
 		m_map.Reset(m_level->Castle().rooms.size());
 		m_map.SetSpelunker(m_save.hero.classType == ClassType::Banker2);
+		/* SaveGameManager line 1946 (MapRoomsUnveiled): a kept castle
+		 * resumes with its visited rooms on the map. The sizes only
+		 * match when the seed is the same castle. */
+		if (m_save.roomsVisited.size() == m_level->Castle().rooms.size())
+			m_map.SetVisited(m_save.roomsVisited);
 		/* LoadingScreen.cs line 256: a hero who already went in resumes at
 		 * the castle entrance, gate closed, not in the courtyard */
 		if (!m_save.LoadStartingRoom && m_level->Player() != nullptr)

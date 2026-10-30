@@ -68,7 +68,7 @@ Le reste est à faire.
     - nettoyage hors salle et au changement de salle différent du C# (le butin n'est pas effacé).
 31. **Le butin ignore le bonus d'or** : compétence, équipement, runes, New Game+ et Banquier (ItemDropObj.cs:104).
 32. **Le coffre du boss s'ouvre tout seul** : dans l'original, il tombe, puis c'est le joueur qui l'ouvre (BossRoomObj.cs:134).
-33. **Téléporteurs et carte** : pas de téléporteurs, pas de légende ni d'icônes, et les salles visitées ne sont pas sauvegardées.
+33. **Téléporteurs et carte** — CORRIGÉ le 30/10 : les pads (Linker, EntranceBoss, CastleEntrance), la flèche, l'écran de voyage, les icônes et la légende de la carte, et les salles visitées sauvegardées (`visited` dans save.txt, restaurées pour un château conservé). Reste : les icônes d'ennemis du trait EideticMemory sur la carte.
 34. **Progression** :
     - le manoir ne s'ouvre pas après le choix de l'héritier ;
     - l'amélioration de classe n'est pas appliquée au héros en cours, et l'écran de déblocage manque ;

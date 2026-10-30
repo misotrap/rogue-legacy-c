@@ -31,6 +31,7 @@ namespace RogueCastle
 		// line 1946: MapRoomsUnveiled)
 		void SetVisited(const std::vector<uint8_t> &visited) { m_visited.assign(visited.begin(), visited.end()); }
 		void GetVisited(std::vector<uint8_t> &out) const { out.assign(m_visited.begin(), m_visited.end()); }
+		size_t VisitedSize() const { return m_visited.size(); }
 		// The castle's chests, for the map icons (MapObj.AddRoom). kind: one
 		// of MapChest::LOCKED / FAIRY / FAIRY_INVISIBLE / OPENED.
 		struct MapChest
