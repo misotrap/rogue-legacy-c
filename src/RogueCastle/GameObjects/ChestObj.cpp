@@ -304,6 +304,10 @@ void ChestObj::Draw(Camera2D *camera)
 		m_arrowIcon->Visible(false);
 		ArrowVisible = false;
 	}
+	/* Self-healing: an open chest must show its second frame (GoToFrame(2)
+	 * may have been undone by a ChangeSprite somewhere). */
+	if (IsOpen() && CurrentFrame() != 2)
+		GoToFrame(2);
 	PhysicsObj::Draw(camera);
 }
 
