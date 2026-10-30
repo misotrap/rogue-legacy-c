@@ -484,7 +484,14 @@ namespace RogueCastle
 			if (m_mapOpen)
 			{
 				m_mapOpen = m_map.Update(buttons, pressed, dt);
-				if (!m_mapOpen) Audio::PlaySound("Map_Off");
+				if (!m_mapOpen)
+				{
+					Audio::PlaySound("Map_Off");
+					/* A teleporter was chosen: the hero lands on its pad. */
+					int roomIndex = -1;
+					if (m_map.TeleportConfirmed(roomIndex) && m_level->Player() != nullptr)
+						m_level->TeleportToRoom(roomIndex);
+				}
 				break;
 			}
 			PlayerObj *player = m_level->Player();
@@ -571,6 +578,15 @@ namespace RogueCastle
 			GameTime gameTime(dt);
 			Game::GlobalInput.Update(blocked ? 0 : buttons);
 			if (!m_bossRoom.Cutscene()) m_level->Update(&gameTime);
+			/* Up on a teleporter pad: the selection map over the level
+			 * (PlayerObj.cs line 1904, RCScreenManager.ActivateMapScreenTeleporter). */
+			if (m_level->TakeTeleporterRequest() && m_level->Player() != nullptr && !m_bossRoom.Cutscene())
+			{
+				m_map.OpenTeleporter(m_level->Player()->X(), m_level->Player()->Y(), m_level->Castle());
+				m_mapOpen = true;
+				Audio::PlaySound("Map_On");
+				break;
+			}
 			/* Clonus (ProceduralLevelScreen.cs line 1603): every 12-35 s,
 			 * the screen shakes for 1-1.5 s (ShakeScreen(1), UpdateShake) */
 			if (m_save.hero.HasTrait(TraitType::Clonus))

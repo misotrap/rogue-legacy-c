@@ -8,6 +8,7 @@
 #include "../GameObjects/EnemyObjs/EnemyObj_Platform.h"
 #include "../GameObjects/EnemyObjs/EnemyObj.h"
 #include "../GameObjects/ProjectileObj.h"
+#include "../GameObjects/TeleporterObj.h"
 #include "../GameObjects/ItemDropObj.h"
 #include "../../DS2DEngine/CollisionMath.h"
 #include "../../gfx.h"
@@ -183,6 +184,34 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	}
 	InitializeChests();
 
+	/* The teleporters: one per Linker (the area junction), EntranceBoss
+	 * and the CastleEntrance (LevelBuilder2.cs lines 186-203 and
+	 * CastleEntranceRoomObj.cs line 43), on the floor tile of the room's
+	 * centre. Bounds/Anchor are read before the position is set, like
+	 * the C# formula. */
+	for (size_t i = 0; i < m_roomList.size() && i < m_castle.rooms.size(); i++)
+	{
+		const char *n = m_castle.rooms[i].name.c_str();
+		if (strcmp(n, "Linker") != 0 && strcmp(n, "EntranceBoss") != 0 && strcmp(n, "CastleEntrance") != 0)
+			continue;
+		RoomObj *room = m_roomList[i];
+		TeleporterObj *teleporter = new TeleporterObj();
+		if (strcmp(n, "CastleEntrance") == 0)
+			/* CastleEntranceRoomObj.cs line 109: its own spot, left of the
+			 * closed gate (the room's centre is behind it). */
+			teleporter->Position(Vector2(room->X() + room->Width() * 0.5f - 600,
+				room->Y() + room->Height() - 120));
+		else
+			teleporter->Position(Vector2(
+				room->X() + room->Width() * 0.5f - (teleporter->Bounds().Right() - teleporter->Anchor().X),
+				room->Y() + room->Height() - 60));
+		m_teleporterList.push_back(teleporter);
+		m_teleporterRoom.push_back((int) i);
+		if (rl_trace())
+			fprintf(stderr, "teleporter in %s room %d at (%.0f,%.0f)\n", n, (int) i,
+				teleporter->X(), teleporter->Y());
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -264,6 +293,33 @@ ProceduralLevelScreen::~ProceduralLevelScreen()
 	m_goldFont.Free();
 	m_objFont.Free();
 	delete m_objPlate;
+	for (TeleporterObj *teleporter : m_teleporterList)
+		delete teleporter;
+}
+
+bool ProceduralLevelScreen::TakeTeleporterRequest()
+{
+	bool requested = m_teleporterRequested;
+	m_teleporterRequested = false;
+	return requested;
+}
+
+void ProceduralLevelScreen::TeleportToRoom(int roomIndex)
+{
+	/* MapObj.TeleportPlayer: the hero lands on the destination pad,
+	 * standing on the room's floor like BossRoom::Teleport. */
+	for (size_t i = 0; i < m_teleporterList.size(); i++)
+	{
+		if (m_teleporterRoom[i] != roomIndex || m_player == nullptr)
+			continue;
+		TeleporterObj *teleporter = m_teleporterList[i];
+		Rectangle feet = m_player->TerrainBounds();
+		m_player->X(teleporter->X());
+		m_player->Y(teleporter->Y() - (feet.Bottom() - m_player->Y()) - 1);
+		if (rl_trace())
+			fprintf(stderr, "teleported to room %d at (%.0f,%.0f)\n", roomIndex, m_player->X(), m_player->Y());
+		break;
+	}
 }
 
 void ProceduralLevelScreen::Update(GameTime *gameTime)
@@ -314,6 +370,22 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 				    && chest->ChestIndex < (int) m_chestFlags->size())
 					(*m_chestFlags)[chest->ChestIndex] = 1;
 			}
+		}
+	}
+
+	/* The teleporter pads of the current room: the arrow while the hero
+	 * stands on one (TeleporterObj.CollisionResponse), and Up opening
+	 * the teleporter map (PlayerObj.cs line 1904). */
+	for (TeleporterObj *teleporter : m_teleporterList)
+	{
+		if (!roomBounds.Intersects(teleporter->Bounds()))
+			continue;
+		if (m_player != nullptr && teleporter->Bounds().Intersects(playerBounds)
+		    && m_player->IsTouchingGround() && !m_player->ControlsLocked)
+		{
+			teleporter->ArrowVisible = true;
+			if (upPressed)
+				m_teleporterRequested = true;
 		}
 	}
 
@@ -686,6 +758,8 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 	uint64_t pxRooms = gfx_pixels - px0 - pxSky;
 	for (RoomObj *room : m_roomList)
 		room->Draw(camera);
+	for (TeleporterObj *teleporter : m_teleporterList)
+		teleporter->Draw(camera);
 	if (rl_trace())
 	{
 		static int frames = 0;

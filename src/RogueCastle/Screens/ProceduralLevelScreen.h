@@ -36,6 +36,14 @@ public:
 	void AddProjectile(class ProjectileObj *proj);   /* takes ownership */
 	/* The castle's chests, for the map icons (MapObj.AddRoom). */
 	const std::vector<class ChestObj *> &ChestList() const { return m_chestList; }
+	/* The teleporters (one per Linker / EntranceBoss / CastleEntrance room),
+	 * with the room's index in Castle().rooms beside them. Up on a pad
+	 * raises the request GameFlow turns into the teleporter map. */
+	const std::vector<class TeleporterObj *> &TeleporterList() const { return m_teleporterList; }
+	int TeleporterRoom(size_t i) const { return m_teleporterRoom[i]; }
+	bool TakeTeleporterRequest();
+	/* MapObj.TeleportPlayer: the hero lands on the destination room's pad. */
+	void TeleportToRoom(int roomIndex);
 	/* ProjectileManager.cs line 258 (FireProjectile) for the player's
 	 * spells: position from the source anchor and flip, heading from the
 	 * angle degrees, the player tag. */
@@ -112,6 +120,9 @@ private:
 	RoomRenderer m_roomRenderer;   /* the original look behind the room objects */
 	std::vector<RoomObj *> m_roomList;
 	std::vector<class ChestObj *> m_chestList;   /* the rooms own them */
+	std::vector<class TeleporterObj *> m_teleporterList;   /* owned */
+	std::vector<int> m_teleporterRoom;   /* castle room index of each teleporter */
+	bool m_teleporterRequested = false;
 	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */
 	std::vector<std::pair<uint8_t, int>> m_killList;   /* EnemiesKilledInRun */
 	/* Every floor and wall of the castle; m_allTerrain holds those around

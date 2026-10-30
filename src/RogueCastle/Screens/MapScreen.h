@@ -44,6 +44,13 @@ namespace RogueCastle
 		// and no chest icons (MapObj.AddRoom line 160)
 		void SetSpelunker(bool on) { m_spelunker = on; }
 		void Open(float playerX, float playerY);
+		/* A teleporter pad's Up: the selection screen over the map
+		 * (MapScreen.IsTeleporter), destinations in visit order with the
+		 * CastleEntrance first, like the icons the C# adds on visit. */
+		void OpenTeleporter(float playerX, float playerY, const Levels::Castle &castle);
+		/* After Update() closed a teleporter screen: the chosen room
+		 * (MapScreen.cs line 344, MapObj.TeleportPlayer). */
+		bool TeleportConfirmed(int &roomIndex);
 		// false once closed
 		bool Update(uint32_t buttons, uint32_t pressed, double dt);
 		// alzheimers: the rooms are forgotten, "?????" instead (MapScreen.cs line 259)
@@ -59,7 +66,14 @@ namespace RogueCastle
 		DS2DEngine::SpriteObj *m_door = nullptr, *m_boss = nullptr, *m_player = nullptr;
 		DS2DEngine::SpriteObj *m_chestLocked = nullptr, *m_chestFairy = nullptr,
 			*m_chestOpened = nullptr, *m_bonus = nullptr, *m_teleporter = nullptr,
-			*m_legendPlate = nullptr;
+			*m_legendPlate = nullptr, *m_titleText = nullptr;
+		/* The teleporter selection (IsTeleporter): destination room indices
+		 * and the selected one. */
+		bool m_isTeleporter = false;
+		int m_selectedTeleporter = 0;
+		int m_teleportChoice = -1;
+		std::vector<int> m_dests;
+		void DrawTeleporters(const Levels::Castle &castle);
 		std::vector<DS2DEngine::SpriteObj *> m_rooms;   // MapRoom{w}x{h}, by "w*10+h"
 		Text::Font m_font;
 		float m_playerX = 0, m_playerY = 0;   // castle coordinates

@@ -91,6 +91,16 @@ namespace RogueCastle
 			m_legendPlate = Make("TraitsScreenPlate_Sprite");   // MapScreen.cs: the legend background
 		else if (SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "miscSpritesheet"))
 			m_legendPlate = Make("TraitsScreenPlate_Sprite");
+		/* TeleporterTitleText_Sprite: the localized bitmap of the
+		 * selection screen (Game.ChangeBitmapLanguage); the port speaks
+		 * French, like Loc::Load("fr"). */
+		const char *title = "TeleporterTitleText_Sprite_FR";
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite(title))
+			SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "language2Spritesheet");
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite(title))
+			title = "TeleporterTitleText_Sprite";
+		if (SpriteSystem::SpriteLibrary::ContainsSprite(title))
+			m_titleText = Make(title);
 		m_rooms.assign(100, nullptr);
 		if (!SpriteSystem::SpriteLibrary::ContainsSprite("MinimapBG_Sprite"))
 			SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "uiExtraSpritesheet");
@@ -133,17 +143,72 @@ namespace RogueCastle
 		m_playerX = playerX;
 		m_playerY = playerY;
 		m_offsetX = m_offsetY = 0;
+		m_isTeleporter = false;
+	}
+
+	void MapScreen::OpenTeleporter(float playerX, float playerY, const Levels::Castle &castle)
+	{
+		Open(playerX, playerY);
+		m_isTeleporter = true;
+		m_selectedTeleporter = 0;
+		m_teleportChoice = -1;
+		m_dests.clear();
+		/* The icons the C# adds as the rooms are visited (MapObj.AddRoom);
+		 * the hero always visits the CastleEntrance first, so its
+		 * teleporter is index 0 (MapObj.TeleportPlayer's hack). The
+		 * spelunker has every room from the start. */
+		for (size_t pass = 0; pass < 2; pass++)
+			for (size_t i = 0; i < castle.rooms.size(); i++)
+			{
+				const Levels::PlacedRoom &r = castle.rooms[i];
+				const char *n = r.name.c_str();
+				if (strcmp(n, "Linker") != 0 && strcmp(n, "EntranceBoss") != 0 && strcmp(n, "CastleEntrance") != 0)
+					continue;
+				bool entrance = strcmp(n, "CastleEntrance") == 0;
+				if (pass == 0 ? !entrance : entrance)
+					continue;
+				if (i < m_visited.size() && (m_visited[i] || m_spelunker))
+					m_dests.push_back((int) i);
+			}
+		if (m_selectedTeleporter >= (int) m_dests.size())
+			m_selectedTeleporter = 0;
+	}
+
+	bool MapScreen::TeleportConfirmed(int &roomIndex)
+	{
+		if (m_teleportChoice < 0)
+			return false;
+		roomIndex = m_dests[m_teleportChoice];
+		m_teleportChoice = -1;
+		return true;
 	}
 
 	bool MapScreen::Update(uint32_t buttons, uint32_t pressed, double dt)
 	{
 		m_time += dt;
-		const float speed = (float) (300 * dt);   // map pixels per second
-		if (buttons & BTN_LEFT) m_offsetX += speed;
-		if (buttons & BTN_RIGHT) m_offsetX -= speed;
-		if (buttons & BTN_UP) m_offsetY += speed;
-		if (buttons & BTN_DOWN) m_offsetY -= speed;
-		if (pressed & BTN_A) m_offsetX = m_offsetY = 0;
+		if (m_isTeleporter && !m_dests.empty())
+		{
+			/* MapScreen.cs line 320: Left/Right cycle the destinations,
+			 * A travels, the map buttons close. */
+			if (pressed & BTN_LEFT)
+				m_selectedTeleporter = (m_selectedTeleporter + (int) m_dests.size() - 1) % (int) m_dests.size();
+			if (pressed & BTN_RIGHT)
+				m_selectedTeleporter = (m_selectedTeleporter + 1) % (int) m_dests.size();
+			if ((pressed & BTN_A) != 0)
+			{
+				m_teleportChoice = m_selectedTeleporter;
+				return false;
+			}
+		}
+		else
+		{
+			const float speed = (float) (300 * dt);   // map pixels per second
+			if (buttons & BTN_LEFT) m_offsetX += speed;
+			if (buttons & BTN_RIGHT) m_offsetX -= speed;
+			if (buttons & BTN_UP) m_offsetY += speed;
+			if (buttons & BTN_DOWN) m_offsetY -= speed;
+			if (pressed & BTN_A) m_offsetX = m_offsetY = 0;
+		}
 		return (pressed & (BTN_SELECT | BTN_B)) == 0;
 	}
 
@@ -158,18 +223,32 @@ namespace RogueCastle
 		}
 
 		// Map pixel (mx, my) -> screen: the player sits in the middle
-		if (alzheimers)
-			m_font.DrawOutlined(frame, "?????", SCREEN_W / 2, SCREEN_H / 2 - 20, 0.8f, WHITE, BLACK, 2, Text::Align::Centre);
-		else
-			DrawRooms(castle, SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX,
-				SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY, 1);
+		if (!m_isTeleporter)
+		{
+			if (alzheimers)
+				m_font.DrawOutlined(frame, "?????", SCREEN_W / 2, SCREEN_H / 2 - 20, 0.8f, WHITE, BLACK, 2, Text::Align::Centre);
+			else
+				DrawRooms(castle, SCREEN_W / 2.0f - m_playerX / SCALE_X + m_offsetX,
+					SCREEN_H / 2.0f - m_playerY / SCALE_Y + m_offsetY, 1);
+		}
 
 		// Help texts at the bottom
 		std::string close = WithButton(Text::Loc::Get("LOC_ID_MAP_SCREEN_1_NEW"), "[Input:9]", "SELECT");
-		std::string centre = WithButton(Text::Loc::Get("LOC_ID_MAP_SCREEN_2_NEW"), "[Input:0]", "A");
-		m_font.DrawOutlined(frame, Text::Loc::Get("LOC_ID_MAP_SCREEN_3"), SCREEN_W / 2, SCREEN_H - 70, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
-		m_font.DrawOutlined(frame, centre.c_str(), SCREEN_W / 2, SCREEN_H - 50, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
-		m_font.DrawOutlined(frame, close.c_str(), SCREEN_W / 2, SCREEN_H - 30, 0.26f, GOLD, BLACK, 1, Text::Align::Centre);
+		if (m_isTeleporter)
+		{
+			/* The selection screen: only the teleporter icons, centred on
+			 * the selected one, the title and the player marker
+			 * (MapObj DrawTeleportersOnly). */
+			DrawTeleporters(castle);
+			m_font.DrawOutlined(frame, close.c_str(), SCREEN_W / 2, SCREEN_H - 30, 0.26f, GOLD, BLACK, 1, Text::Align::Centre);
+		}
+		else
+		{
+			std::string centre = WithButton(Text::Loc::Get("LOC_ID_MAP_SCREEN_2_NEW"), "[Input:0]", "A");
+			m_font.DrawOutlined(frame, Text::Loc::Get("LOC_ID_MAP_SCREEN_3"), SCREEN_W / 2, SCREEN_H - 70, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
+			m_font.DrawOutlined(frame, centre.c_str(), SCREEN_W / 2, SCREEN_H - 50, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
+			m_font.DrawOutlined(frame, close.c_str(), SCREEN_W / 2, SCREEN_H - 30, 0.26f, GOLD, BLACK, 1, Text::Align::Centre);
+		}
 
 		// The legend (MapScreen.cs LoadContent): a plate at the bottom
 		// right with an icon and a text per row. The original is twice this
@@ -204,6 +283,41 @@ namespace RogueCastle
 			}
 		}
 	}
+	/* The teleporter selection (MapObj DrawTeleportersOnly): the visited
+	 * teleporter rooms' icons only, the screen centred on the selected
+	 * one (CentreAroundTeleporter), the title at the top and the player
+	 * marker on it (the C# draws a small red walking knight). */
+	void MapScreen::DrawTeleporters(const Levels::Castle &castle)
+	{
+		if (m_dests.empty() || m_selectedTeleporter >= (int) m_dests.size())
+			return;
+		const float w = m_teleporter->SpriteRect().Width, h = m_teleporter->SpriteRect().Height;
+		auto iconPos = [&](int roomIndex)
+		{
+			const Levels::PlacedRoom &r = castle.rooms[roomIndex];
+			return Vector2((r.x + r.width / 2.0f) / SCALE_X - w / 2.0f - 1,
+				(r.y + r.height / 2.0f) / SCALE_Y - h / 2.0f - 2);
+		};
+		Vector2 sel = iconPos(m_dests[m_selectedTeleporter]);
+		float ox = SCREEN_W * 0.5f - sel.X, oy = SCREEN_H * 0.5f - sel.Y;
+		m_teleporter->Scale(Vector2(1, 1));
+		for (int roomIndex : m_dests)
+		{
+			Vector2 p = iconPos(roomIndex);
+			m_teleporter->Position(Vector2(ox + p.X, oy + p.Y));
+			m_teleporter->Draw(&m_camera);
+		}
+		m_player->Scale(Vector2(1, 1));
+		m_player->Position(Vector2(ox + sel.X + 7, oy + sel.Y - 10));
+		m_player->Draw(&m_camera);
+		if (m_titleText != nullptr)
+		{
+			m_titleText->Scale(Vector2(0.5f, 0.5f));
+			m_titleText->Position(Vector2(SCREEN_W * 0.5f, SCREEN_H * 0.1f));
+			m_titleText->Draw(&m_camera);
+		}
+	}
+
 	// MapObj.Draw: the visited rooms in their area colours, their doors, the
 	// boss icon and the blinking player icon. Map pixel p -> screen o + p * k
 	// (k = 1 for the map screen, 0.5 for the minimap).
