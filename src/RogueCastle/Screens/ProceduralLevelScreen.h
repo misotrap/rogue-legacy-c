@@ -26,7 +26,9 @@ public:
 	 * chestFlags (optional, owned by the caller, e.g. save.chestsOpened):
 	 * one flag per chest, in room order; opened chests stay open. */
 	ProceduralLevelScreen(const char *assets, uint32_t seed,
-	                      std::vector<uint8_t> *chestFlags = nullptr, int timesCastleBeaten = 0);
+	                      std::vector<uint8_t> *chestFlags = nullptr, int timesCastleBeaten = 0,
+	                      /* save.DiaryEntry, of the diary rooms */
+	                      int *diaryEntry = nullptr);
 	~ProceduralLevelScreen();   /* frees the fonts (2 MB of Junicode) */
 
 	void Update(GameTime *gameTime);
@@ -44,6 +46,11 @@ public:
 	bool TakeTeleporterRequest();
 	/* MapObj.TeleportPlayer: the hero lands on the destination room's pad. */
 	void TeleportToRoom(int roomIndex);
+	/* DiaryRoomObj (Bonus Tag 6): Up next to the diary reads the next
+	 * journal entry. GameFlow opens the dialogue, then clears the
+	 * request; the entry counter has already moved on (the C# shows
+	 * entry m_diaryIndex then DiaryEntry++, DiaryRoomObj.cs line 71). */
+	bool TakeDiaryRequest(int &entryIndex);
 	/* ProjectileManager.cs line 258 (FireProjectile) for the player's
 	 * spells: position from the source anchor and flip, heading from the
 	 * angle degrees, the player tag. */
@@ -75,6 +82,9 @@ public:
 	void ObjectiveComplete();
 	/* Dev/test (RL_DEBUG_CHEST): "12p" opens chest 12, forcing a print. */
 	void DebugOpenChest(const char *arg);
+	/* Dev/test (RL_DEBUG_BONUS): the centre of the first bonus room of
+	 * that tag (BonusRoomTypes), to spawn the hero in it. */
+	bool DebugBonusSpawn(int tag, float &x, float &y);
 	/* The shots of this enemy vanish (EnemyObj_Energon.DestroyAllProjectiles) */
 	void KillProjectilesFrom(class EnemyObj *source);
 	class ProjectileObj *FireProjectile(const char *spriteName, Vector2 position,
@@ -123,6 +133,21 @@ private:
 	std::vector<class TeleporterObj *> m_teleporterList;   /* owned */
 	std::vector<int> m_teleporterRoom;   /* castle room index of each teleporter */
 	bool m_teleporterRequested = false;
+	/* The diary rooms (Bonus Tag 6): the "diary" object, its bounds, and
+	 * whether its entry was read in this castle (RoomCompleted). */
+	struct DiaryRoom
+	{
+		int room = 0;
+		Rectangle bounds;
+		float x = 0, y = 0;
+		bool used = false;
+		bool arrowVisible = false;
+	};
+	std::vector<DiaryRoom> m_diaries;
+	int *m_diaryEntry = nullptr;
+	int m_diaryRequest = -1;
+	DS2DEngine::SpriteObj *m_diaryArrow = nullptr;
+	float m_elapsed = 0;
 	std::vector<uint8_t> *m_chestFlags = nullptr;   /* save.chestsOpened */
 	std::vector<std::pair<uint8_t, int>> m_killList;   /* EnemiesKilledInRun */
 	/* Every floor and wall of the castle; m_allTerrain holds those around

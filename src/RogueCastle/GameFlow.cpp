@@ -109,7 +109,8 @@ namespace RogueCastle
 		}
 		m_save.IsDead = false;
 		m_level = new ProceduralLevelScreen(m_assets.c_str(), m_save.castleSeed,
-		                                     &m_save.chestsOpened, m_save.TimesCastleBeaten);
+		                                     &m_save.chestsOpened, m_save.TimesCastleBeaten,
+		                                     &m_save.DiaryEntry);
 		/* The hero's real stats (Game.PlayerStats) drive the player. */
 		m_level->Player()->SetPlayerStats(&m_save);
 		/* The trait scale and speed (ProceduralLevelScreen.cs OnEnter,
@@ -185,6 +186,17 @@ namespace RogueCastle
 					m_bossRoom.ForceGateClosed();
 					break;
 				}
+		/* Dev/test: RL_DEBUG_BONUS=<BonusRoomTypes tag> starts the hero in
+		 * the first bonus room of that type. */
+		if (const char *bonus = getenv("RL_DEBUG_BONUS"))
+		{
+			float bx = 0, by = 0;
+			if (m_level->DebugBonusSpawn(atoi(bonus), bx, by) && m_level->Player() != nullptr)
+			{
+				m_level->Player()->X(bx);
+				m_level->Player()->Y(by);
+			}
+		}
 		Save();
 	}
 
@@ -596,6 +608,16 @@ namespace RogueCastle
 				m_mapOpen = true;
 				Audio::PlaySound("Map_On");
 				break;
+			}
+			/* The diary rooms: Up next to the diary reads the next
+			 * journal entry (DiaryRoomObj.cs line 71). */
+			int diaryEntry = -1;
+			if (m_level->TakeDiaryRequest(diaryEntry))
+			{
+				char name[24];
+				snprintf(name, sizeof(name), "DiaryEntry%d", diaryEntry);
+				m_dialogue.Open(name, m_save.hero.isFemale);
+				Save();
 			}
 			/* Clonus (ProceduralLevelScreen.cs line 1603): every 12-35 s,
 			 * the screen shakes for 1-1.5 s (ShakeScreen(1), UpdateShake) */

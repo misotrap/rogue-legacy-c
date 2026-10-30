@@ -35,8 +35,9 @@ namespace RogueCastle
 using namespace DS2DEngine;
 
 ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
-                                             std::vector<uint8_t> *chestFlags, int timesCastleBeaten)
-	: m_chestFlags(chestFlags)
+                                             std::vector<uint8_t> *chestFlags, int timesCastleBeaten,
+                                             int *diaryEntry)
+	: m_diaryEntry(diaryEntry), m_chestFlags(chestFlags)
 {
 	/* LoadContent: the sheets this level needs (AGENTS.md: only the
 	 * sheets the current area needs). */
@@ -212,6 +213,35 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 				teleporter->X(), teleporter->Y());
 	}
 
+	/* The diary rooms (DiaryRoomObj, Bonus Tag 6): the template's
+	 * "diary" object. X/Y is the sprite's anchor, W/H its scaled size,
+	 * so the bounds are centred on it. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "6") continue;
+		for (const Levels::ObjData &o : r.objs)
+			if (o.name == "diary")
+			{
+				DiaryRoom d;
+				d.room = (int) i;
+				d.bounds = Rectangle((int) (o.x - o.width * 0.5f), (int) (o.y - o.height * 0.5f),
+					(int) o.width, (int) o.height);
+				d.x = o.x;
+				d.y = o.y;
+				m_diaries.push_back(d);
+				if (rl_trace())
+					fprintf(stderr, "diary in room %d at (%.0f,%.0f)\n", (int) i, o.x, o.y);
+				break;
+			}
+	}
+	if (SpriteSystem::SpriteLibrary::ContainsSprite("UpArrowSquare_Sprite"))
+	{
+		m_diaryArrow = new DS2DEngine::SpriteObj("UpArrowSquare_Sprite");
+		m_diaryArrow->Flip(SpriteEffects::FlipHorizontally);   // DiaryRoomObj.Initialize
+		m_diaryArrow->ForceDraw(true);
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -295,6 +325,7 @@ ProceduralLevelScreen::~ProceduralLevelScreen()
 	delete m_objPlate;
 	for (TeleporterObj *teleporter : m_teleporterList)
 		delete teleporter;
+	delete m_diaryArrow;
 }
 
 bool ProceduralLevelScreen::TakeTeleporterRequest()
@@ -302,6 +333,30 @@ bool ProceduralLevelScreen::TakeTeleporterRequest()
 	bool requested = m_teleporterRequested;
 	m_teleporterRequested = false;
 	return requested;
+}
+
+bool ProceduralLevelScreen::DebugBonusSpawn(int tag, float &x, float &y)
+{
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name == "Bonus" && atoi(r.tag.c_str()) == tag)
+		{
+			x = r.x + r.width * 0.5f;
+			y = r.y + r.height - 300;   /* falls onto the room's floor */
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ProceduralLevelScreen::TakeDiaryRequest(int &entryIndex)
+{
+	if (m_diaryRequest < 0)
+		return false;
+	entryIndex = m_diaryRequest;
+	m_diaryRequest = -1;
+	return true;
 }
 
 void ProceduralLevelScreen::TeleportToRoom(int roomIndex)
@@ -386,6 +441,37 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 			teleporter->ArrowVisible = true;
 			if (upPressed)
 				m_teleporterRequested = true;
+		}
+	}
+
+	/* The diary of the current room (DiaryRoomObj.Update): the bubble
+	 * floats above it while the hero has not read it (or stands next to
+	 * it), and Up reads the next journal entry. */
+	m_elapsed += (float) gameTime->ElapsedGameTime;
+	for (DiaryRoom &d : m_diaries)
+	{
+		if (m_roomList[d.room] != m_currentRoom || m_player == nullptr)
+		{
+			d.arrowVisible = false;
+			continue;
+		}
+		/* DiaryRoomObj.cs line 63: the bounds widen by 50/100. */
+		Rectangle b = d.bounds;
+		b.X -= 50;
+		b.Width += 100;
+		bool touching = playerBounds.Intersects(b);
+		bool maxed = m_diaryEntry != nullptr && *m_diaryEntry >= LevelEV::TOTAL_JOURNAL_ENTRIES - 1;
+		d.arrowVisible = !maxed && (!d.used || touching);
+		if (!touching || !m_player->IsTouchingGround() || !upPressed || m_diaryRequest >= 0)
+			continue;
+		/* DiaryRoomObj.cs line 71: the next entry is shown, the counter
+		 * moves on and the room is completed for this castle. The
+		 * journal list screen of the maxed diary is not ported. */
+		if (!d.used && !maxed && m_diaryEntry != nullptr)
+		{
+			m_diaryRequest = *m_diaryEntry;
+			(*m_diaryEntry)++;
+			d.used = true;
 		}
 	}
 
@@ -760,6 +846,15 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		room->Draw(camera);
 	for (TeleporterObj *teleporter : m_teleporterList)
 		teleporter->Draw(camera);
+	/* The diaries' bubble (DiaryRoomObj.cs line 65), swaying above. */
+	if (m_diaryArrow != nullptr)
+		for (DiaryRoom &d : m_diaries)
+			if (d.arrowVisible)
+			{
+				float sway = sinf(m_elapsed * 20) * 2;
+				m_diaryArrow->Position(Vector2(d.x, d.y - m_diaryArrow->SpriteRect().Height - 50 + sway));
+				m_diaryArrow->Draw(camera);
+			}
 	if (rl_trace())
 	{
 		static int frames = 0;
