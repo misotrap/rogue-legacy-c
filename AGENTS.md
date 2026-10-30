@@ -343,8 +343,14 @@ the map/minimap and the options; the game code below is yours.
    Playing"), the pedestal's special item (2, "Special Item Prayer",
    GetItem's SpecialItem case). The level's pending-dialogue queue
    (TakeSpecialDialogue) and SetDecorationTint (the room renderer
-   greys the used fountain/pedestal) are the shared plumbing. Left:
-   RandomTeleport (3), SpellSwap (4), PickChest (1), Arena (10),
-   CarnivalShoot1/2 (8/9), the donation box of the challenge rooms
-   (needs the challenge-boss linkage), and the journal-list screen of
-   a maxed diary.
+   greys the used fountain/pedestal) are the shared plumbing.
+   Done since: the random teleport pad (3), the spell swap pedestal
+   (4, GetItem's Spell case), the elf's chest game (1: the pay-25%
+   offer, the gate that opens, the shuffled chests), the arena (10:
+   the named champions, the chest revealed when they are dead), the
+   shooting gallery (8: the clown, the dagger spell, the bullseyes,
+   the camera override; RL_BTN_PULSE extends the test harness).
+   Left: CarnivalShoot2 (9, the harder gallery - reuse the Tag 8
+   machinery), the donation box of the challenge rooms (needs the
+   challenge-boss linkage), and the journal-list screen of a maxed
+   diary.
