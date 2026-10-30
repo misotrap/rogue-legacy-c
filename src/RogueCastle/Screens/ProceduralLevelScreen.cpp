@@ -3,6 +3,7 @@
 #include "../../debugflags.h"
 #include "../Types/EnemyType.h"
 #include "../Types/TraitType.h"
+#include "../Types/SpecialItemType.h"
 #include "../EVs/GlobalEV.h"
 #include "../Game.h"
 #include "../GameObjects/EnemyObjs/EnemyObj_Platform.h"
@@ -328,6 +329,37 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			}
 	}
 
+	/* The special item rooms (SpecialItemRoomObj, Bonus Tag 2): the
+	 * "pedestal" with a random item floating above it (never the one the
+	 * hero already carries; 30% glasses with a vision trait,
+	 * SpecialItemRoomObj.RandomizeItem). */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "2") continue;
+		for (const Levels::ObjData &o : r.objs)
+			if (o.name == "pedestal")
+			{
+				SpecialItemRoom item;
+				item.room = (int) i;
+				item.bounds = SpriteBounds(o);
+				/* The hero stands ON the pedestal: reach a little above it,
+				 * like the C# bounds (whose edges touch) */
+				item.bounds.Y -= 20;
+				item.bounds.Height += 20;
+				item.itemType = 0;   /* rolled at the first update, once the hero's stats are known */
+				item.x = o.x;
+				/* SpecialItemRoomObj.Initialize: the icon floats half its
+				 * height plus 10 above the pedestal's top */
+				item.y = item.bounds.Y - 10;
+				m_specialItems.push_back(item);
+				if (rl_trace())
+					fprintf(stderr, "special item in room %d: type %d at (%.0f,%.0f)\n",
+						(int) i, (int) item.itemType, o.x, o.y);
+				break;
+			}
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -412,6 +444,7 @@ ProceduralLevelScreen::~ProceduralLevelScreen()
 	for (TeleporterObj *teleporter : m_teleporterList)
 		delete teleporter;
 	delete m_diaryArrow;
+	delete m_itemIcon;
 }
 
 bool ProceduralLevelScreen::TakeTeleporterRequest()
@@ -444,6 +477,28 @@ static const char *const JUKEBOX_TITLES[] = { "Pistol Shrimp", "The Grim Outdoor
 	"Lamprey", "Broadside of the Broadsword", "Mincemeat", "Trilobyte", "Poot-yan",
 	"SeaSawHorse (Legacy)", "SeaSawHorse (Manor)", "Rogue Legacy", "The Fish and the Whale",
 	"Rotten Legacy", "Whale. Shark.", "Whale. Shark. (Drums)" };
+
+int ProceduralLevelScreen::TakeSpecialItemPrayer()
+{
+	int room = m_specialItemPrayer;
+	m_specialItemPrayer = -1;
+	return room;
+}
+
+int ProceduralLevelScreen::TakeSpecialItem(int roomIndex)
+{
+	for (SpecialItemRoom &item : m_specialItems)
+	{
+		if (item.room != roomIndex || item.taken)
+			continue;
+		item.taken = true;
+		item.arrowVisible = false;
+		/* The pedestal dries out like the fountain (TakeItem). */
+		m_roomRenderer.SetDecorationTint(m_castle.rooms[roomIndex], "pedestal", 0xFF646464u);
+		return item.itemType;
+	}
+	return 0;
+}
 
 const char *ProceduralLevelScreen::JukeboxSong()
 {
@@ -628,7 +683,36 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		AddPopup(buf, m_player->X(), (float) playerBounds.Top(), 0xFF6495EDu /* CornflowerBlue */);
 		v.used = true;
 		v.arrowVisible = false;
-		m_roomRenderer.SetFountainTint(m_castle.rooms[v.room], 0xFF646464u /* (100,100,100) */);
+		m_roomRenderer.SetDecorationTint(m_castle.rooms[v.room], "fountain", 0xFF646464u /* (100,100,100) */);
+	}
+
+	/* The special item rooms (SpecialItemRoomObj): the item is rolled once
+	 * the hero's traits and carried item are known (RandomizeItem), then
+	 * Up at the pedestal prays for it. */
+	for (SpecialItemRoom &item : m_specialItems)
+	{
+		if (m_roomList[item.room] != m_currentRoom || m_player == nullptr)
+		{
+			item.arrowVisible = false;
+			continue;
+		}
+		if (item.itemType == 0 && m_player->Stats() != nullptr && !item.taken)
+		{
+			const Save::GameState *stats = m_player->Stats();
+			item.itemType = 1 + rand() % (SpecialItemType::Total - 1);   /* FreeEntrance..Compass */
+			const Lineage::Heir &hero = stats->hero;
+			bool vision = hero.HasTrait(TraitType::NearSighted) || hero.HasTrait(TraitType::FarSighted)
+				|| hero.HasTrait(TraitType::Vertigo) || hero.HasTrait(TraitType::ColorBlind)
+				|| hero.HasTrait(TraitType::Nostalgic);
+			if (vision && rand() % 100 < 30)
+				item.itemType = SpecialItemType::Glasses;
+			if (item.itemType == stats->SpecialItem)
+				item.itemType = item.itemType % (SpecialItemType::Total - 1) + 1;   /* never what he carries */
+		}
+		item.arrowVisible = !item.taken && item.itemType != 0
+			&& playerBounds.Intersects(item.bounds) && m_player->IsTouchingGround();
+		if (item.arrowVisible && upPressed && m_specialItemPrayer < 0)
+			m_specialItemPrayer = item.room;
 	}
 
 	/* The jukebox: Up plays the next song (JukeboxBonusRoom.Update),
@@ -1045,6 +1129,30 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 					j.y - m_diaryArrow->SpriteRect().Height - 110 + sway));
 				m_diaryArrow->Draw(camera);
 			}
+		/* The pedestals' item, floating above them; the prayer arrow is
+		 * the pedestal's bounds check, drawn when arrowVisible. */
+		for (SpecialItemRoom &item : m_specialItems)
+		{
+			if (item.taken || item.itemType == 0) continue;
+			if (!SpriteSystem::SpriteLibrary::ContainsSprite(SpecialItemType::SpriteName(item.itemType)))
+				continue;
+			if (m_itemIcon == nullptr || m_itemIconSprite != item.itemType)
+			{
+				delete m_itemIcon;
+				m_itemIcon = new DS2DEngine::SpriteObj(SpecialItemType::SpriteName(item.itemType));
+				m_itemIcon->Scale(Vector2(2, 2));   // SpecialItemRoomObj.Initialize
+				m_itemIconSprite = item.itemType;
+			}
+			m_itemIcon->Position(Vector2(item.x,
+				item.y - m_itemIcon->SpriteRect().Height + sinf(m_elapsed * 2) * 5));
+			m_itemIcon->Draw(camera);
+			if (item.arrowVisible)
+			{
+				m_diaryArrow->Position(Vector2(item.x,
+					item.y - m_diaryArrow->SpriteRect().Height - 30 + sway));
+				m_diaryArrow->Draw(camera);
+			}
+		}
 	}
 	if (rl_trace())
 	{

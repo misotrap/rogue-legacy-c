@@ -61,17 +61,18 @@ namespace RogueCastle
 		/* The ancestor shown in each portrait room, chosen by the level
 		 * (one random per castle, like PortraitRoomObj.OnEnter). */
 		std::map<const Levels::PlacedRoom *, int> m_portraitIndex;
-		/* The vita chambers' fountains, to grey them out once used
-		 * (VitaChamberRoomObj.OnEnter). */
-		std::map<const Levels::PlacedRoom *, DS2DEngine::SpriteObj *> m_fountains;
-		std::map<const Levels::PlacedRoom *, uint32_t> m_fountainTint;
+		/* Decorations to tint on demand (the used vita chamber's fountain,
+		 * the emptied special-item pedestal): room + object name. */
+		std::map<std::pair<const Levels::PlacedRoom *, std::string>, DS2DEngine::SpriteObj *> m_tinted;
+		std::map<std::pair<const Levels::PlacedRoom *, std::string>, uint32_t> m_tints;
 	public:
 		void SetPortraitIndex(const Levels::PlacedRoom &room, int index) { m_portraitIndex[&room] = index; }
-		void SetFountainTint(const Levels::PlacedRoom &room, uint32_t colour)
+		void SetDecorationTint(const Levels::PlacedRoom &room, const char *name, uint32_t colour)
 		{
-			m_fountainTint[&room] = colour;
-			auto it = m_fountains.find(&room);
-			if (it != m_fountains.end() && it->second != nullptr)
+			auto key = std::make_pair(&room, std::string(name));
+			m_tints[key] = colour;
+			auto it = m_tinted.find(key);
+			if (it != m_tinted.end() && it->second != nullptr)
 				it->second->TextureColor(Color(colour >> 16 & 255, colour >> 8 & 255, colour & 255));
 		}
 	private:

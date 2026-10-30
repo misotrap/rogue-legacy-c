@@ -50,7 +50,7 @@ namespace RogueCastle
 			for (GameObj *o : entry.second.front) delete o;
 		}
 		m_decorations.clear();
-		m_fountains.clear();   // those sprites were part of the decorations
+		m_tinted.clear();   // those sprites were part of the decorations
 	}
 
 	bool RoomRenderer::LoadContent(const char *assetsDir)
@@ -295,13 +295,20 @@ namespace RogueCastle
 				obj = fountainObj = new SpriteObj(sprite);
 			}
 			else continue; // a sheet that is not loaded
-			if (o.name == "fountain")
+			// The tinted decorations (the fountain, the pedestal): greyed
+			// on demand by the level (SetDecorationTint)
+			if (!o.name.empty() && (o.name == "fountain" || o.name == "pedestal"))
 			{
-				m_fountains[&room] = fountainObj;
-				auto tint = m_fountainTint.find(&room);
-				if (tint != m_fountainTint.end())
-					obj->TextureColor(Color(tint->second >> 16 & 255,
+				auto key = std::make_pair(&room, o.name);
+				auto tint = m_tints.find(key);
+				if (tint != m_tints.end() && fountainObj != nullptr)
+				{
+					fountainObj->TextureColor(Color(tint->second >> 16 & 255,
 						tint->second >> 8 & 255, tint->second & 255));
+					m_tinted[key] = fountainObj;
+				}
+				else
+					m_tinted[key] = fountainObj;
 			}
 			obj->X(o.x);
 			obj->Y(o.y);

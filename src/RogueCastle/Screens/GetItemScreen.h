@@ -17,7 +17,7 @@ namespace RogueCastle
 {
 	namespace GetItem
 	{
-		enum Type { Blueprint = 1, Rune = 2, StatDrop = 3, TripStatDrop = 6 };   // GetItemType
+		enum Type { Blueprint = 1, Rune = 2, StatDrop = 3, TripStatDrop = 6, SpecialItem = 4 };   // GetItemType
 		struct Reward
 		{
 			int type = 0;

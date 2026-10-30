@@ -1,4 +1,5 @@
 #include "GetItemScreen.h"
+#include "../Types/SpecialItemType.h"
 
 #include "../../Audio/Audio.h"
 #include "../../SpriteSystem/SpriteLibrary.h"
@@ -97,7 +98,14 @@ namespace RogueCastle
 		return ok;
 	}
 
-	void GetItemScreen::Open(const GetItem::Reward &reward, float camX, float camY, int timesCastleBeaten)
+	static const char *SpecialItemLocID(int item)
+{
+	static char id[40];
+	snprintf(id, sizeof(id), "LOC_ID_SPECIAL_ITEM_TYPE_%d", item);
+	return id;
+}
+
+void GetItemScreen::Open(const GetItem::Reward &reward, float camX, float camY, int timesCastleBeaten)
 	{
 		m_reward = reward;
 		m_time = 0;
@@ -125,6 +133,12 @@ namespace RogueCastle
 				Text::Loc::Get(LocIDs::EquipmentAbilityType_ToStringID(reward.y)),
 				Text::Loc::Get("LOC_ID_ENCHANTRESS_SCREEN_13"));
 			m_texts[1] = std::string("(") + Text::Loc::Get(LocIDs::EquipmentCategoryType_ToStringID2(reward.x)) + ")";
+			break;
+		case GetItem::SpecialItem:
+			/* GetItemScreen.cs line 199: the icon and name of the item */
+			m_items[0]->ChangeSprite(SpecialItemType::SpriteName((uint8_t) reward.x));
+			m_found->ChangeSprite("ItemFoundText_Sprite_FR");
+			m_texts[0] = Text::Loc::Get(SpecialItemLocID(reward.x));
 			break;
 		default:
 			m_found->ChangeSprite("StatFoundText_Sprite_FR");

@@ -449,6 +449,29 @@ namespace RogueCastle
 						Save();
 					}
 				}
+				if (m_specialItemRoom >= 0 && r != DialogueScreen::Result::Open)
+				{
+					int room = m_specialItemRoom;
+					m_specialItemRoom = -1;
+					if (r == DialogueScreen::Result::Confirmed)
+					{
+						/* SpecialItemRoomObj.TakeItem: the item is carried,
+						 * the pedestal dries out and the GetItem screen
+						 * shows it. */
+						int item = m_level->TakeSpecialItem(room);
+						if (item != 0)
+						{
+							m_save.SpecialItem = (uint8_t) item;
+							if (m_level->Player() != nullptr)
+								m_level->Player()->SetPlayerStats(&m_save);   /* the glasses part */
+							GetItem::Reward reward;
+							reward.type = GetItem::SpecialItem;
+							reward.x = item;
+							GetItem::Push(reward);
+							Save();
+						}
+					}
+				}
 				if (m_architectAsking && r != DialogueScreen::Result::Open)
 				{
 					m_architectAsking = false;
@@ -617,6 +640,14 @@ namespace RogueCastle
 			{
 				m_dialogue.Open(specialTalk.c_str(), m_save.hero.isFemale);
 				Save();
+			}
+			/* The special item's prayer (SpecialItemRoomObj.Update):
+			 * "Special Item Prayer" with a confirm; TakeItem on yes. */
+			int prayerRoom = m_level->TakeSpecialItemPrayer();
+			if (prayerRoom >= 0)
+			{
+				m_specialItemRoom = prayerRoom;
+				m_dialogue.Open("Special Item Prayer", m_save.hero.isFemale, "ConfirmTest1");
 			}
 			/* Clonus (ProceduralLevelScreen.cs line 1603): every 12-35 s,
 			 * the screen shakes for 1-1.5 s (ShakeScreen(1), UpdateShake) */

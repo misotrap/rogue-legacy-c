@@ -53,6 +53,12 @@ public:
 	 * area music while the hero stays in the room (JukeboxBonusRoom);
 	 * nullptr outside or before the first Up. */
 	const char *JukeboxSong();
+	/* The special item rooms (Bonus Tag 2): Up at the pedestal prays for
+	 * the item (the "Special Item Prayer" dialogue). GameFlow asks which
+	 * room, then TakeSpecialItem on confirm. */
+	int TakeSpecialItemPrayer();
+	/* Returns the item taken, greys the pedestal and hides the icon. */
+	int TakeSpecialItem(int roomIndex);
 	/* ProjectileManager.cs line 258 (FireProjectile) for the player's
 	 * spells: position from the source anchor and flip, heading from the
 	 * angle degrees, the player tag. */
@@ -155,6 +161,21 @@ private:
 	/* The vita chambers (Bonus Tag 5): the "fountain", grey once used. */
 	struct VitaRoom { int room; Rectangle bounds; float x, y; bool used; bool arrowVisible; };
 	std::vector<VitaRoom> m_vitas;
+	/* The special item rooms (Bonus Tag 2): the "pedestal" and the item
+	 * floating above it (SpecialItemRoomObj). */
+	struct SpecialItemRoom
+	{
+		int room = 0;
+		Rectangle bounds;      /* the pedestal's */
+		float x = 0, y = 0;   /* the floating icon's anchor */
+		uint8_t itemType = 0;
+		bool taken = false;
+		bool arrowVisible = false;
+	};
+	std::vector<SpecialItemRoom> m_specialItems;
+	int m_specialItemPrayer = -1;
+	DS2DEngine::SpriteObj *m_itemIcon = nullptr;   /* the floating item */
+	uint8_t m_itemIconSprite = 0;
 	/* The jukebox rooms (Bonus Tag 11): Up plays the next song. */
 	struct JukeboxRoom
 	{

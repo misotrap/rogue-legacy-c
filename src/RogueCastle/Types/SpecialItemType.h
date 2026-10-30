@@ -27,6 +27,26 @@ namespace SpecialItemType
 	constexpr uint8_t FireballToken = 11;
 	constexpr uint8_t BlobToken = 12;
 	constexpr uint8_t LastBossToken = 13;
+/* SpecialItemType.SpriteName (line 60). */
+inline const char *SpriteName(uint8_t itemType)
+{
+	switch (itemType)
+	{
+	case Revive: return "BonusRoomRingIcon_Sprite";
+	case SpikeImmunity: return "BonusRoomBootsIcon_Sprite";
+	case LoseCoins: return "BonusRoomHedgehogIcon_Sprite";
+	case FreeEntrance: return "BonusRoomObolIcon_Sprite";
+	case Compass: return "BonusRoomCompassIcon_Sprite";
+	case GoldPerKill: return "BonusRoomBlessingIcon_Sprite";
+	case Glasses: return "BonusRoomGlassesIcon_Sprite";
+	case EyeballToken: return "BonusRoomEyeballTokenIcon_Sprite";
+	case SkullToken: return "BonusRoomSkullTokenIcon_Sprite";
+	case FireballToken: return "BonusRoomFireballTokenIcon_Sprite";
+	case BlobToken: return "BonusRoomBlobTokenIcon_Sprite";
+	case LastBossToken: return "BonusRoomLastBossTokenIcon_Sprite";
+	default: return "Blank_Sprite";
+	}
+}
 }
 }
 
