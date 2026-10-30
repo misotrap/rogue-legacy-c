@@ -57,6 +57,11 @@ public:
 	 * throws the hero into a random ordinary room
 	 * (RandomTeleportRoomObj.TeleportPlayer). */
 	void RandomTeleport();
+	/* The spell swap rooms (Bonus Tag 4): Up at the pedestal swaps the
+	 * hero's spell for the one on it; TakeSpellSwap hands the room to
+	 * GameFlow, CompleteSpellSwap takes the spell and returns it. */
+	int TakeSpellSwap();
+	int CompleteSpellSwap(int roomIndex);
 	/* The special item rooms (Bonus Tag 2): Up at the pedestal prays for
 	 * the item (the "Special Item Prayer" dialogue). GameFlow asks which
 	 * room, then TakeSpecialItem on confirm. */
@@ -182,6 +187,19 @@ private:
 	struct RandomTeleportRoom { int room; DS2DEngine::SpriteObj *pad; };
 	std::vector<RandomTeleportRoom> m_randomTeleports;
 	bool m_randomArrow = false;   /* the touched pad shows the arrow */
+	/* The spell swap rooms (Bonus Tag 4): the pedestal with a random
+	 * spell of the hero's class (SpellSwapRoomObj). */
+	struct SpellSwapRoom
+	{
+		int room = 0;
+		Rectangle bounds;
+		float x = 0, y = 0;
+		int spell = 0;          /* 0 = not rolled yet */
+		bool taken = false;
+		bool arrowVisible = false;
+	};
+	std::vector<SpellSwapRoom> m_spellSwaps;
+	int m_spellSwapRoom = -1;
 	DS2DEngine::SpriteObj *m_itemIcon = nullptr;   /* the floating item */
 	uint8_t m_itemIconSprite = 0;
 	/* The jukebox rooms (Bonus Tag 11): Up plays the next song. */

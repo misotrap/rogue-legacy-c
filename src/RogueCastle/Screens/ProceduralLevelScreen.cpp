@@ -35,6 +35,29 @@ namespace RogueCastle
 
 using namespace DS2DEngine;
 
+/* SpellType.Icon (line 110), for the spell swap rooms' pedestal. */
+static const char *SpellIconName(int spell)
+{
+	switch (spell)
+	{
+	case SpellType::Dagger: return "DaggerIcon_Sprite";
+	case SpellType::Axe: return "AxeIcon_Sprite";
+	case SpellType::TimeBomb: return "TimeBombIcon_Sprite";
+	case SpellType::TimeStop: return "TimeStopIcon_Sprite";
+	case SpellType::Nuke: return "NukeIcon_Sprite";
+	case SpellType::Translocator: return "TranslocatorIcon_Sprite";
+	case SpellType::Displacer: return "DisplacerIcon_Sprite";
+	case SpellType::Boomerang: return "BoomerangIcon_Sprite";
+	case SpellType::DualBlades: return "DualBladesIcon_Sprite";
+	case SpellType::Close: return "CloseIcon_Sprite";
+	case SpellType::DamageShield: return "DamageShieldIcon_Sprite";
+	case SpellType::Bounce: return "BounceIcon_Sprite";
+	case SpellType::DragonFire: return "DragonFireIcon_Sprite";
+	case SpellType::RapidDagger: return "RapidDaggerIcon_Sprite";
+	default: return "DaggerIcon_Sprite";
+	}
+}
+
 /* The object's world bounds with its sprite's real anchor (X/Y is the
  * anchor position, and the anchor is not always centred: the healing
  * fountain's sits at its bottom). */
@@ -384,6 +407,29 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			}
 	}
 
+	/* The spell swap rooms (SpellSwapRoomObj, Bonus Tag 4): the
+	 * "pedestal" with a random spell of the hero's class. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "4") continue;
+		for (const Levels::ObjData &o : r.objs)
+			if (o.name == "pedestal")
+			{
+				SpellSwapRoom sw;
+				sw.room = (int) i;
+				sw.bounds = SpriteBounds(o);
+				sw.bounds.Y -= 20;
+				sw.bounds.Height += 20;   /* the hero stands on the pedestal */
+				sw.x = o.x;
+				sw.y = sw.bounds.Y;   /* the icon floats above it */
+				m_spellSwaps.push_back(sw);
+				if (rl_trace())
+					fprintf(stderr, "spell swap in room %d at (%.0f,%.0f)\n", (int) i, o.x, o.y);
+				break;
+			}
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -540,6 +586,27 @@ void ProceduralLevelScreen::RandomTeleport()
 			fprintf(stderr, "random teleport -> %s at (%.0f,%.0f)\n", dest->Name().c_str(), m_player->X(), m_player->Y());
 		break;
 	}
+}
+
+int ProceduralLevelScreen::TakeSpellSwap()
+{
+	int room = m_spellSwapRoom;
+	m_spellSwapRoom = -1;
+	return room;
+}
+
+int ProceduralLevelScreen::CompleteSpellSwap(int roomIndex)
+{
+	for (SpellSwapRoom &sw : m_spellSwaps)
+		if (sw.room == roomIndex && !sw.taken && sw.spell != 0)
+		{
+			sw.taken = true;
+			sw.arrowVisible = false;
+			/* The pedestal dries out like the fountain (TakeItem). */
+			m_roomRenderer.SetDecorationTint(m_castle.rooms[roomIndex], "pedestal", 0xFF646464u);
+			return sw.spell;
+		}
+	return 0;
 }
 
 int ProceduralLevelScreen::TakeSpecialItemPrayer()
@@ -777,6 +844,48 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 			&& playerBounds.Intersects(item.bounds) && m_player->IsTouchingGround();
 		if (item.arrowVisible && upPressed && m_specialItemPrayer < 0)
 			m_specialItemPrayer = item.room;
+	}
+
+	/* The spell swap rooms: the spell is rolled from the hero's class
+	 * once known (RandomizeItem), Up takes it right away - no dialogue
+	 * (SpellSwapRoomObj.Update). */
+	for (SpellSwapRoom &sw : m_spellSwaps)
+	{
+		if (m_roomList[sw.room] != m_currentRoom || m_player == nullptr)
+		{
+			sw.arrowVisible = false;
+			continue;
+		}
+		if (sw.spell == 0 && !sw.taken && m_player->Stats() != nullptr)
+		{
+			const Save::GameState *stats = m_player->Stats();
+			uint8_t cls = stats->hero.classType;
+			if (cls == ClassType::Dragon)
+				sw.spell = SpellType::DragonFire;
+			else if (cls == ClassType::Traitor)
+				sw.spell = SpellType::RapidDagger;
+			else
+			{
+				std::vector<uint8_t> list = Lineage::Generator::GetSpellList(cls);
+				do
+				{
+					sw.spell = list.empty() ? (int) SpellType::Dagger : list[rand() % list.size()];
+				}
+				while (stats->hero.HasTrait(TraitType::Savant)
+					&& (sw.spell == SpellType::Translocator || sw.spell == SpellType::TimeStop
+					 || sw.spell == SpellType::DamageShield));
+				/* never the spell the hero already casts */
+				if (sw.spell == stats->hero.spell)
+					sw.spell = list.empty() ? (int) SpellType::Dagger
+						: list[(rand() + 1) % list.size()];
+				if (sw.spell == stats->hero.spell)
+					sw.spell = SpellType::Dagger;
+			}
+		}
+		sw.arrowVisible = !sw.taken && sw.spell != 0
+			&& playerBounds.Intersects(sw.bounds) && m_player->IsTouchingGround();
+		if (sw.arrowVisible && upPressed && m_spellSwapRoom < 0)
+			m_spellSwapRoom = sw.room;
 	}
 
 	/* The random teleport pads: the arrow while the hero stands on one,
@@ -1221,6 +1330,27 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 					j.y - m_diaryArrow->SpriteRect().Height - 110 + sway));
 				m_diaryArrow->Draw(camera);
 			}
+		/* The spell swap rooms' icon, floating the same way. */
+		for (SpellSwapRoom &sw : m_spellSwaps)
+		{
+			if (sw.taken || sw.spell == 0) continue;
+			const char *icon = SpellIconName(sw.spell);
+			if (!SpriteSystem::SpriteLibrary::ContainsSprite(icon)) continue;
+			if (m_itemIcon == nullptr || m_itemIconSprite != (uint8_t) sw.spell)
+			{
+				delete m_itemIcon;
+				m_itemIcon = new DS2DEngine::SpriteObj(icon);
+				m_itemIcon->Scale(Vector2(2, 2));
+				m_itemIconSprite = (uint8_t) sw.spell;
+			}
+			m_itemIcon->Position(Vector2(sw.x, sw.y - 20 + sinf(m_elapsed * 2) * 5));
+			m_itemIcon->Draw(camera);
+			if (sw.arrowVisible)
+			{
+				m_diaryArrow->Position(Vector2(sw.x, sw.y - 90 + sway));
+				m_diaryArrow->Draw(camera);
+			}
+		}
 		/* The pedestals' item, floating above them; the prayer arrow is
 		 * the pedestal's bounds check, drawn when arrowVisible. */
 		for (SpecialItemRoom &item : m_specialItems)

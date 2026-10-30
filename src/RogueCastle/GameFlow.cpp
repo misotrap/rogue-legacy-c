@@ -641,6 +641,23 @@ namespace RogueCastle
 				m_dialogue.Open(specialTalk.c_str(), m_save.hero.isFemale);
 				Save();
 			}
+			/* The spell swap rooms (SpellSwapRoomObj.TakeItem): Up
+			 * swaps the hero's spell right away, then the GetItem screen
+			 * shows it. */
+			int swapRoom = m_level->TakeSpellSwap();
+			if (swapRoom >= 0)
+			{
+				int spell = m_level->CompleteSpellSwap(swapRoom);
+				if (spell != 0)
+				{
+					m_save.hero.spell = (uint8_t) spell;
+					GetItem::Reward reward;
+					reward.type = GetItem::Spell;
+					reward.x = spell;
+					GetItem::Push(reward);
+					Save();
+				}
+			}
 			/* The special item's prayer (SpecialItemRoomObj.Update):
 			 * "Special Item Prayer" with a confirm; TakeItem on yes. */
 			int prayerRoom = m_level->TakeSpecialItemPrayer();

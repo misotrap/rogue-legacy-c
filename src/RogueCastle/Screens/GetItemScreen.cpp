@@ -105,6 +105,29 @@ namespace RogueCastle
 	return id;
 }
 
+/* SpellType.Icon (line 110). */
+static const char *SpellIcon(int spell)
+{
+	switch (spell)
+	{
+	case SpellType::Dagger: return "DaggerIcon_Sprite";
+	case SpellType::Axe: return "AxeIcon_Sprite";
+	case SpellType::TimeBomb: return "TimeBombIcon_Sprite";
+	case SpellType::TimeStop: return "TimeStopIcon_Sprite";
+	case SpellType::Nuke: return "NukeIcon_Sprite";
+	case SpellType::Translocator: return "TranslocatorIcon_Sprite";
+	case SpellType::Displacer: return "DisplacerIcon_Sprite";
+	case SpellType::Boomerang: return "BoomerangIcon_Sprite";
+	case SpellType::DualBlades: return "DualBladesIcon_Sprite";
+	case SpellType::Close: return "CloseIcon_Sprite";
+	case SpellType::DamageShield: return "DamageShieldIcon_Sprite";
+	case SpellType::Bounce: return "BounceIcon_Sprite";
+	case SpellType::DragonFire: return "DragonFireIcon_Sprite";
+	case SpellType::RapidDagger: return "RapidDaggerIcon_Sprite";
+	default: return "DaggerIcon_Sprite";
+	}
+}
+
 void GetItemScreen::Open(const GetItem::Reward &reward, float camX, float camY, int timesCastleBeaten)
 	{
 		m_reward = reward;
@@ -133,6 +156,12 @@ void GetItemScreen::Open(const GetItem::Reward &reward, float camX, float camY, 
 				Text::Loc::Get(LocIDs::EquipmentAbilityType_ToStringID(reward.y)),
 				Text::Loc::Get("LOC_ID_ENCHANTRESS_SCREEN_13"));
 			m_texts[1] = std::string("(") + Text::Loc::Get(LocIDs::EquipmentCategoryType_ToStringID2(reward.x)) + ")";
+			break;
+		case GetItem::Spell:
+			/* GetItemScreen.cs line 204: the spell's icon and name */
+			m_items[0]->ChangeSprite(SpellIcon(reward.x));
+			m_found->ChangeSprite("SpellFoundText_Sprite_FR");
+			m_texts[0] = Text::Loc::Get(LocIDs::SpellType_ToStringID(reward.x));
 			break;
 		case GetItem::SpecialItem:
 			/* GetItemScreen.cs line 199: the icon and name of the item */
