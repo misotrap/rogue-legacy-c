@@ -230,13 +230,18 @@ void ProjectileObj::Update(GameTime *gameTime)
 			KillProjectile();
 		break;
 	case ST::DamageShield:
-		/* The leaves orbit the player while the spell is active. */
-		if (SourcePlayer != nullptr && SourcePlayer->CastingDamageShield())
+		/* The leaves orbit their caster while the spell is active
+		 * (ProjectileObj.cs line 189: the player while he casts, an
+		 * enemy's fire shield - the horse, the last boss - around its
+		 * Target for its whole life). */
+		if ((SourcePlayer != nullptr && SourcePlayer->CastingDamageShield())
+		    || (Source != nullptr && Target != nullptr))
 		{
 			AltX += m_speed * 60 * elapsed;
 			float angle = AltX * (float) M_PI / 180.0f;
-			Position(Vector2(SourcePlayer->X() + cosf(angle) * AltY,
-			                 SourcePlayer->Y() + sinf(angle) * AltY));
+			float cx = SourcePlayer != nullptr ? SourcePlayer->X() : Target->X();
+			float cy = SourcePlayer != nullptr ? SourcePlayer->Y() : Target->Y();
+			Position(Vector2(cx + cosf(angle) * AltY, cy + sinf(angle) * AltY));
 		}
 		else
 			KillProjectile();

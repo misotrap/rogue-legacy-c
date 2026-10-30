@@ -9,6 +9,8 @@
 
 #include "EnemyObj.h"
 
+#include <vector>
+
 namespace RogueCastle
 {
 
@@ -31,13 +33,19 @@ protected:
 private:
 	void TurnHorse();
 	void DropFireProjectile();
+	void CastFireShield(int numFires);
 	void InitializeOne(EnemyDifficulty difficulty);
 
-	/* EnemyObj_Horse.cs lines 19-21. */
+	/* EnemyObj_Horse.cs lines 19-32. */
 	float m_collisionCheckTimer = 0.5f;
 	float m_fireDropTimer = 0.5f;
 	float m_fireDropInterval = 0.075f;
 	float m_fireDropLifespan = 0.75f;
+	int m_numFireShieldObjs = 2;
+	float m_fireDistance = 110;
+	float m_fireRotationSpeed = 1.5f;
+	float m_fireShieldScale = 2.5f;
+	std::vector<class ProjectileObj *> m_fireShieldList;
 	bool m_turning = false;
 };
 

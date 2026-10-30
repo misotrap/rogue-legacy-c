@@ -772,12 +772,17 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 	if (const char *debugEnemy = getenv("RL_DEBUG_ENEMY"))
 	{
 		uint8_t type = (uint8_t) atoi(debugEnemy);
+		/* optional :difficulty (0 basic .. 3 miniboss) for the fallback spawn */
+		int debugDiff = 0;
+		if (const char *colon = strchr(debugEnemy, ':'))
+			debugDiff = atoi(colon + 1);
 		bool found = false;
+		/* with an explicit difficulty, always use the fallback spawn */
 		for (RoomObj *room : m_roomList)
 		{
 			for (EnemyObj *enemy : room->EnemyList())
 			{
-				if (enemy->Type != type)
+				if (enemy->Type != type || debugDiff != 0)
 					continue;
 				m_player->X(enemy->X());
 				m_player->Y(enemy->Y() - 200);
@@ -794,7 +799,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		{
 			/* Dev: some types (the Energon) are not in any area pool -
 			 * build one beside the hero instead. */
-			EnemyObj *spawn = RoomObj::CreateEnemyOfType(type, 0, m_player);
+			EnemyObj *spawn = RoomObj::CreateEnemyOfType(type, debugDiff, m_player);
 			if (spawn != nullptr)
 			{
 				spawn->Position(Vector2(m_player->X() + 300, m_player->Y() - 120));

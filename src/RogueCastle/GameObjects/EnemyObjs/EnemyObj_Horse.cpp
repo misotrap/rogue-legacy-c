@@ -4,6 +4,9 @@
 #include "../../Types/EnemyType.h"
 #include "../Player/PlayerObj.h"
 #include "../TerrainObj.h"
+#include "../ProjectileObj.h"
+#include "../../Types/SpellType.h"
+#include "../../../Audio/Audio.h"
 #include "../../Screens/ProceduralLevelScreen.h"
 #include "../../../DS2DEngine/CollisionMath.h"
 
@@ -158,6 +161,34 @@ void EnemyObj_Horse::DropFireProjectile()
 	                              false, this, m_fireDropLifespan);
 }
 
+void EnemyObj_Horse::CastFireShield(int numFires)
+{
+	/* CastFireShield (line 474): numFires flames orbit the horse at
+	 * m_fireDistance, m_fireRotationSpeed degrees per second, for its
+	 * whole life (Lifespan 999999, DestroysWithEnemy false) - the same
+	 * DamageShield spell as the player's leaves, with the horse as
+	 * Target (ProjectileObj.cs line 189: Source is EnemyObj). */
+	if (m_levelScreen == nullptr)
+		return;
+	Audio::PlaySound("Cast_FireShield");
+	for (int i = 0; i < numFires; i++)
+	{
+		float angle = (360.0f / numFires) * i;
+		ProjectileObj *proj = m_levelScreen->FireProjectile("SpellDamageShield_Sprite",
+			Position(), Vector2(1, 0), m_fireRotationSpeed,
+			(int) ProjectileDamage, Vector2(m_fireShieldScale, m_fireShieldScale),
+			false, this, 999999);
+		if (proj == nullptr) continue;
+		proj->Spell = SpellType::DamageShield;
+		proj->AltX = angle;   /* the orbit's angle and distance */
+		proj->AltY = m_fireDistance;
+		proj->Target = this;
+		proj->DestroysWithEnemy = false;
+		proj->IgnoreBoundsCheck = true;
+		m_fireShieldList.push_back(proj);
+	}
+}
+
 void EnemyObj_Horse::TurnHorse()
 {
 	/* TurnHorse: the turn animation while keeping the old direction,
@@ -185,6 +216,18 @@ void EnemyObj_Horse::UpdateEnemy(GameTime *gameTime)
 			}
 		}
 	}
+	/* The expert keeps two flames orbiting (line 405). */
+	if (DifficultyType == EXPERT && !IsPaused)
+	{
+		for (size_t i = 0; i < m_fireShieldList.size(); )
+			if (m_fireShieldList[i]->IsKilled)
+				m_fireShieldList.erase(m_fireShieldList.begin() + i);
+			else
+				i++;
+		if (m_fireShieldList.empty())
+			CastFireShield(m_numFireShieldObjs);
+	}
+
 	if (m_actionTimer > 0)
 		m_actionTimer -= elapsed;
 
