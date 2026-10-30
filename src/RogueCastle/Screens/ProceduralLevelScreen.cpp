@@ -307,6 +307,27 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			}
 	}
 
+	/* The jukebox rooms (JukeboxBonusRoom, Bonus Tag 11): the
+	 * "Jukebox" object; Up plays the next song of the list. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "11") continue;
+		for (const Levels::ObjData &o : r.objs)
+			if (o.name == "Jukebox")
+			{
+				JukeboxRoom j;
+				j.room = (int) i;
+				j.bounds = SpriteBounds(o);
+				j.x = o.x;
+				j.y = o.y;
+				m_jukeboxes.push_back(j);
+				if (rl_trace())
+					fprintf(stderr, "jukebox in room %d at (%.0f,%.0f)\n", (int) i, o.x, o.y);
+				break;
+			}
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -413,6 +434,27 @@ bool ProceduralLevelScreen::DebugBonusSpawn(int tag, float &x, float &y)
 		}
 	}
 	return false;
+}
+
+/* JukeboxBonusRoom's song list (the constructor) and titles. */
+static const char *const JUKEBOX_SONGS[] = { "CastleBossSong", "GardenSong", "GardenBossSong", "TowerSong",
+	"TowerBossSong", "DungeonSong", "DungeonBoss", "CastleSong", "PooyanSong", "LegacySong",
+	"SkillTreeSong", "TitleScreenSong", "CreditsSong", "LastBossSong", "EndSong", "EndSongDrums" };
+static const char *const JUKEBOX_TITLES[] = { "Pistol Shrimp", "The Grim Outdoors", "Skin Off My Teeth", "Narwhal",
+	"Lamprey", "Broadside of the Broadsword", "Mincemeat", "Trilobyte", "Poot-yan",
+	"SeaSawHorse (Legacy)", "SeaSawHorse (Manor)", "Rogue Legacy", "The Fish and the Whale",
+	"Rotten Legacy", "Whale. Shark.", "Whale. Shark. (Drums)" };
+
+const char *ProceduralLevelScreen::JukeboxSong()
+{
+	if (m_player == nullptr || m_currentRoom == nullptr) return nullptr;
+	for (JukeboxRoom &j : m_jukeboxes)
+	{
+		if (m_roomList[j.room] != m_currentRoom || j.playing < 0) continue;
+		if (!j.bounds.Intersects(m_player->Bounds())) continue;
+		return JUKEBOX_SONGS[j.playing];
+	}
+	return nullptr;
 }
 
 bool ProceduralLevelScreen::TakeSpecialDialogue(std::string &name)
@@ -587,6 +629,25 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		v.used = true;
 		v.arrowVisible = false;
 		m_roomRenderer.SetFountainTint(m_castle.rooms[v.room], 0xFF646464u /* (100,100,100) */);
+	}
+
+	/* The jukebox: Up plays the next song (JukeboxBonusRoom.Update),
+	 * with the "Now Playing" text for a few seconds. */
+	for (JukeboxRoom &j : m_jukeboxes)
+	{
+		if (m_roomList[j.room] != m_currentRoom || m_player == nullptr)
+		{
+			j.arrowVisible = false;
+			continue;
+		}
+		j.arrowVisible = playerBounds.Intersects(j.bounds);
+		j.titleTime -= (float) gameTime->ElapsedGameTime;
+		if (j.arrowVisible && m_player->IsTouchingGround() && upPressed)
+		{
+			j.playing = j.songIndex;
+			j.songIndex = (j.songIndex + 1) % 16;
+			j.titleTime = 2.7f;   /* the C# tweens: in 0.5s, out from 2.2s */
+		}
 	}
 
 	/* m_projectileManager.Update(gameTime): move the projectiles and
@@ -977,6 +1038,13 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 				m_diaryArrow->Position(Vector2(v.x, v.y - 150 + sway));
 				m_diaryArrow->Draw(camera);
 			}
+		for (JukeboxRoom &j : m_jukeboxes)
+			if (j.arrowVisible)
+			{
+				m_diaryArrow->Position(Vector2(j.x,
+					j.y - m_diaryArrow->SpriteRect().Height - 110 + sway));
+				m_diaryArrow->Draw(camera);
+			}
 	}
 	if (rl_trace())
 	{
@@ -1002,6 +1070,19 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		m_goldFont.Measure(text, w, h);
 		m_goldFont.Draw(gfx_frame(), text, x - w * 0.5f * 0.7f, y, 0.7f, popup.colour,
 		                Text::Align::Left);
+	}
+	/* The jukebox's "Now Playing" (JukeboxBonusRoom.LoadContent):
+	 * bottom right of the original screen, fading in and out. */
+	for (JukeboxRoom &j : m_jukeboxes)
+	{
+		if (j.titleTime <= 0) continue;
+		float alpha = j.titleTime > 2.2f ? (2.7f - j.titleTime) / 0.5f
+			: j.titleTime < 0.5f ? j.titleTime / 0.5f : 1;
+		uint32_t a = (uint32_t) (alpha * 255) << 24;
+		m_objFont.DrawOutlined(gfx_frame(), JUKEBOX_TITLES[j.playing], 645, 345, 0.4f,
+			a | 0x00FFFFFFu, a | 0xFF000000u, 2, Text::Align::Right);
+		m_objFont.DrawOutlined(gfx_frame(), Text::Loc::Get("LOC_ID_JUKEBOX_BONUS_ROOM_1"), 645, 318, 0.24f,
+			a | 0x00FFFFFFu, a | 0xFF000000u, 1, Text::Align::Right);
 	}
 	if (m_player != nullptr)
 	{

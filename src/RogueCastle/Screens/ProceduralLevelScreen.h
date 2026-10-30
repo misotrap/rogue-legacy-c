@@ -49,6 +49,10 @@ public:
 	/* The bonus rooms' dialogues (diary, portrait...): GameFlow opens
 	 * the pending one, if any. */
 	bool TakeSpecialDialogue(std::string &name);
+	/* The jukebox rooms (Bonus Tag 11): the chosen song replaces the
+	 * area music while the hero stays in the room (JukeboxBonusRoom);
+	 * nullptr outside or before the first Up. */
+	const char *JukeboxSong();
 	/* ProjectileManager.cs line 258 (FireProjectile) for the player's
 	 * spells: position from the source anchor and flip, heading from the
 	 * angle degrees, the player tag. */
@@ -151,6 +155,18 @@ private:
 	/* The vita chambers (Bonus Tag 5): the "fountain", grey once used. */
 	struct VitaRoom { int room; Rectangle bounds; float x, y; bool used; bool arrowVisible; };
 	std::vector<VitaRoom> m_vitas;
+	/* The jukebox rooms (Bonus Tag 11): Up plays the next song. */
+	struct JukeboxRoom
+	{
+		int room = 0;
+		Rectangle bounds;
+		float x = 0, y = 0;
+		int songIndex = 0;      /* the next song to play (cycles) */
+		int playing = -1;       /* the chosen song, -1 none yet */
+		float titleTime = 0;    /* the "Now Playing" text countdown */
+		bool arrowVisible = false;
+	};
+	std::vector<JukeboxRoom> m_jukeboxes;
 	std::string m_specialDialogue;
 	DS2DEngine::SpriteObj *m_diaryArrow = nullptr;
 	float m_elapsed = 0;

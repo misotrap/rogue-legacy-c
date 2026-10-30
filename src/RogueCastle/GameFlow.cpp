@@ -865,6 +865,13 @@ namespace RogueCastle
 		case State::Castle:
 		{
 			if (m_level == nullptr || m_level->Player() == nullptr) break;
+			/* The jukebox room's chosen song overrides the area music
+			 * while the hero stands there (JukeboxBonusRoom.Update). */
+			if (const char *song = m_level->JukeboxSong())
+			{
+				Audio::PlayMusic(song);
+				break;
+			}
 			float x = m_level->Player()->X(), y = m_level->Player()->Y();
 			for (const Levels::PlacedRoom &r : m_level->Castle().rooms)
 			{
