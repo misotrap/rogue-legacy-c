@@ -445,6 +445,12 @@ namespace RogueCastle
 		}
 		m_cacheW = w;
 		m_cacheH = h;
+		/* The pieces below redirect the draw target to the cache's
+		 * screen buffer: remember the real frame, it is restored at the
+		 * end - without it the frame the cache is built in never gets
+		 * its world drawn (the architect's rebuilt castle showed the
+		 * frozen half-drawn frame behind the dialogue). */
+		uint32_t *keepTarget = gfx_frame();
 		free(m_cacheFront);
 		m_cacheFront = (uint32_t *) malloc((size_t) w * h * 4);
 		if (m_cacheFront == nullptr) { m_cacheRoom = nullptr; return; }
@@ -487,6 +493,7 @@ namespace RogueCastle
 		m_buildingCache = false;
 		camera->ViewHeight(360);
 		camera->Position(keep);
+		gfx_begin(keepTarget);   /* back to the real frame */
 		m_cacheRoom = &room;
 		m_cacheOpaque = true;
 		size_t holes = 0, partial = 0;
