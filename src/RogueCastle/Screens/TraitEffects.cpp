@@ -89,9 +89,11 @@ namespace RogueCastle
 
 		if (dungeon || hero.HasTrait(TraitType::Glaucoma))
 		{
-			// ShadowFX: black at 0.7 minus the hero's light (LightSource x12)
+			// ShadowFX: black at 0.7 minus the hero's light (LightSource
+			// x12). The C# overlay covers the WHOLE screen - the letterbox
+			// bands included, not just the play area.
 			float radius = 41 * 12 * 0.5f;
-			for (int y = TOP; y < BOTTOM; y++)
+			for (int y = 0; y < SCREEN_H; y++)
 				for (int x = 0; x < SCREEN_W; x++)
 				{
 					float dx = x - px, dy = y - py;
