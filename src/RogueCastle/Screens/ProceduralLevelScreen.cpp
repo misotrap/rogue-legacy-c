@@ -545,11 +545,22 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			if (o.type == "CollHullObj" && o.name == "Floor") { floorY = o.y; haveFloor = true; }
 			if (o.type == "ObjContainer" && o.name == "Line") { lineX = o.x; haveLine = true; }
 		}
-		if (!haveClown || !haveFloor || !haveLine) continue;
+		if (!haveClown || !haveFloor || !haveLine)
+		{
+			/* Console diagnosis (log.txt): why a shooting gallery was skipped */
+			fprintf(stderr, "carnival skip room %d: clown=%d floor=%d line=%d\n",
+				(int) i, (int) haveClown, (int) haveFloor, (int) haveLine);
+			continue;
+		}
 		if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Clown_Character"))
 		{
-			SpriteSystem::SpriteLibrary::LoadSheet(assets, "blacksmithUISpritesheet");
-			if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Clown_Character")) continue;
+			bool loaded = SpriteSystem::SpriteLibrary::LoadSheet(assets, "blacksmithUISpritesheet");
+			if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Clown_Character"))
+			{
+				fprintf(stderr, "carnival: blacksmithUISpritesheet %s, no Clown_Character\n",
+					loaded ? "loaded" : "FAILED to load");
+				continue;
+			}
 		}
 		CarnivalRoom c;
 		c.room = (int) i;
@@ -609,8 +620,8 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 				c.targetIcons[t]->ForceDraw(true);
 			}
 		m_carnivals.push_back(c);
-		if (rl_trace())
-			fprintf(stderr, "carnival in room %d: line %.0f, %d targets\n", (int) i, lineX, (int) c.targets.size());
+		fprintf(stderr, "carnival in room %d: clown at %.0f, line %.0f, %d targets\n",
+			(int) i, clownX, lineX, (int) c.targets.size());
 	}
 
 	/* The second shooting gallery (CarnivalShoot2BonusRoom, Bonus Tag 9):
