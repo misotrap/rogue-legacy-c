@@ -449,6 +449,13 @@ namespace RogueCastle
 						Save();
 					}
 				}
+				if (m_carnivalAsking >= 0 && r != DialogueScreen::Result::Open)
+				{
+					int room = m_carnivalAsking;
+					m_carnivalAsking = -1;
+					if (r == DialogueScreen::Result::Confirmed)
+						m_level->BeginCarnival(room);
+				}
 				if (m_chestGameAsking >= 0 && r != DialogueScreen::Result::Open)
 				{
 					int room = m_chestGameAsking;
@@ -652,6 +659,20 @@ namespace RogueCastle
 			{
 				m_dialogue.Open(specialTalk.c_str(), m_save.hero.isFemale);
 				Save();
+			}
+			/* The shooting gallery (CarnivalShoot1BonusRoom): the offer
+			 * with its confirm starts the game, the end talk afterwards. */
+			int carnivalRoom = m_level->TakeCarnivalTalk();
+			if (carnivalRoom >= 0)
+			{
+				bool completed = m_level->CarnivalCompleted(carnivalRoom);
+				if (!completed)
+				{
+					m_carnivalAsking = carnivalRoom;
+					m_dialogue.Open("CarnivalRoom1-Start", m_save.hero.isFemale, "ConfirmTest1");
+				}
+				else
+					m_dialogue.Open("CarnivalRoom1-End", m_save.hero.isFemale);
 			}
 			/* The elf's chest game (ChestBonusRoomObj.HandleInput):
 			 * the offer with its confirm, the choose reminder once paid,

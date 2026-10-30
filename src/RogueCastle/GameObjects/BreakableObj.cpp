@@ -49,6 +49,15 @@ void BreakableObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherB
 		}
 	}
 
+	/* BreakableObj.cs line 52: the player's spell projectiles break even
+	 * the HitBySpellsOnly targets (the carnival's bullseyes). */
+	if (otherBox->PhysicsParent() != nullptr && otherBox->PhysicsParent()->IsSpellProjectile()
+	    && otherBox->PhysicsParent()->CollisionTypeTag() == 2 /* player */
+	    && otherBox->Type() == Consts::WEAPON_HITBOX && !Broken)
+	{
+		Break();
+	}
+
 	/* Hack to make only terrain or other breakables collide with this:
 	 * pushed only by something above (or rotated, not supported). */
 	if (collisionResponseType == Consts::COLLISIONRESPONSE_TERRAIN

@@ -70,6 +70,12 @@ public:
 	 * TakeSpecialDialogue. */
 	bool TakeChestGameTalk(int &room, int &phase);
 	bool PayChestGame(int room);
+	/* The first shooting gallery (Bonus Tag 8, CarnivalShoot1BonusRoom):
+	 * Up at the clown offers the game; BeginCarnival equips the dagger
+	 * spell and starts the targets. */
+	int TakeCarnivalTalk();
+	bool CarnivalCompleted(int room);
+	void BeginCarnival(int room);
 	/* The special item rooms (Bonus Tag 2): Up at the pedestal prays for
 	 * the item (the "Special Item Prayer" dialogue). GameFlow asks which
 	 * room, then TakeSpecialItem on confirm. */
@@ -233,6 +239,37 @@ private:
 		float revealTime = 0;        /* the 2 s fade-in */
 	};
 	std::vector<ArenaRoom> m_arenas;
+	/* The shooting gallery (Bonus Tag 8): the clown, the targets and
+	 * the reward chest. */
+	struct CarnivalRoom
+	{
+		int room = 0;
+		DS2DEngine::ObjContainer *clown = nullptr;       /* owned */
+		DS2DEngine::SpriteObj *clownIcon = nullptr;      /* the exclamation bubble */
+		float lineX = 0;
+		bool playing = false, spokeToNpc = false, completed = false;
+		bool clownTouching = false;
+		int daggersThrown = 0;
+		uint8_t storedSpell = 0;
+		float storedMana = 0;
+		std::vector<class BreakableObj *> targets;     /* owned */
+		int currentTarget = 0;
+		float targetSpeed = 200, targetSpeedMod = 100;
+		bool targetMovingUp = false;
+		float slideFrom = 0, slideTo = 0, slideTime = 0;   /* the target's slide-in */
+		ChestObj *rewardChest = nullptr;                 /* owned */
+		/* the UI: 12 daggers, 8 targets */
+		DS2DEngine::SpriteObj *daggers[12] = {};
+		DS2DEngine::SpriteObj *targetIcons[8] = {};
+	};
+	std::vector<CarnivalRoom> m_carnivals;
+	void CarnivalActivateTarget(CarnivalRoom &c, const Levels::PlacedRoom &r);
+	void CarnivalEndGame(CarnivalRoom &c, bool won);
+	int m_carnivalTalk = -1;
+	/* While the shooting gallery runs: the camera glides to m_cameraTargetX */
+	bool m_cameraOverride = false;
+	float m_cameraTargetX = 0;
+	float m_lastElapsed = 0;
 	DS2DEngine::SpriteObj *m_itemIcon = nullptr;   /* the floating item */
 	uint8_t m_itemIconSprite = 0;
 	/* The jukebox rooms (Bonus Tag 11): Up plays the next song. */

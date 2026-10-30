@@ -154,6 +154,8 @@ public:
 
 	/* ChestConditionChecker reads these (C# properties). */
 	bool IsTouchingGround() const { return m_isTouchingGround; }
+	/* CarnivalShoot1BonusRoom.HandleInput reads the spell delay */
+	float SpellCastDelay() const { return m_spellCastDelay; }
 	bool IsJumping() const { return m_isJumping; }
 
 	bool m_collidingLeft = false;

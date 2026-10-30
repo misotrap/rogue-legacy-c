@@ -530,6 +530,89 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 			fprintf(stderr, "arena in room %d: %d enemies\n", (int) i, m_roomList[i]->ActiveEnemies());
 	}
 
+	/* The shooting gallery (CarnivalShoot1BonusRoom, Bonus Tag 8): the
+	 * clown at the waypoint, the chain line, and eight hidden bullseye
+	 * targets that only spells break. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "8") continue;
+		float clownX = 0, floorY = 0, lineX = 0;
+		bool haveClown = false, haveFloor = false, haveLine = false;
+		for (const Levels::ObjData &o : r.objs)
+		{
+			if (o.type == "EnemyOrbObj" && o.isWaypoint) { clownX = o.x; haveClown = true; }
+			if (o.type == "CollHullObj" && o.name == "Floor") { floorY = o.y; haveFloor = true; }
+			if (o.type == "ObjContainer" && o.name == "Line") { lineX = o.x; haveLine = true; }
+		}
+		if (!haveClown || !haveFloor || !haveLine) continue;
+		if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Clown_Character"))
+		{
+			SpriteSystem::SpriteLibrary::LoadSheet(assets, "blacksmithUISpritesheet");
+			if (!SpriteSystem::SpriteLibrary::ContainsCharacter("Clown_Character")) continue;
+		}
+		CarnivalRoom c;
+		c.room = (int) i;
+		c.lineX = lineX;
+		c.clown = new DS2DEngine::ObjContainer("Clown_Character");
+		c.clown->Scale(Vector2(2, 2));
+		c.clown->Flip(r.reversed ? SpriteEffects::None : SpriteEffects::FlipHorizontally);
+		c.clown->X(clownX);
+		c.clown->Y(floorY - 2);
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("ExclamationBubble_Sprite"))
+		{
+			c.clownIcon = new DS2DEngine::SpriteObj("ExclamationBubble_Sprite");
+			c.clownIcon->Scale(Vector2(2, 2));
+			c.clownIcon->ForceDraw(true);
+		}
+		/* Eight bullseyes at the line, hidden until their turn */
+		if (SpriteSystem::SpriteLibrary::ContainsCharacter("Target1_Character"))
+			for (int t = 0; t < 8; t++)
+			{
+				BreakableObj *target = new BreakableObj("Target1_Character");
+				target->Scale(Vector2(2, 2));
+				target->Visible(false);
+				target->DropItem = false;
+				target->HitBySpellsOnly = true;
+				target->SetLevelScreen(this);
+				target->X(r.reversed ? r.x : r.Right());
+				target->Y(r.y + r.height * 0.5f);
+				target->Flip(r.reversed ? SpriteEffects::None : SpriteEffects::FlipHorizontally);
+				m_physicsManager.AddObject(target);
+				c.targets.push_back(target);
+			}
+		/* The reward chest beside the clown (gold, hidden until won) */
+		c.rewardChest = new ChestObj();
+		c.rewardChest->SetChestType(ChestType::Gold);
+		c.rewardChest->SetLevelScreen(this);
+		c.rewardChest->ChestIndex = -1;   /* not in the save's chest flags */
+		c.rewardChest->Level = m_roomList[i]->Level / LevelEV::ROOM_LEVEL_MOD;
+		c.rewardChest->X(r.reversed ? clownX - 150 : clownX + 100);
+		c.rewardChest->Y(floorY - 66);
+		c.rewardChest->Visible(false);
+		/* Opened and drawn through the level's chest list; its index -1
+		 * keeps it out of the save's chest flags. */
+		m_chestList.push_back(c.rewardChest);
+		/* The UI icons: 12 daggers, 8 targets */
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("SpellDagger_Sprite"))
+			for (int d = 0; d < 12; d++)
+			{
+				c.daggers[d] = new DS2DEngine::SpriteObj("SpellDagger_Sprite");
+				c.daggers[d]->Scale(Vector2(2, 2));
+				c.daggers[d]->ForceDraw(true);
+			}
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("Target2Piece1_Sprite"))
+			for (int t = 0; t < 8; t++)
+			{
+				c.targetIcons[t] = new DS2DEngine::SpriteObj("Target2Piece1_Sprite");
+				c.targetIcons[t]->Scale(Vector2(2, 2));
+				c.targetIcons[t]->ForceDraw(true);
+			}
+		m_carnivals.push_back(c);
+		if (rl_trace())
+			fprintf(stderr, "carnival in room %d: line %.0f, %d targets\n", (int) i, lineX, (int) c.targets.size());
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -621,6 +704,19 @@ ProceduralLevelScreen::~ProceduralLevelScreen()
 		delete g.elfIcon;
 		delete g.gate;
 	}
+	for (CarnivalRoom &c : m_carnivals)
+	{
+		delete c.clown;
+		delete c.clownIcon;
+		for (BreakableObj *target : c.targets)
+		{
+			m_physicsManager.RemoveObject(target);
+			delete target;
+		}
+		delete c.rewardChest;
+		for (int d = 0; d < 12; d++) delete c.daggers[d];
+		for (int t = 0; t < 8; t++) delete c.targetIcons[t];
+	}
 	delete m_diaryArrow;
 	delete m_itemIcon;
 }
@@ -692,6 +788,118 @@ void ProceduralLevelScreen::RandomTeleport()
 		Audio::PlaySound("Teleport_Reappear");
 		if (rl_trace())
 			fprintf(stderr, "random teleport -> %s at (%.0f,%.0f)\n", dest->Name().c_str(), m_player->X(), m_player->Y());
+		break;
+	}
+}
+
+void ProceduralLevelScreen::CarnivalActivateTarget(CarnivalRoom &c, const Levels::PlacedRoom &r)
+{
+	/* ActivateTarget: cross out the icon of the broken one and pay, then
+	 * slide the next in from the room's edge (faster every time). */
+	if (c.currentTarget < (int) c.targets.size())
+	{
+		if (c.targetIcons[c.currentTarget] != nullptr)
+			c.targetIcons[c.currentTarget]->Visible(false);
+		/* GiveGold: 10 gold per target down */
+		int down = 0;
+		for (BreakableObj *t : c.targets)
+			if (t->Broken) down++;
+		if (down > 0 && m_player->Stats() != nullptr)
+		{
+			m_player->Stats()->Gold += down * 10;
+			char buf[32];
+			snprintf(buf, sizeof(buf), "+%d %s", down * 10, Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_4"));
+			AddPopup(buf, c.targets[c.currentTarget]->X(), (float) c.targets[c.currentTarget]->Bounds().Top(),
+				0xFFFFFF00u /* Yellow */);
+		}
+	}
+	if (c.currentTarget < (int) c.targets.size())
+	{
+		if (c.currentTarget > 0)
+			c.targetSpeed += c.targetSpeedMod;
+		BreakableObj *target = c.targets[c.currentTarget];
+		target->Visible(true);
+		target->X(r.reversed ? r.x : r.Right());
+		target->Y(r.y + r.height * 0.5f);
+		/* the slide-in, done by hand (the C# tweens X by ~-400) */
+		c.slideFrom = target->X();
+		c.slideTo = target->X() + (r.reversed ? 400.0f : -400.0f) + (rand() % 401 - 200);
+		c.slideTime = 0;
+		c.currentTarget++;
+	}
+}
+
+void ProceduralLevelScreen::CarnivalEndGame(CarnivalRoom &c, bool won)
+{
+	/* EndGame / CheckPlayerReward: the spell and mana come back, the
+	 * reward chest appears beside the clown when every bullseye fell. */
+	c.playing = false;
+	c.completed = true;
+	m_cameraOverride = false;
+	if (m_player != nullptr && m_player->Stats() != nullptr)
+	{
+		m_player->Stats()->hero.spell = c.storedSpell;
+		m_player->CurrentMana = c.storedMana;
+	}
+	if (won)
+	{
+		if (m_specialDialogue.empty())
+			m_specialDialogue = "CarnivalRoom1-Reward";
+		if (c.rewardChest != nullptr) c.rewardChest->Visible(true);
+	}
+	else if (m_specialDialogue.empty())
+		m_specialDialogue = "CarnivalRoom1-Fail";
+}
+
+bool ProceduralLevelScreen::CarnivalCompleted(int room)
+{
+	for (CarnivalRoom &c : m_carnivals)
+		if (c.room == room)
+			return c.completed;
+	return true;
+}
+
+int ProceduralLevelScreen::TakeCarnivalTalk()
+{
+	int room = m_carnivalTalk;
+	m_carnivalTalk = -1;
+	return room;
+}
+
+void ProceduralLevelScreen::BeginCarnival(int room)
+{
+	/* BeginGame: the camera pans to the shooting range, the hero casts
+	 * daggers with a full mana bar, and the first bullseye slides in. */
+	for (CarnivalRoom &c : m_carnivals)
+	{
+		if (c.room != room || m_player == nullptr) continue;
+		const Levels::PlacedRoom &r = m_castle.rooms[c.room];
+		c.playing = true;
+		c.spokeToNpc = true;
+		c.daggersThrown = 0;
+		c.currentTarget = 0;
+		c.targetSpeed = 200;
+		c.targetMovingUp = false;
+		for (int d = 0; d < 12; d++)
+			if (c.daggers[d] != nullptr) c.daggers[d]->Visible(true);
+		for (int t = 0; t < 8; t++)
+			if (c.targetIcons[t] != nullptr) c.targetIcons[t]->Visible(true);
+		for (BreakableObj *target : c.targets)
+		{
+			target->Broken = false;
+			target->Visible(false);
+		}
+		if (m_player->Stats() != nullptr)
+		{
+			c.storedSpell = m_player->Stats()->hero.spell;
+			c.storedMana = m_player->CurrentMana;
+			m_player->Stats()->hero.spell = SpellType::Dagger;
+		}
+		m_player->CurrentMana = m_player->MaxMana();
+		/* the camera glides to the range */
+		m_cameraOverride = true;
+		m_cameraTargetX = c.lineX + (r.reversed ? -500.0f : 500.0f);
+		CarnivalActivateTarget(c, r);
 		break;
 	}
 }
@@ -909,7 +1117,8 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	/* The diary of the current room (DiaryRoomObj.Update): the bubble
 	 * floats above it while the hero has not read it (or stands next to
 	 * it), and Up reads the next journal entry. */
-	m_elapsed += (float) gameTime->ElapsedGameTime;
+	m_lastElapsed = (float) gameTime->ElapsedGameTime;
+	m_elapsed += m_lastElapsed;
 	for (DiaryRoom &d : m_diaries)
 	{
 		if (m_roomList[d.room] != m_currentRoom || m_player == nullptr)
@@ -1122,6 +1331,91 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 				a.chest->Opacity(t);
 				if (t >= 1) a.chest->IsLocked = false;
 			}
+
+	/* The shooting gallery (CarnivalShoot1BonusRoom.Update): the hero is
+	 * confined behind the chain line, the current bullseye bobs faster
+	 * and faster, each broken one pays 10 gold per target down and
+	 * starts the next, and the game ends at twelve daggers or eight
+	 * bullseyes. */
+	for (CarnivalRoom &c : m_carnivals)
+	{
+		if (m_roomList[c.room] != m_currentRoom || m_player == nullptr)
+		{
+			c.clownTouching = false;
+			continue;
+		}
+		const Levels::PlacedRoom &r = m_castle.rooms[c.room];
+		/* The confinement bounds */
+		if (!r.reversed)
+		{
+			if (m_player->X() >= c.lineX - 150) m_player->X(c.lineX - 150);
+			if (m_player->X() > r.Right() - 1320) m_player->X(r.Right() - 1320);
+		}
+		else
+		{
+			if (m_player->X() < c.lineX + 150) m_player->X(c.lineX + 150);
+			if (m_player->X() < r.x + 1320) m_player->X(r.x + 1320);
+		}
+		if (c.playing)
+		{
+			/* The daggers: each spell press throws one, mana refilled */
+			if (Game::GlobalInput.JustPressed(PLAYER_SPELL) && m_player->SpellCastDelay() <= 0)
+			{
+				c.daggersThrown++;
+				m_player->CurrentMana = m_player->MaxMana();
+				if (c.daggersThrown <= 12 && c.daggers[c.daggersThrown - 1] != nullptr)
+					c.daggers[12 - c.daggersThrown]->Visible(false);
+				if (c.daggersThrown > 12 && m_player->Stats() != nullptr)
+					m_player->Stats()->hero.spell = 0;   /* out of daggers */
+			}
+			/* The current bullseye slides in, then bobs up and down */
+			BreakableObj *target = c.currentTarget < (int) c.targets.size()
+				? c.targets[c.currentTarget] : nullptr;
+			if (target != nullptr && c.slideTime < 2)
+			{
+				c.slideTime += (float) gameTime->ElapsedGameTime;
+				float t = c.slideTime / 2;
+				if (t > 1) t = 1;
+				t = 1 - (1 - t) * (1 - t);   /* Quad.EaseOut */
+				target->X(c.slideFrom + (c.slideTo - c.slideFrom) * t);
+			}
+			if (target != nullptr && !target->Broken)
+			{
+				float elapsed = (float) gameTime->ElapsedGameTime;
+				Rectangle b = target->Bounds();
+				if (c.targetMovingUp && b.Y > r.y + 80)
+					target->Y(target->Y() - elapsed * c.targetSpeed);
+				else if (c.targetMovingUp)
+				{
+					target->Y(target->Y() + elapsed * c.targetSpeed);
+					c.targetMovingUp = false;
+				}
+				if (!c.targetMovingUp && b.Y + b.Height < r.y + r.height - 140)
+					target->Y(target->Y() + elapsed * c.targetSpeed);
+				else if (!c.targetMovingUp)
+				{
+					target->Y(target->Y() - elapsed * c.targetSpeed);
+					c.targetMovingUp = true;
+				}
+			}
+			int activeTargets = 0;
+			for (BreakableObj *t : c.targets)
+				if (!t->Broken) activeTargets++;
+			bool projectilesFlying = false;
+			for (ProjectileObj *proj : m_projectiles)
+				if (!proj->IsKilled && proj->SourcePlayer != nullptr) projectilesFlying = true;
+			if ((c.daggersThrown >= 12 && !projectilesFlying && activeTargets > 0) || activeTargets == 0)
+				CarnivalEndGame(c, activeTargets == 0);
+			/* The next bullseye slides in when the current one breaks */
+			if (target != nullptr && target->Broken)
+				CarnivalActivateTarget(c, r);
+		}
+		/* The clown: the offer, or the end talk */
+		Rectangle clownBounds = c.clown != nullptr ? c.clown->Bounds() : Rectangle();
+		c.clownTouching = c.clown != nullptr && playerBounds.Intersects(clownBounds);
+		if (c.clownTouching && m_player->IsTouchingGround() && upPressed && m_carnivalTalk < 0)
+			m_carnivalTalk = c.room;
+	}
 
 	/* The random teleport pads: the arrow while the hero stands on one,
 	 * Up throws him into a random ordinary room. */
@@ -1356,7 +1650,17 @@ void ProceduralLevelScreen::DebugOpenChest(const char *arg)
 void ProceduralLevelScreen::UpdateCamera()
 {
 	/* ProceduralLevelScreen.cs line 1621 (UpdateCamera). */
-	if (m_player != nullptr)
+	if (m_cameraOverride)
+	{
+		/* The shooting gallery: CameraLockedToPlayer = false, the camera
+		 * glides toward its post (Tweener.Quad.EaseInOut over 1 s). */
+		float dx = m_cameraTargetX - m_camera.X();
+		float step = 1200 * (float) m_lastElapsed;
+		m_camera.X(m_camera.X() + (dx > 0 ? (dx < step ? dx : step) : (dx > -step ? dx : -step)));
+		if (m_player != nullptr)
+			m_camera.Y(m_player->Position().Y + GlobalEV::Camera_YOffset);
+	}
+	if (!m_cameraOverride && m_player != nullptr)
 	{
 		m_camera.X(m_player->Position().X + GlobalEV::Camera_XOffset);
 		m_camera.Y(m_player->Position().Y + GlobalEV::Camera_YOffset);
@@ -1527,6 +1831,42 @@ void ProceduralLevelScreen::Draw(Camera2D *camera)
 		room->Draw(camera);
 	for (TeleporterObj *teleporter : m_teleporterList)
 		teleporter->Draw(camera);
+	/* The shooting gallery: the clown, the bullseyes, the reward chest
+	 * and the dagger / target counters. */
+	for (CarnivalRoom &c : m_carnivals)
+	{
+		if (c.clown != nullptr) c.clown->Draw(camera);
+		if (c.clownIcon != nullptr && c.clownTouching)
+		{
+			Rectangle b = c.clown->Bounds();
+			c.clownIcon->Position(Vector2(b.X + b.Width * 0.5f,
+				b.Y - 50 + sinf(m_elapsed * 20) * 2));
+			c.clownIcon->Draw(camera);
+		}
+		for (BreakableObj *target : c.targets)
+			if (target->Visible()) target->Draw(camera);
+		if (c.rewardChest != nullptr && c.rewardChest->Visible()) c.rewardChest->Draw(camera);
+		/* The counters, at the room's bottom right (world 1320x720
+		 * coordinates like the C#'s containers) */
+		const Levels::PlacedRoom &r = m_castle.rooms[c.room];
+		float baseY = r.y + r.height - 40;
+		float tx = r.Right() - 100;
+		for (int t = 0; t < 8; t++)
+			if (c.targetIcons[t] != nullptr && c.targetIcons[t]->Visible())
+			{
+				c.targetIcons[t]->X(tx - (8 - t) * 84);
+				c.targetIcons[t]->Y(baseY);
+				c.targetIcons[t]->Draw(camera);
+			}
+		float dx0 = tx - 400 - 8 * 84;
+		for (int d = 0; d < 12; d++)
+			if (c.daggers[d] != nullptr && c.daggers[d]->Visible())
+			{
+				c.daggers[d]->X(dx0 + (d % 6) * 44);
+				c.daggers[d]->Y(baseY - 30 + (d / 6) * 20);
+				c.daggers[d]->Draw(camera);
+			}
+	}
 	/* The elf's chest game: the elf and his talk bubble, the gate. */
 	for (ChestGameRoom &g : m_chestGames)
 	{
