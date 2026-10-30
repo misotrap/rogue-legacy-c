@@ -51,6 +51,12 @@ namespace RogueCastle
 		delete m_door;
 		delete m_boss;
 		delete m_player;
+		delete m_chestLocked;
+		delete m_chestFairy;
+		delete m_chestOpened;
+		delete m_bonus;
+		delete m_teleporter;
+		delete m_legendPlate;
 		delete m_miniBG;
 		for (SpriteObj *s : m_rooms) delete s;
 	}
@@ -67,6 +73,24 @@ namespace RogueCastle
 		m_player = Make("MapPlayerIcon_Sprite");
 		m_player->AnimationDelay(1 / 30.0f);
 		m_player->PlayAnimation(true);
+		// MapObj.AddRoom: the chest, bonus and teleporter icons
+		m_chestLocked = Make("MapLockedChestIcon_Sprite");
+		m_chestLocked->AnimationDelay(1 / 30.0f);
+		m_chestLocked->PlayAnimation(true);
+		m_chestFairy = Make("MapFairyChestIcon_Sprite");
+		m_chestFairy->AnimationDelay(1 / 30.0f);
+		m_chestFairy->PlayAnimation(true);
+		m_chestOpened = Make("MapChestUnlocked_Sprite");
+		m_bonus = Make("MapBonusIcon_Sprite");
+		m_bonus->AnimationDelay(1 / 30.0f);
+		m_bonus->PlayAnimation(true);
+		m_teleporter = Make("MapTeleporterIcon_Sprite");
+		m_teleporter->AnimationDelay(1 / 30.0f);
+		m_teleporter->PlayAnimation(true);
+		if (SpriteSystem::SpriteLibrary::ContainsSprite("TraitsScreenPlate_Sprite"))
+			m_legendPlate = Make("TraitsScreenPlate_Sprite");   // MapScreen.cs: the legend background
+		else if (SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "miscSpritesheet"))
+			m_legendPlate = Make("TraitsScreenPlate_Sprite");
 		m_rooms.assign(100, nullptr);
 		if (!SpriteSystem::SpriteLibrary::ContainsSprite("MinimapBG_Sprite"))
 			SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "uiExtraSpritesheet");
@@ -146,6 +170,39 @@ namespace RogueCastle
 		m_font.DrawOutlined(frame, Text::Loc::Get("LOC_ID_MAP_SCREEN_3"), SCREEN_W / 2, SCREEN_H - 70, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
 		m_font.DrawOutlined(frame, centre.c_str(), SCREEN_W / 2, SCREEN_H - 50, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
 		m_font.DrawOutlined(frame, close.c_str(), SCREEN_W / 2, SCREEN_H - 30, 0.26f, GOLD, BLACK, 1, Text::Align::Centre);
+
+		// The legend (MapScreen.cs LoadContent): a plate at the bottom
+		// right with an icon and a text per row. The original is twice this
+		// size on a 1320x720 screen.
+		if (m_legendPlate != nullptr)
+		{
+			const float pw = m_legendPlate->SpriteRect().Width * 0.375f, ph = m_legendPlate->SpriteRect().Height * 0.29f;
+			const float px = SCREEN_W - pw - 10, py = SCREEN_H - ph - 10;
+			m_legendPlate->Position(Vector2(px, py));
+			m_legendPlate->Scale(Vector2(0.375f, 0.29f));
+			m_legendPlate->Draw(&m_camera);
+			const uint32_t TITLE = 0xFFD5D5ADu;   // Color(213, 213, 173)
+			m_font.DrawOutlined(frame, Text::Loc::Get("LOC_ID_MAP_SCREEN_5"), (int) (px + pw / 2), (int) (py + 10),
+				0.13f, TITLE, BLACK, 1, Text::Align::Centre);
+			static const char *const ids[] = { "LOC_ID_MAP_SCREEN_6", "LOC_ID_MAP_SCREEN_7", "LOC_ID_MAP_SCREEN_8",
+				"LOC_ID_MAP_SCREEN_9", "LOC_ID_MAP_SCREEN_10", "LOC_ID_MAP_SCREEN_11", "LOC_ID_MAP_SCREEN_12" };
+			SpriteObj *const icons[] = { m_player, m_boss, m_chestLocked, m_chestFairy, m_chestOpened, m_teleporter, m_bonus };
+			const float step = 13.0f;
+			for (int i = 0; i < 7; i++)
+			{
+				if (icons[i] == nullptr) continue;
+				float iy = py + 26 + step * i;
+				Vector2 keep = icons[i]->Position(), keepScale = icons[i]->Scale();
+				icons[i]->Scale(Vector2(0.5f, 0.5f));   // the 20x20 map icons, legend size
+				icons[i]->Position(Vector2(px + 14, iy));
+				icons[i]->Opacity(1);
+				icons[i]->Draw(&m_camera);
+				icons[i]->Position(keep);
+				icons[i]->Scale(keepScale);
+				m_font.DrawOutlined(frame, Text::Loc::Get(ids[i]), (int) (px + 34), (int) (iy - 4),
+					0.13f, WHITE, BLACK, 1, Text::Align::Left);
+			}
+		}
 	}
 	// MapObj.Draw: the visited rooms in their area colours, their doors, the
 	// boss icon and the blinking player icon. Map pixel p -> screen o + p * k
@@ -156,9 +213,20 @@ namespace RogueCastle
 		m_door->Scale(Vector2(k, k));
 		m_boss->Scale(Vector2(k, k));
 		m_player->Scale(Vector2(k, k));
+		m_chestLocked->Scale(Vector2(k, k));
+		m_chestFairy->Scale(Vector2(k, k));
+		m_chestOpened->Scale(Vector2(k, k));
+		m_bonus->Scale(Vector2(k, k));
+		m_teleporter->Scale(Vector2(k, k));
+		// Room centre in map pixels, the boss / bonus / teleporter icon
+		// position formula of MapObj.AddRoom
+		auto centreIcon = [k](float rx, float ry, float w, float h)
+		{
+			return Vector2((rx / SCALE_X - w / 2.0f - 1) * k, (ry / SCALE_Y - h / 2.0f - 2) * k);
+		};
 		for (size_t i = 0; i < castle.rooms.size() && i < m_visited.size(); i++)
 		{
-			if (!m_visited[i]) continue;
+			if (!m_visited[i] && !m_spelunker) continue;
 			const Levels::PlacedRoom &r = castle.rooms[i];
 			SpriteObj *s = RoomSprite(r.width / 1320, r.height / 720);
 			if (s == nullptr) continue;   // too large a room is not added
@@ -187,9 +255,41 @@ namespace RogueCastle
 
 			if (r.name == "EntranceBoss")
 			{
-				m_boss->Position(Vector2(ox + ((r.x + r.width / 2.0f) / SCALE_X - m_boss->SpriteRect().Width / 2.0f - 1) * k,
-					oy + ((r.y + r.height / 2.0f) / SCALE_Y - m_boss->SpriteRect().Height / 2.0f - 2) * k));
+				m_boss->Position(centreIcon(r.x + r.width / 2.0f, r.y + r.height / 2.0f,
+					m_boss->SpriteRect().Width, m_boss->SpriteRect().Height) + Vector2(ox, oy));
 				m_boss->Draw(&m_camera);
+			}
+			// MapObj.AddRoom: the bonus room icon (skipped for the
+			// spelunker, who sees every room anyway)
+			if (r.name == "Bonus")
+			{
+				m_bonus->Position(centreIcon(r.x + r.width / 2.0f, r.y + r.height / 2.0f,
+					m_bonus->SpriteRect().Width, m_bonus->SpriteRect().Height) + Vector2(ox, oy));
+				m_bonus->Draw(&m_camera);
+			}
+			// The teleporter rooms (the icons double as the destinations of
+			// the teleporter screen)
+			if (r.name == "Linker" || r.name == "EntranceBoss" || r.name == "CastleEntrance")
+			{
+				m_teleporter->Position(centreIcon(r.x + r.width / 2.0f, r.y + r.height / 2.0f,
+					m_teleporter->SpriteRect().Width, m_teleporter->SpriteRect().Height) + Vector2(ox, oy));
+				m_teleporter->Draw(&m_camera);
+			}
+			// The chests of the room (MapObj.AddRoom skips the bonus rooms,
+			// which have many, and everything for the spelunker). The icon
+			// sits at the chest itself.
+			if (r.name != "Bonus" && !m_spelunker)
+			{
+				for (const MapChest &c : m_chests)
+				{
+					if (c.x < r.x || c.x >= r.Right() || c.y < r.y || c.y >= r.Bottom()) continue;
+					SpriteObj *icon = c.kind == MapChest::OPENED ? m_chestOpened
+						: (c.kind == MapChest::FAIRY || c.kind == MapChest::FAIRY_INVISIBLE) ? m_chestFairy
+						: m_chestLocked;
+					icon->Opacity(c.kind == MapChest::FAIRY_INVISIBLE ? 0.2f : 1.0f);
+					icon->Position(Vector2(ox + (c.x / SCALE_X - 8) * k, oy + (c.y / SCALE_Y - 12) * k));
+					icon->Draw(&m_camera);
+				}
 			}
 		}
 

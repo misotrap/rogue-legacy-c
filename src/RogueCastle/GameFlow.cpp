@@ -9,6 +9,8 @@
 #include "Game.h"
 #include "EVs/GameEV.h"
 #include "Types/TraitType.h"
+#include "Types/ChestConditionType.h"
+#include "GameObjects/ChestObj.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -161,6 +163,7 @@ namespace RogueCastle
 		m_getItemOpen = false;
 		m_bossRoom.Reset();
 		m_map.Reset(m_level->Castle().rooms.size());
+		m_map.SetSpelunker(m_save.hero.classType == ClassType::Banker2);
 		/* LoadingScreen.cs line 256: a hero who already went in resumes at
 		 * the castle entrance, gate closed, not in the courtyard */
 		if (!m_save.LoadStartingRoom && m_level->Player() != nullptr)
@@ -728,6 +731,25 @@ namespace RogueCastle
 			m_hud.Draw(frame, v);
 			if (m_level->Player() != nullptr)
 				m_map.Visit(m_level->Castle(), m_level->Player()->X(), m_level->Player()->Y());
+			/* The map's chest icons (MapObj.AddRoom), refreshed every
+			 * frame: the opened state and the fairy conditions change. */
+			{
+				std::vector<MapScreen::MapChest> chests;
+				chests.reserve(m_level->ChestList().size());
+				for (const ChestObj *chest : m_level->ChestList())
+				{
+					if (chest == nullptr) continue;
+					MapScreen::MapChest c;
+					c.x = chest->X();
+					c.y = chest->Y();
+					c.kind = chest->IsOpen() ? MapScreen::MapChest::OPENED
+						: chest->IsFairyChest() ? (chest->ConditionType() == ChestConditionType::InvisibleChest
+							? MapScreen::MapChest::FAIRY_INVISIBLE : MapScreen::MapChest::FAIRY)
+						: MapScreen::MapChest::LOCKED;
+					chests.push_back(c);
+				}
+				m_map.SetChests(chests);
+			}
 			if (InCourtyard()) m_court.DrawRain(frame, m_level->Camera());
 			/* The minimap (not in the courtyard nor the boss rooms) */
 			if (m_level->Player() != nullptr && !InCourtyard() && !m_mapOpen)

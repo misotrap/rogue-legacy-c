@@ -27,6 +27,22 @@ namespace RogueCastle
 		void Reset(size_t numRooms) { m_visited.assign(numRooms, false); }
 		// Marks the room holding (x, y) as visited
 		void Visit(const Levels::Castle &castle, float x, float y);
+		// Restores the visited flags of a locked castle (SaveGameManager
+		// line 1946: MapRoomsUnveiled)
+		void SetVisited(const std::vector<uint8_t> &visited) { m_visited.assign(visited.begin(), visited.end()); }
+		void GetVisited(std::vector<uint8_t> &out) const { out.assign(m_visited.begin(), m_visited.end()); }
+		// The castle's chests, for the map icons (MapObj.AddRoom). kind: one
+		// of MapChest::LOCKED / FAIRY / FAIRY_INVISIBLE / OPENED.
+		struct MapChest
+		{
+			enum Kind { LOCKED, FAIRY, FAIRY_INVISIBLE, OPENED };
+			float x, y;   // castle coordinates
+			uint8_t kind;
+		};
+		void SetChests(const std::vector<MapChest> &chests) { m_chests = chests; }
+		// The spelunker (Banker2): every room is on the map from the start,
+		// and no chest icons (MapObj.AddRoom line 160)
+		void SetSpelunker(bool on) { m_spelunker = on; }
 		void Open(float playerX, float playerY);
 		// false once closed
 		bool Update(uint32_t buttons, uint32_t pressed, double dt);
@@ -37,8 +53,13 @@ namespace RogueCastle
 
 	private:
 		std::vector<bool> m_visited;
+		std::vector<MapChest> m_chests;
+		bool m_spelunker = false;
 		DS2DEngine::Camera2D m_camera;
 		DS2DEngine::SpriteObj *m_door = nullptr, *m_boss = nullptr, *m_player = nullptr;
+		DS2DEngine::SpriteObj *m_chestLocked = nullptr, *m_chestFairy = nullptr,
+			*m_chestOpened = nullptr, *m_bonus = nullptr, *m_teleporter = nullptr,
+			*m_legendPlate = nullptr;
 		std::vector<DS2DEngine::SpriteObj *> m_rooms;   // MapRoom{w}x{h}, by "w*10+h"
 		Text::Font m_font;
 		float m_playerX = 0, m_playerY = 0;   // castle coordinates

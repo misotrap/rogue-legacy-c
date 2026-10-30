@@ -26,7 +26,7 @@ public:
 	/* FairyChestObj.cs line 38: the condition comes from the Tag
 	 * ("1" = kill all enemies...), unless the level forces one. */
 	void SetConditionType(int conditionType = 0);
-	int ConditionType() const { return m_conditionType; }
+	int ConditionType() const override { return m_conditionType; }
 
 	void SetChestUnlocked();
 	void SetChestFailed();

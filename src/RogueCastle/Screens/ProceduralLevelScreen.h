@@ -34,6 +34,8 @@ public:
 
 	/* The ProjectileManager subset: bones and later the spells. */
 	void AddProjectile(class ProjectileObj *proj);   /* takes ownership */
+	/* The castle's chests, for the map icons (MapObj.AddRoom). */
+	const std::vector<class ChestObj *> &ChestList() const { return m_chestList; }
 	/* ProjectileManager.cs line 258 (FireProjectile) for the player's
 	 * spells: position from the source anchor and flip, heading from the
 	 * angle degrees, the player tag. */

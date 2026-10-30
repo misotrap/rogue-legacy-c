@@ -45,6 +45,8 @@ public:
 	/* Set once by InitializeChests; false for chests restored from a save. */
 	bool IsOpen() const { return CurrentFrame() == 2; }
 	virtual bool IsFairyChest() const { return false; }
+	/* FairyChestObj: ChestConditionType (0 = a plain chest) */
+	virtual int ConditionType() const { return 0; }
 
 	uint8_t ChestType() const { return m_chestType; }
 	void SetChestType(uint8_t type);
