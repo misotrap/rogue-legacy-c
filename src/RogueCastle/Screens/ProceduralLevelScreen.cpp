@@ -491,6 +491,45 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 				(int) i, elfX, floorY, (int) g.chests.size());
 	}
 
+	/* The arena rooms (ArenaBonusRoom, Bonus Tag 10): the named enemies,
+	 * and the gold chest hidden until they are all dead. */
+	for (size_t i = 0; i < m_castle.rooms.size(); i++)
+	{
+		const Levels::PlacedRoom &r = m_castle.rooms[i];
+		if (r.name != "Bonus" || r.tag != "10") continue;
+		ArenaRoom a;
+		a.room = (int) i;
+		for (ChestObj *chest : m_roomList[i]->ChestList())
+		{
+			a.chest = chest;
+			break;
+		}
+		if (a.chest == nullptr) continue;
+		a.chest->SetChestType(ChestType::Gold);
+		a.chest->IsLocked = true;
+		a.chest->Opacity(0);
+		m_arenas.push_back(a);
+		/* UpdateEnemyNames: the arena's champions */
+		bool firstNamed = false;
+		for (EnemyObj *enemy : m_roomList[i]->EnemyList())
+		{
+			const char *name = nullptr;
+			if (enemy->Type == EnemyType::EarthWizard)
+				name = firstNamed ? "Amon" : "Barbatos";
+			else if (enemy->Type == EnemyType::Skeleton)
+				name = firstNamed ? "Halphas" : "Berith";
+			else if (enemy->Type == EnemyType::Plant)
+				name = firstNamed ? "Focalor" : "Stolas";
+			if (name != nullptr)
+			{
+				enemy->Name = name;
+				firstNamed = true;
+			}
+		}
+		if (rl_trace())
+			fprintf(stderr, "arena in room %d: %d enemies\n", (int) i, m_roomList[i]->ActiveEnemies());
+	}
+
 	/* InitializeEnemies (ProceduralLevelScreen.cs line 544): each enemy's
 	 * level from its room (a boss room: the entrance it is linked to) */
 	for (RoomObj *room : m_roomList)
@@ -1061,6 +1100,28 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		if (g.elfTouching && m_player->IsTouchingGround() && upPressed && m_chestGameTalk < 0)
 			m_chestGameTalk = g.room;
 	}
+
+	/* The arena rooms: all enemies dead -> the gold chest fades in and
+	 * unlocks (ArenaBonusRoom.Update / DisplayChest). */
+	for (ArenaRoom &a : m_arenas)
+	{
+		if (a.revealed || a.chest == nullptr || a.chest->IsOpen()) continue;
+		if (m_roomList[a.room] == m_currentRoom && m_roomList[a.room]->ActiveEnemies() == 0)
+		{
+			a.revealed = true;
+			a.revealTime = 0;
+		}
+	}
+	if (m_currentRoom != nullptr)
+		for (ArenaRoom &a : m_arenas)
+			if (a.revealed && a.chest != nullptr && !a.chest->IsOpen() && a.chest->Opacity() < 1)
+			{
+				a.revealTime += (float) gameTime->ElapsedGameTime;
+				float t = a.revealTime / 2;   /* the C# fades and rises over 2 s */
+				if (t > 1) t = 1;
+				a.chest->Opacity(t);
+				if (t >= 1) a.chest->IsLocked = false;
+			}
 
 	/* The random teleport pads: the arrow while the hero stands on one,
 	 * Up throws him into a random ordinary room. */

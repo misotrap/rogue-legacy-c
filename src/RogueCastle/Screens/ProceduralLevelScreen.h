@@ -223,6 +223,16 @@ private:
 	};
 	std::vector<ChestGameRoom> m_chestGames;
 	int m_chestGameTalk = -1;
+	/* The arena rooms (Bonus Tag 10, ArenaBonusRoom): the gold chest
+	 * hidden until the room's enemies are dead. */
+	struct ArenaRoom
+	{
+		int room = 0;
+		ChestObj *chest = nullptr;   /* the room owns it */
+		bool revealed = false;
+		float revealTime = 0;        /* the 2 s fade-in */
+	};
+	std::vector<ArenaRoom> m_arenas;
 	DS2DEngine::SpriteObj *m_itemIcon = nullptr;   /* the floating item */
 	uint8_t m_itemIconSprite = 0;
 	/* The jukebox rooms (Bonus Tag 11): Up plays the next song. */
