@@ -18,6 +18,16 @@ cp "$DEST/rlc" "$DEST/rlc.bak" 2>/dev/null || true
 cp build/miyoo/rlc "$DEST/rlc"
 echo "Mise a jour des images et des sons..."
 rsync -rt --modify-window=2 assets/ "$DEST/assets/"
+# The C library the game runs on (libdl included: the sound loads the
+# console's SDL with it)
+mkdir -p "$DEST/lib"
+cp tools/miyoo-runtime/*.so* "$DEST/lib/"
+# launch.sh: the console's libraries (/customer/lib) for the sound; the
+# rest of the file (the CPU setting...) stays as it is
+if ! grep -q "/customer/lib" "$DEST/launch.sh"; then
+	sed -i '' 's|--library-path ./lib |--library-path ./lib:/customer/lib |' "$DEST/launch.sh"
+	echo "launch.sh : chemin du son ajoute."
+fi
 sync
 
 if cmp -s build/miyoo/rlc "$DEST/rlc"; then

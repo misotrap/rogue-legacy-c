@@ -19,7 +19,7 @@ dev: $(SRC) $(shell find src -name '*.h')
 
 miyoo: $(SRC) $(shell find src -name '*.h')
 	mkdir -p build/miyoo
-	$(MIYOO_CXX) $(CXXFLAGS) $(MIYOO_FLAGS) -static-libstdc++ -static-libgcc -o build/miyoo/rlc $(SRC) src/platform_miyoo.cpp -lm
+	$(MIYOO_CXX) $(CXXFLAGS) $(MIYOO_FLAGS) -static-libstdc++ -static-libgcc -o build/miyoo/rlc $(SRC) src/platform_miyoo.cpp -lm -ldl
 
 ev:
 	python3 tools/convert_ev.py ref/RogueLegacy1 src
