@@ -261,7 +261,9 @@ private:
 		uint8_t storedSpell = 0;
 		float storedMana = 0;
 		std::vector<class BreakableObj *> targets;     /* owned */
-		int currentTarget = 0;
+		int currentTarget = 0;            // the next one to slide in
+		BreakableObj *activeTarget = nullptr;   // m_currentTarget: the one bobbing now
+		float lastCastDelay = 0;          // the hero's spell delay last frame: it jumps up on a throw
 		float targetSpeed = 200, targetSpeedMod = 100;
 		bool targetMovingUp = false;
 		float slideFrom = 0, slideTo = 0, slideTime = 0;   /* the target's slide-in */

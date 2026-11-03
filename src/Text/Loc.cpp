@@ -38,6 +38,10 @@ namespace Text
 							else
 								value += line[i];
 						}
+						// Some texts carry their line break doubly escaped
+						// ("\\n"): it shows as "\n" once unescaped
+						for (size_t at = value.find("\\n"); at != std::string::npos; at = value.find("\\n", at))
+							value.replace(at, 2, "\n");
 						into[line.substr(0, tab)] = value;
 					}
 					line.clear();

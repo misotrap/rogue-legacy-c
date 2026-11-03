@@ -319,6 +319,7 @@ namespace RogueCastle
 	{
 		uint32_t pressed = buttons & ~m_previous;
 		m_previous = buttons;
+		if (rl_trace() && (pressed & BTN_A)) fprintf(stderr, "flow: A pressed (state %d, dialogue %d, getitem %d, paused %d)\n", (int) m_state, (int) m_dialogue.IsOpen(), (int) m_getItemOpen, (int) m_paused);
 		UpdateMusic();
 		if (m_optionsOpen)
 		{

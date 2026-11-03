@@ -1013,7 +1013,8 @@ void ProceduralLevelScreen::CarnivalActivateTarget(CarnivalRoom &c, const Levels
 			m_player->Stats()->Gold += down * 10;
 			char buf[32];
 			snprintf(buf, sizeof(buf), "+%d %s", down * 10, Text::Loc::Get("LOC_ID_CARNIVAL_BONUS_ROOM_4"));
-			AddPopup(buf, c.targets[c.currentTarget]->X(), (float) c.targets[c.currentTarget]->Bounds().Top(),
+			BreakableObj *at = c.activeTarget != nullptr ? c.activeTarget : c.targets[c.currentTarget];
+			AddPopup(buf, at->X(), (float) at->Bounds().Top(),
 				0xFFFFFF00u /* Yellow */);
 		}
 	}
@@ -1028,6 +1029,7 @@ void ProceduralLevelScreen::CarnivalActivateTarget(CarnivalRoom &c, const Levels
 		c.slideFrom = target->X();
 		c.slideTo = target->X() + (r.reversed ? 400.0f : -400.0f) + (rand() % 401 - 200);
 		c.slideTime = 0;
+		c.activeTarget = target;
 		c.currentTarget++;
 	}
 }
@@ -1179,6 +1181,7 @@ void ProceduralLevelScreen::BeginCarnival(int room)
 		c.spokeToNpc = true;
 		c.daggersThrown = 0;
 		c.currentTarget = 0;
+		c.activeTarget = nullptr;
 		c.targetSpeed = 200;
 		c.targetMovingUp = false;
 		for (int d = 0; d < 12; d++)
@@ -1664,8 +1667,11 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 		}
 		if (c.playing)
 		{
-			/* The daggers: each spell press throws one, mana refilled */
-			if (Game::GlobalInput.JustPressed(PLAYER_SPELL) && m_player->SpellCastDelay() <= 0)
+			/* The daggers: each throw (the hero casts before this update:
+			 * his spell delay has just restarted) counts, mana refilled */
+			bool thrown = m_player->SpellCastDelay() > c.lastCastDelay + 0.001f;
+			c.lastCastDelay = m_player->SpellCastDelay();
+			if (thrown)
 			{
 				c.daggersThrown++;
 				m_player->CurrentMana = m_player->MaxMana();
@@ -1675,8 +1681,7 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 					m_player->Stats()->hero.spell = 0;   /* out of daggers */
 			}
 			/* The current bullseye slides in, then bobs up and down */
-			BreakableObj *target = c.currentTarget < (int) c.targets.size()
-				? c.targets[c.currentTarget] : nullptr;
+			BreakableObj *target = c.activeTarget;
 			if (target != nullptr && c.slideTime < 2)
 			{
 				c.slideTime += (float) gameTime->ElapsedGameTime;
@@ -1684,6 +1689,13 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 				if (t > 1) t = 1;
 				t = 1 - (1 - t) * (1 - t);   /* Quad.EaseOut */
 				target->X(c.slideFrom + (c.slideTo - c.slideFrom) * t);
+			}
+			if (rl_trace() && target != nullptr)
+			{
+				static int n = 0;
+				if (n++ % 60 == 0)
+					fprintf(stderr, "carnival target %d at %.0f,%.0f visible %d broken %d, camera %.0f,%.0f, room %.0f..%.0f\n", c.currentTarget,
+					        target->X(), target->Y(), (int) target->Visible(), (int) target->Broken, m_camera.X(), m_camera.Y(), r.x, r.Right());
 			}
 			if (target != nullptr && !target->Broken)
 			{

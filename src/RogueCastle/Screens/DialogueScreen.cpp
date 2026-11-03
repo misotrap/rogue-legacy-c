@@ -1,4 +1,6 @@
 #include "DialogueScreen.h"
+#include "../../debugflags.h"
+#include <cstdio>
 
 #include <string>
 
@@ -114,6 +116,7 @@ namespace RogueCastle
 	bool DialogueScreen::Open(const char *name, bool isFemale, const char *choice,
 		const char *arg0, const char *arg1)
 	{
+		if (rl_trace()) fprintf(stderr, "dialogue: open %s\n", name);
 		m_scrambledPage = -1;
 		m_entry = Find(name);
 		m_choice = Find(choice);
@@ -130,6 +133,7 @@ namespace RogueCastle
 	DialogueScreen::Result DialogueScreen::Update(uint32_t pressed, double dt)
 	{
 		if (m_entry == nullptr) return Result::Closed;
+		if (rl_trace() && (pressed & (BTN_A | BTN_B))) fprintf(stderr, "dialogue: A/B at page %d, time %.2f\n", m_page, m_time);
 		m_time += dt;
 		if (m_choosing)
 		{
@@ -140,6 +144,7 @@ namespace RogueCastle
 			}
 			if (pressed & (BTN_A | BTN_B))
 			{
+				if (rl_trace()) fprintf(stderr, "dialogue: choice %d\n", m_selected);
 				m_entry = nullptr;
 				Audio::PlaySound(m_selected == 0 ? "ShopMenuConfirm" : "ShopMenuCancel");
 				return m_selected == 0 ? Result::Confirmed : Result::Cancelled;
@@ -148,10 +153,12 @@ namespace RogueCastle
 		}
 		if (pressed & (BTN_A | BTN_B))
 		{
+			if (rl_trace()) fprintf(stderr, "dialogue: page %d of %d\n", m_page + 1, m_entry->count);
 			if (++m_page >= m_entry->count)
 			{
 				if (m_choice != nullptr)
 				{
+					if (rl_trace()) fprintf(stderr, "dialogue: choosing\n");
 					m_choosing = true;
 					m_page = m_entry->count - 1;
 				}
