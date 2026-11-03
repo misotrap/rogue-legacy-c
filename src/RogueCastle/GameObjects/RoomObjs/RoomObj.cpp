@@ -166,6 +166,7 @@ void RoomObj::LoadRoom(const Levels::PlacedRoom &placed, PlayerObj *player)
 	m_width = placed.width;
 	m_height = placed.height;
 	m_linkedRoom = placed.linkedRoom;
+	m_challengeRoom = placed.challengeRoom;
 
 	/* Terrain from the CollHullObj (and builder-added terrain like closed
 	 * doors and door borders). Rotated hulls are rare; they are skipped

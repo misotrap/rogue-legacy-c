@@ -988,6 +988,15 @@ namespace Levels
 		}
 		for (PlacedRoom &b : bossToAdd) rooms.push_back(b);
 		for (PlacedRoom &ch : challengeToAdd) rooms.push_back(ch);
+		/* The entrance's boss door leads to its challenge room once paid
+		 * for (OpenChallengeBossDoor): the challenges all sit after the
+		 * boss rooms in the list. */
+		for (size_t ch = 0; ch < challengeToAdd.size(); ch++)
+		{
+			int entrance = challengeToAdd[ch].linkedRoom;
+			if (entrance >= 0 && entrance < (int) rooms.size())
+				rooms[entrance].challengeRoom = count + (int) bossToAdd.size() + (int) ch;
+		}
 	}
 
 	// Builds the room's object list: the template's objects for its area

@@ -92,6 +92,7 @@ namespace Levels
 		std::string name, tag;
 		std::vector<Door> doors;
 		int linkedRoom = -1;       // boss entrance <-> boss room, castle entrance -> tutorial
+		int challengeRoom = -1;   // boss entrance -> its challenge room (the rematch, once unlocked)
 		// Terrain and borders added by the builder (closed doors, door
 		// borders, bottom platforms), relative to the room
 		std::vector<ObjData> extra;

@@ -1,4 +1,5 @@
 #include "GameFlow.h"
+#include "Types/SpecialItemType.h"
 #include "../debugflags.h"
 #include "../perf.h"
 
@@ -444,8 +445,29 @@ namespace RogueCastle
 						float cost = 1.0f - m_save.skills.ModifierAmount(Skills::SkillType::Prices_Down);
 						m_save.Gold -= (int) (m_save.Gold * cost);
 						m_save.SpokeToTollCollector = true;
+						/* StartingRoomObj.cs line 676: a boss token given to
+						 * Charon unlocks that boss's rematch */
+						switch (m_save.SpecialItem)
+						{
+						case SpecialItemType::EyeballToken: m_save.ChallengeEyeballUnlocked = true; m_save.SpecialItem = 0; break;
+						case SpecialItemType::SkullToken: m_save.ChallengeSkullUnlocked = true; m_save.SpecialItem = 0; break;
+						case SpecialItemType::FireballToken: m_save.ChallengeFireballUnlocked = true; m_save.SpecialItem = 0; break;
+						case SpecialItemType::BlobToken: m_save.ChallengeBlobUnlocked = true; m_save.SpecialItem = 0; break;
+						default: break;
+						}
 						m_court.HideToll();
 						Audio::PlaySound("Charon_LaughPoof");
+						Save();
+					}
+				}
+				if (m_donationAsking && r != DialogueScreen::Result::Open)
+				{
+					m_donationAsking = false;
+					if (r == DialogueScreen::Result::Confirmed)
+					{
+						m_bossRoom.Donate(m_save);
+						Audio::PlaySound("Upgrade_Splash_In");
+						m_dialogue.Open("DonationBoxTalkUpgraded", m_save.hero.isFemale);
 						Save();
 					}
 				}
@@ -657,6 +679,22 @@ namespace RogueCastle
 			bool blocked = m_bossRoom.Update(m_level, m_save, pressed, dt, m_getItemOpen);
 			if (const char *talk = m_bossRoom.TakeDialogue())
 				m_dialogue.Open(talk, m_save.hero.isFemale);
+			int donation = 0;
+			if (m_bossRoom.TakeDonationOffer(donation) && !m_dialogue.IsOpen())
+			{
+				// RoomObj.BuffPlayer's talks: maxed, too poor, or the offer
+				char cost[16];
+				snprintf(cost, sizeof(cost), "%d", donation);
+				if (donation < 0)
+					m_dialogue.Open("DonationBoxTalkMaxxed", m_save.hero.isFemale);
+				else if (m_save.Gold < donation)
+					m_dialogue.Open("DonationBoxTalkPoor", m_save.hero.isFemale, nullptr, cost);
+				else
+				{
+					m_dialogue.Open("DonationBoxTalk01", m_save.hero.isFemale, "ConfirmTest1", cost);
+					m_donationAsking = true;
+				}
+			}
 			if (m_bossRoom.LastBossBeaten())
 			{
 				OnCastleBeaten();

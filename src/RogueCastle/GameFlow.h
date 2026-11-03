@@ -95,6 +95,7 @@ namespace RogueCastle
 		int m_carnivalAsking = -1;   /* the shooting gallery offer */
 		int m_carnival2Asking = -1;  /* the second gallery offer */
 		bool m_tollAsking = false;        /* the open dialogue ends on the toll choice */
+		bool m_donationAsking = false;   // the donation box's offer is open (BuffPlayer on Yes)
 		OptionsScreen m_options;          /* SELECT in the pause and on the title */
 		bool m_optionsOpen = false, m_quit = false;
 		std::vector<uint32_t> m_lastFrame;   /* the castle frame while dying */

@@ -76,6 +76,10 @@ public:
 	void HitPlayer(int damage, Vector2 attackPosition);
 	/* The last thing that hurt the hero, for the game over text:
 	 * 0 unknown, 1 an enemy, 2 a boss, 3 a shot without a shooter, 4 a trap */
+	/* A challenge rematch (ChallengeBossRoomObj): the hero does not die,
+	 * he loses the fight and the room kicks him out (KickPlayerOut) */
+	bool ChallengeMode = false;
+	bool ChallengeLost = false;
 	int KillerKind = 0;
 	bool m_wasOnSlope = false;   // trace: on a ramp last step
 	std::string KillerName;

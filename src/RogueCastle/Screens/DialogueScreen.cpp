@@ -111,12 +111,15 @@ namespace RogueCastle
 		return out;
 	}
 
-	bool DialogueScreen::Open(const char *name, bool isFemale, const char *choice)
+	bool DialogueScreen::Open(const char *name, bool isFemale, const char *choice,
+		const char *arg0, const char *arg1)
 	{
 		m_scrambledPage = -1;
 		m_entry = Find(name);
 		m_choice = Find(choice);
 		m_female = isFemale;
+		m_arg0 = arg0 != nullptr ? arg0 : "";
+		m_arg1 = arg1 != nullptr ? arg1 : "";
 		m_page = 0;
 		m_selected = 0;
 		m_choosing = false;
@@ -172,6 +175,14 @@ namespace RogueCastle
 		// speaker at (-W/2.2, -H/1.6), text at (-W/2.15, -H/3.5) from the box centre
 		m_font.DrawOutlined(frame, Text(page.speaker), SX(BOX_X - w / 2.2f), SY(BOX_Y - h / 1.6f), 0.34f, SPEAKER, BLACK, 1);
 		const char *pageText = Text(page.text);
+		std::string formatted = pageText;
+		if (m_arg0.empty() == false)
+			for (size_t at = formatted.find("{0}"); at != std::string::npos; at = formatted.find("{0}"))
+				formatted.replace(at, 3, m_arg0);
+		if (m_arg1.empty() == false)
+			for (size_t at = formatted.find("{1}"); at != std::string::npos; at = formatted.find("{1}"))
+				formatted.replace(at, 3, m_arg1);
+		pageText = formatted.c_str();
 		if (Dyslexia)
 		{
 			if (m_scrambledPage != m_page) { m_scrambled = RandomizeSentence(pageText); m_scrambledPage = m_page; }

@@ -17,6 +17,10 @@
 #include "../EVs/GlobalEV.h"
 #include "../Types/ClassType.h"
 #include "../Types/EnemyType.h"
+#include "../Types/SpellType.h"
+#include "../Types/TraitType.h"
+#include "../Types/SpecialItemType.h"
+#include "../Equipment/EquipmentData.h"
 #include "../../DS2DEngine/Camera2D.h"
 #include "../../DS2DEngine/GameObjs/ObjContainer.h"
 #include "../../DS2DEngine/GameObjs/SpriteObj.h"
@@ -328,12 +332,192 @@ namespace RogueCastle
 		}
 	}
 
+	namespace
+	{
+		// The rematch heroes and their Neo bosses (the SetRoomData of
+		// Eyeball/Fairy/Fireball/BlobChallengeRoom.cs): equipment and runes
+		// by EquipmentCategoryType (Sword, Helm, Chest, Limbs, Cape), -1 none
+		struct ChallengePreset
+		{
+			Levels::LevelType area;
+			const char *name;
+			bool female;
+			uint8_t classType, spell, trait1, trait2;
+			int specialItem, health, mana, strength, magic, defense;
+			int8_t equipped[5], rune[5];
+			int bossHealth[3], bossDamage[3];
+		};
+		namespace EB = EquipmentBaseType;
+		namespace EA = EquipmentAbilityType;
+		const ChallengePreset PRESETS[] = {
+			{ Levels::LevelType::CASTLE, "McSwordy", true, ClassType::SpellSword2, SpellType::Close, TraitType::Vertigo, TraitType::Hyperactive,
+			  SpecialItemType::Glasses, 39, 0, 5, 190, 0,
+			  { EB::Silver, EB::Silver, EB::Silver, EB::Silver, EB::Silver }, { EA::MovementSpeed, EA::DoubleJump, EA::DoubleJump, EA::Dash, EA::Dash },
+			  { 17000, 17000, 17000 }, { 57, 57, 57 } },
+			{ Levels::LevelType::GARDEN, "Wagner", false, ClassType::Ninja2, SpellType::Translocator, TraitType::Tourettes, TraitType::OCD,
+			  0, 30, 10, 150, 40, 230,
+			  { EB::Dark, EB::Dark, EB::Spike, EB::Spike, EB::Sky }, { -1, -1, EA::DoubleJump, -1, EA::DoubleJump },
+			  { 15000, 17000, 17000 }, { 200, 175, 175 } },
+			{ Levels::LevelType::TOWER, "Dovahkiin", false, ClassType::Barbarian2, SpellType::None, TraitType::Dementia, TraitType::OCD,
+			  0, 28, -14, 150, -10, 230,
+			  { EB::Royal, EB::Royal, EB::Royal, EB::Royal, EB::Sky }, { EA::Dash, EA::DoubleJump, EA::DoubleJump, EA::DoubleJump, EA::DoubleJump },
+			  { 12000, 12000, 12000 }, { 380, 380, 380 } },
+			{ Levels::LevelType::DUNGEON, "Echidna", true, ClassType::Dragon, SpellType::DragonFireNeo, TraitType::Gay, TraitType::Hypogonadism,
+			  0, 90, 8, 50, 33, 230,
+			  { EB::Dragon, EB::Dragon, EB::Dragon, EB::Dragon, -1 }, { -1, EA::MovementSpeed, EA::MovementSpeed, -1, -1 },
+			  { 100, 100, 100 }, { 370, 370, 370 } },
+		};
+		const ChallengePreset *PresetFor(Levels::LevelType area)
+		{
+			for (const ChallengePreset &p : PRESETS)
+				if (p.area == area) return &p;
+			return nullptr;
+		}
+		// RoomObj.m_empowerCostArray: the price of each upgrade
+		const int EMPOWER_COST[] = { 7500, 15000, 30000, 45000, 67500, 90000, 120000, 150000, 187500, 225000 };
+	}
+
+	void BossRoom::StartChallenge(ProceduralLevelScreen *level, Save::GameState &save, RoomObj *room)
+	{
+		const ChallengePreset *p = PresetFor(room->LevelType());
+		PlayerObj *player = level->Player();
+		if (p == nullptr || player == nullptr) return;
+		// StorePlayerData
+		if (!m_challengeActive)
+		{
+			m_stored.hero = save.hero;
+			memcpy(m_stored.equipped, save.equipment.equipped, 5);
+			memcpy(m_stored.equippedRune, save.equipment.equippedRune, 5);
+			m_stored.bonusHealth = save.BonusHealth;
+			m_stored.bonusMana = save.BonusMana;
+			m_stored.bonusStrength = save.BonusStrength;
+			m_stored.bonusMagic = save.BonusMagic;
+			m_stored.bonusDefense = save.BonusDefense;
+			m_stored.specialItem = save.SpecialItem;
+		}
+		// SetRoomData: the preset hero, +20% health/strength/magic per upgrade
+		int times = *ChallengeTimesFlag(save, (int) room->LevelType());
+		if (times < 0) times = 0;
+		save.hero.name = p->name;
+		save.hero.romanNumeral = "";
+		save.hero.isFemale = p->female;
+		save.hero.classType = p->classType;
+		save.hero.spell = p->spell;
+		save.hero.trait1 = p->trait1;
+		save.hero.trait2 = p->trait2;
+		save.SpecialItem = p->specialItem;
+		save.BonusHealth = p->health + (int) (p->health * 0.2f * times);
+		save.BonusMana = p->mana;
+		save.BonusStrength = p->strength + (int) (p->strength * 0.2f * times);
+		save.BonusMagic = p->magic + (int) (p->magic * 0.2f * times);
+		save.BonusDefense = p->defense;
+		memcpy(save.equipment.equipped, p->equipped, 5);
+		memcpy(save.equipment.equippedRune, p->rune, 5);
+		m_challengeActive = true;
+		m_challengeEntryX = player->X();
+		player->ChallengeMode = true;
+		player->ChallengeLost = false;
+		player->SetPlayerStats(&save);
+		player->CurrentHealth = player->MaxHealth();   // ChallengeBossRoomObj.OnEnter
+		player->CurrentMana = player->MaxMana();
+		// The Neo bosses
+		int n = 0;
+		for (EnemyObj *e : room->EnemyList())
+			if (e != nullptr && !e->NonKillable)
+			{
+				int i = n < 3 ? n : 2;
+				e->MaxHealth = (float) p->bossHealth[i];
+				e->CurrentHealth = e->MaxHealth;
+				e->Damage = (float) p->bossDamage[i];
+				n++;
+			}
+	}
+
+	void BossRoom::EndChallenge(ProceduralLevelScreen *level, Save::GameState &save)
+	{
+		// LoadPlayerData: the real hero comes back, healed
+		if (!m_challengeActive) return;
+		m_challengeActive = false;
+		save.hero = m_stored.hero;
+		memcpy(save.equipment.equipped, m_stored.equipped, 5);
+		memcpy(save.equipment.equippedRune, m_stored.equippedRune, 5);
+		save.BonusHealth = m_stored.bonusHealth;
+		save.BonusMana = m_stored.bonusMana;
+		save.BonusStrength = m_stored.bonusStrength;
+		save.BonusMagic = m_stored.bonusMagic;
+		save.BonusDefense = m_stored.bonusDefense;
+		save.SpecialItem = m_stored.specialItem;
+		if (PlayerObj *player = level->Player())
+		{
+			player->ChallengeMode = false;
+			player->ChallengeLost = false;
+			player->SetPlayerStats(&save);
+			player->CurrentHealth = player->MaxHealth();
+			player->CurrentMana = player->MaxMana();
+		}
+	}
+
+	void BossRoom::Donate(Save::GameState &save)
+	{
+		int *times = ChallengeTimesFlag(save, m_donationArea);
+		int cost = *times >= 0 && *times < 9 ? EMPOWER_COST[*times] : -1;
+		if (cost < 0 || save.Gold < cost) return;
+		save.Gold -= cost;
+		(*times)++;
+	}
+
+	bool *BossRoom::ChallengeUnlockedFlag(Save::GameState &save, int levelType)
+	{
+		switch ((Levels::LevelType) levelType)
+		{
+		case Levels::LevelType::GARDEN: return &save.ChallengeSkullUnlocked;
+		case Levels::LevelType::TOWER: return &save.ChallengeFireballUnlocked;
+		case Levels::LevelType::DUNGEON: return &save.ChallengeBlobUnlocked;
+		default: return &save.ChallengeEyeballUnlocked;
+		}
+	}
+
+	bool *BossRoom::ChallengeBeatenFlag(Save::GameState &save, int levelType)
+	{
+		switch ((Levels::LevelType) levelType)
+		{
+		case Levels::LevelType::GARDEN: return &save.ChallengeSkullBeaten;
+		case Levels::LevelType::TOWER: return &save.ChallengeFireballBeaten;
+		case Levels::LevelType::DUNGEON: return &save.ChallengeBlobBeaten;
+		default: return &save.ChallengeEyeballBeaten;
+		}
+	}
+
+	int *BossRoom::ChallengeTimesFlag(Save::GameState &save, int levelType)
+	{
+		switch ((Levels::LevelType) levelType)
+		{
+		case Levels::LevelType::GARDEN: return &save.ChallengeSkullTimesUpgraded;
+		case Levels::LevelType::TOWER: return &save.ChallengeFireballTimesUpgraded;
+		case Levels::LevelType::DUNGEON: return &save.ChallengeBlobTimesUpgraded;
+		default: return &save.ChallengeEyeballTimesUpgraded;
+		}
+	}
+
+	/* The challenge door is reachable (OpenChallengeBossDoor): the boss is
+	 * dead, the rematch paid for and not yet beaten. */
+	bool BossRoom::ChallengeAccessible(RoomObj *room, Save::GameState &save)
+	{
+		return room->Name() == "EntranceBoss"
+			&& room->ChallengeRoom() >= 0
+			&& *BeatenFlag(save, (int) room->LevelType())
+			&& *ChallengeUnlockedFlag(save, (int) room->LevelType())
+			&& !*ChallengeBeatenFlag(save, (int) room->LevelType());
+	}
+
 	// The boss doors: an area's entrance until its boss is beaten; the
 	// castle entrance once the four are (CastleEntranceRoomObj.OnEnter);
 	// the corridor before the last boss (TutorialRoomObj)
 	bool BossRoom::DoorOpen(RoomObj *room, Save::GameState &save)
 	{
-		if (room->Name() == "EntranceBoss") return !*BeatenFlag(save, (int) room->LevelType());
+		if (room->Name() == "EntranceBoss")
+			return !*BeatenFlag(save, (int) room->LevelType())
+				|| ChallengeAccessible(room, save);
 		if (room->Name() == "CastleEntrance")
 			return save.EyeballBossBeaten && save.FairyBossBeaten && save.BlobBossBeaten && save.FireballBossBeaten;
 		return room->Name() == "Tutorial";
@@ -489,17 +673,23 @@ namespace RogueCastle
 			}
 		}
 
-		// The boss door: Up in front of it, while that boss lives
+		// The boss door: Up in front of it, while that boss lives - or
+		// to the rematch once it is paid for (OpenChallengeBossDoor)
 		if ((pressed & BTN_UP) && player->IsTouchingGround() && DoorOpen(room, save)
 			&& room->LinkedRoom() >= 0 && room->LinkedRoom() < (int) level->RoomList().size())
 		{
+			/* the challenge room when the rematch is accessible */
+			int to = room->LinkedRoom();
+			if (ChallengeAccessible(room, save)
+				&& room->ChallengeRoom() < (int) level->RoomList().size())
+				to = room->ChallengeRoom();
 			Rectangle b = player->Bounds();
 			for (const RoomObj::DoorInfo &d : room->DoorList())
 			{
 				float dx = d.x, dy = d.y;
 				if (d.bossDoor && b.Right() > dx && b.X < dx + d.width && b.Bottom() > dy && b.Top() < dy + d.height)
 				{
-					Teleport(level, level->RoomList()[room->LinkedRoom()], true);
+					Teleport(level, level->RoomList()[to], true);
 					return true;
 				}
 			}
@@ -511,7 +701,51 @@ namespace RogueCastle
 			UpdateGate(level, room, dt);
 		}
 
-		if (room->Name() != "Boss")
+		/* KickPlayerOut: the preset hero lost the rematch; the real one is
+		 * back at the boss door, alive */
+		if (m_challengeActive && player->ChallengeLost && m_room != nullptr)
+		{
+			int back = m_room->LinkedRoom();
+			EndChallenge(level, save);
+			if (back >= 0 && back < (int) level->RoomList().size())
+				Teleport(level, level->RoomList()[back], true);
+			Audio::PlaySound("Teleport_Reappear");
+			m_phase = Phase::None;
+			m_room = nullptr;
+			return true;
+		}
+
+		/* The donation box in front of a reachable rematch (RoomObj.OnEnter
+		 * shows it, Up talks to it) */
+		if (room->Name() == "EntranceBoss" && (pressed & BTN_UP) && player->IsTouchingGround()
+		    && ChallengeAccessible(room, save))
+		{
+			const std::vector<RoomObj *> &rooms = level->RoomList();
+			for (size_t i = 0; i < rooms.size() && i < level->Castle().rooms.size(); i++)
+			{
+				if (rooms[i] != room) continue;
+				for (const Levels::ObjData &o : level->Castle().rooms[i].objs)
+				{
+					if (o.name != "donationbox") continue;
+					Rectangle box((int) o.x, (int) o.y, (int) (o.width * o.scaleX), (int) (o.height * o.scaleY));
+					if (!box.Intersects(player->Bounds())) continue;
+					int times = *ChallengeTimesFlag(save, (int) room->LevelType());
+					m_donationArea = (int) room->LevelType();
+					m_donationCost = times >= 0 && times < 9 ? EMPOWER_COST[times] : -1;
+					m_donationOffer = true;
+				}
+			}
+		}
+
+		if (rl_trace())
+		{
+			static int lastPhase = -1;
+			if ((int) m_phase != lastPhase)
+				fprintf(stderr, "boss phase %d in %s (challenge %d)\n", (int) m_phase, room->Name().c_str(), (int) m_challengeActive);
+			lastPhase = (int) m_phase;
+		}
+		bool challenge = room->Name() == "ChallengeBoss";
+		if (room->Name() != "Boss" && !challenge)
 		{
 			if (m_room != nullptr && room != m_room) m_room = nullptr, m_phase = Phase::None;
 			return false;
@@ -519,11 +753,20 @@ namespace RogueCastle
 
 		if (room != m_room)
 		{
-			// BossRoomObj.OnEnter
+			// BossRoomObj.OnEnter / ChallengeBossRoomObj.OnEnter
 			m_room = room;
 			m_time = 0;
-			m_phase = room->LevelType() != Levels::LevelType::NONE && *BeatenFlag(save, (int) room->LevelType())
-				? Phase::Done : Phase::Intro;
+			if (challenge)
+			{
+				/* the rematch: done once beaten; otherwise the preset hero
+				 * (empowered by the donation box) against the Neo boss */
+				m_phase = *ChallengeBeatenFlag(save, (int) room->LevelType()) ? Phase::Done : Phase::Intro;
+				if (m_phase == Phase::Intro)
+					StartChallenge(level, save, room);
+			}
+			else
+				m_phase = room->LevelType() != Levels::LevelType::NONE && *BeatenFlag(save, (int) room->LevelType())
+					? Phase::Done : Phase::Intro;
 			if (m_phase == Phase::Intro)
 			{
 				Audio::StopMusic();
@@ -591,7 +834,10 @@ namespace RogueCastle
 			if (any && !alive)
 			{
 				// BossCleanup: the flag is saved, the boss chest falls
-				*BeatenFlag(save, (int) room->LevelType()) = true;
+				if (m_room->Name() == "ChallengeBoss")
+					*ChallengeBeatenFlag(save, (int) room->LevelType()) = true;
+				else
+					*BeatenFlag(save, (int) room->LevelType()) = true;
 				save.NewBossBeaten = true;
 				m_phase = Phase::Won;
 				m_bossChest.reset();
@@ -607,7 +853,7 @@ namespace RogueCastle
 				// ChestType.Boss: three stat drops
 				m_bossChest.reset(new ChestObj());
 				m_bossChest->SetChestType(ChestType::Boss);
-				m_bossChest->X(room->X() + room->Width() / 2.0f);
+				m_bossChest->X(m_challengeActive ? m_challengeEntryX : room->X() + room->Width() / 2.0f);
 				// m_roomFloor: the lowest terrain top under the chest
 				float cx = m_bossChest->X(), floor = room->Y() + room->Height() - 120;
 				int best = INT32_MIN;
@@ -625,6 +871,13 @@ namespace RogueCastle
 			m_bossChest->Opacity(t);
 			m_bossChest->Y(m_chestFloor - 600 * (1 - t) * (1 - t));   // Quad.EaseOut
 			m_bossChest->ArrowVisible = false;
+			if (rl_trace() && t >= 1 && player != nullptr)
+			{
+				static int n = 0;
+				if (n++ % 60 == 0)
+					fprintf(stderr, "chest %.0f,%.0f hero %.0f,%.0f touch %d ground %d locked %d\n", m_bossChest->X(), m_bossChest->Y(), player->X(), player->Y(),
+					        (int) m_bossChest->Bounds().Intersects(player->Bounds()), (int) player->IsTouchingGround(), (int) player->ControlsLocked);
+			}
 			if (t >= 1 && player != nullptr && m_bossChest->Bounds().Intersects(player->Bounds())
 			    && player->IsTouchingGround() && !player->ControlsLocked)
 			{
@@ -650,6 +903,7 @@ namespace RogueCastle
 		case Phase::Leaving:
 			if (m_time >= 0.8)
 			{
+				EndChallenge(level, save);   // LoadPlayerData
 				int back = room->LinkedRoom();
 				if (back >= 0 && back < (int) level->RoomList().size())
 					Teleport(level, level->RoomList()[back], true);

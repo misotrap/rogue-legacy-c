@@ -39,6 +39,12 @@ namespace RogueCastle
 		void DrawWorld(DS2DEngine::Camera2D *camera);
 		// FinalBossTalk01: the dialogue to open now (once), or nullptr
 		const char *TakeDialogue() { const char *d = m_dialogue; m_dialogue = nullptr; return d; }
+		// The donation box (RoomObj.BuffPlayer): true once when the hero
+		// asks it in front of a challenge door; cost = the next upgrade's
+		// price, -1 when maxed
+		bool TakeDonationOffer(int &cost) { if (!m_donationOffer) return false; m_donationOffer = false; cost = m_donationCost; return true; }
+		// The hero paid: one more upgrade for that rematch
+		void Donate(Save::GameState &save);
 		// CastleEntranceRoomObj.ForceGateClosed: a run resumed at the entrance
 		void ForceGateClosed() { m_gateClosed = true; m_gateTime = 2; }
 		// m_cutsceneRunning: the room (boss included) waits
@@ -49,6 +55,28 @@ namespace RogueCastle
 		const char *Music() const;
 
 	private:
+		/* The challenge rematch flags of an area (the donation box's
+		 * upgrades): unlocked, beaten, times paid. */
+		static bool *ChallengeUnlockedFlag(Save::GameState &save, int levelType);
+		static bool *ChallengeBeatenFlag(Save::GameState &save, int levelType);
+		static int *ChallengeTimesFlag(Save::GameState &save, int levelType);
+		static bool ChallengeAccessible(RoomObj *room, Save::GameState &save);
+		// ChallengeBossRoomObj: the real hero is set aside while a preset
+		// one fights the rematch, and comes back on leaving or losing
+		struct StoredHero
+		{
+			Lineage::Heir hero;
+			int8_t equipped[5], equippedRune[5];
+			int bonusHealth, bonusMana, bonusStrength, bonusMagic, bonusDefense, specialItem;
+		};
+		StoredHero m_stored;
+		bool m_challengeActive = false;
+		float m_challengeEntryX = 0;   // ChallengeBossRoomObj.OnEnter: the chest falls where the hero came in
+		bool m_donationOffer = false;
+		int m_donationCost = 0;
+		int m_donationArea = 0;   // the level type of the box's boss
+		void StartChallenge(ProceduralLevelScreen *level, Save::GameState &save, RoomObj *room);
+		void EndChallenge(ProceduralLevelScreen *level, Save::GameState &save);
 		enum class Phase { None, Intro, Fight, Won, Chest, Leaving, Done, Ending, Finished };
 		Phase m_phase = Phase::None;
 		RoomObj *m_room = nullptr;

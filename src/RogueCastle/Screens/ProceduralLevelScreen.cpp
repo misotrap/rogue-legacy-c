@@ -599,7 +599,7 @@ ProceduralLevelScreen::ProceduralLevelScreen(const char *assets, uint32_t seed,
 		c.rewardChest->ChestIndex = -1;   /* not in the save's chest flags */
 		c.rewardChest->Level = m_roomList[i]->Level / LevelEV::ROOM_LEVEL_MOD;
 		c.rewardChest->X(r.reversed ? clownX - 150 : clownX + 100);
-		c.rewardChest->Y(floorY - 66);
+		c.rewardChest->Y(floorY - c.rewardChest->Bounds().Height - 8);
 		c.rewardChest->Visible(false);
 		/* Opened and drawn through the level's chest list; its index -1
 		 * keeps it out of the save's chest flags. */
@@ -1025,7 +1025,6 @@ void ProceduralLevelScreen::CarnivalActivateTarget(CarnivalRoom &c, const Levels
 		target->Visible(true);
 		target->X(r.reversed ? r.x : r.Right());
 		target->Y(r.y + r.height * 0.5f);
-		/* the slide-in, done by hand (the C# tweens X by ~-400) */
 		c.slideFrom = target->X();
 		c.slideTo = target->X() + (r.reversed ? 400.0f : -400.0f) + (rand() % 401 - 200);
 		c.slideTime = 0;
@@ -1377,6 +1376,11 @@ void ProceduralLevelScreen::Update(GameTime *gameTime)
 	Rectangle roomBounds = m_currentRoom != nullptr ? m_currentRoom->Bounds() : Rectangle();
 	for (ChestObj *chest : m_chestList)
 	{
+		/* The carnival's reward chest is invisible until the game is
+		 * won: it must not open under the Up press meant for the
+		 * clown next to it (ChestObj only opens what is Visible) */
+		if (!chest->Visible())
+			continue;
 		/* FairyChestObj checks its condition from Draw, so only in the
 		 * room the hero is in (ProceduralLevelScreen.cs: CurrentRoom.Draw) */
 		bool here = roomBounds.Intersects(chest->Bounds());

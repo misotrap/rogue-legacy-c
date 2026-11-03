@@ -955,6 +955,13 @@ void PlayerObj::HitPlayer(int damage, Vector2 attackPosition)
 	}
 	else
 	{
+		if (ChallengeMode)
+		{
+			CurrentHealth = 1;
+			ChallengeLost = true;
+			m_invincibleCounter = 5;   // until the room kicks him out
+			return;
+		}
 		/* PlayerObj.cs line 2371: the Revive item (25% hp, used up), then
 		 * the Death Defy skill's roll (10% hp) before dying */
 		if (m_stats != nullptr)

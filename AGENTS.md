@@ -351,6 +351,14 @@ the map/minimap and the options; the game code below is yours.
    shooting gallery (8: the clown, the dagger spell, the bullseyes,
    the camera override; RL_BTN_PULSE extends the test harness).
    Left: CarnivalShoot2 (9, the harder gallery - reuse the Tag 8
-   machinery), the donation box of the challenge rooms (needs the
-   challenge-boss linkage), and the journal-list screen of a maxed
-   diary.
+   machinery) and the journal-list screen of a maxed diary.
+   Challenge rematches (done, Rooms/BossRoom.cpp): a boss token given to
+   Charon unlocks the rematch; the EntranceBoss door then leads to the
+   ChallengeBoss room. The real hero is stored and the preset one of
+   that area fights the Neo boss (PRESETS, from the four
+   *ChallengeRoom.cs SetRoomData; +20% health/strength/magic per
+   donation-box upgrade, EMPOWER_COST). Losing kicks the hero out alive
+   (PlayerObj::ChallengeMode/ChallengeLost), winning drops the boss chest
+   where the hero came in. Not done: the last boss's rematch (Johannes
+   preset, LastBossChallengeRoom.cs), the Neo boss titles, hiding the
+   donation box while the rematch is not reachable.

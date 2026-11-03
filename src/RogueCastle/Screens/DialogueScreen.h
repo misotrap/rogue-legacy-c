@@ -25,8 +25,11 @@ namespace RogueCastle
 		~DialogueScreen();
 		bool LoadContent(const char *assetsDir);
 		// name: a DialogueManager key ("Meet Architect"); choice: a choice
-		// dialogue shown after the last page ("ConfirmTest1"), or nullptr
-		bool Open(const char *name, bool isFemale, const char *choice = nullptr);
+		// dialogue shown after the last page ("ConfirmTest1"), or nullptr.
+		// arg0/arg1 replace {0}/{1} in the pages (SetDialogue's params,
+		// the donation box's gold cost).
+		bool Open(const char *name, bool isFemale, const char *choice = nullptr,
+			const char *arg0 = nullptr, const char *arg1 = nullptr);
 		bool IsOpen() const { return m_entry != nullptr; }
 		// The Dyslexia trait: the letters inside the words are shuffled
 		// (TextObj.RandomizeSentence), once per page
@@ -43,6 +46,7 @@ namespace RogueCastle
 		int m_page = 0, m_selected = 0;
 		int m_scrambledPage = -1;
 		std::string m_scrambled;
+		std::string m_arg0, m_arg1;   /* {0} and {1} in the pages */
 		double m_time = 0;
 
 		const char *Text(const char *id) const;
