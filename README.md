@@ -10,6 +10,32 @@ to run on small Linux handhelds, first of all the **Miyoo Mini Plus**
 > [LICENSE.md](LICENSE.md)). **No game asset is included**: you need your own
 > copy of the game.
 
+## Playing on a Miyoo Mini Plus (OnionOS)
+
+1. Download `RogueLegacyC-miyoo.zip` from the [Releases](../../releases)
+   page and unzip it into the SD card's `App/` folder, so that you get
+   `App/RogueLegacyC/`. It holds the port only, without any game file.
+2. On a computer, make the game files from your own copy of the game (once),
+   with Python 3, a C++ compiler and git installed:
+
+   ```sh
+   git clone <this repository> rogue-legacy-c
+   cd rogue-legacy-c
+   sh tools/make_assets.sh "<your game>/Content"
+   ```
+
+   With the Steam version on macOS, the Content folder is in
+   `Rogue Legacy.app/Contents/Resources/Content`; on Windows and Linux it is
+   next to the game's executable.
+3. Copy them next to the port on the SD card:
+
+   ```sh
+   sh tools/copy_assets.sh "<SD card>/App/RogueLegacyC"
+   ```
+
+4. Start "Rogue Legacy C" from the Apps menu. If it does not start, the
+   reason is in `App/RogueLegacyC/log.txt`.
+
 ## What you need
 
 - A copy of **Rogue Legacy** (for example on Steam). The game's pictures,
@@ -24,18 +50,9 @@ to run on small Linux handhelds, first of all the **Miyoo Mini Plus**
 
 ## Making the game files (`assets/`)
 
-From your own copy of the game, once:
-
-```sh
-git clone https://github.com/flibitijibibo/RogueLegacy1 ref/RogueLegacy1
-python3 tools/convert_assets.py "<your game>/Content" assets
-c++ -O2 -std=c++17 -o convert_audio tools/convert_audio.cpp
-./convert_audio "<your game>/Content/Audio" assets/audio
-python3 tools/convert_loc.py ref/RogueLegacy1 assets src
-```
-
-On macOS with the Steam version, `<your game>` is
-`Rogue Legacy.app/Contents/Resources`. The `assets/` folder is yours: never
+From your own copy of the game, once: `sh tools/make_assets.sh "<your game>/Content"`
+(it clones the official source code into `ref/RogueLegacy1`, then converts the
+pictures, the sounds and the texts). The `assets/` folder is yours: never
 publish it.
 
 ## Building and playing
@@ -53,7 +70,8 @@ Keys: arrows to move, `Z` jump, `X` attack, `C` spell, `V` special,
 On the Miyoo Mini Plus (OnionOS):
 
 ```sh
-make package     # builds build/RogueLegacyC
+make package                 # build/RogueLegacyC, with your game files
+NO_ASSETS=1 make package     # build/RogueLegacyC-miyoo.zip, without them (to share)
 ```
 
 Copy `build/RogueLegacyC` into the SD card's `App/` folder. With the card in
