@@ -53,10 +53,10 @@ namespace RogueCastle
 	bool PauseScreen::LoadContent(const char *assetsDir)
 	{
 		bool ok = m_font.Load(assetsDir, "Junicode");
-		if (!SpriteSystem::SpriteLibrary::ContainsSprite("GamePausedTitleText_Sprite_FR"))
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite(Text::Loc::Sprite("GamePausedTitleText_Sprite").c_str()))
 			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "language3Spritesheet") && ok;
-		// Game.ChangeBitmapLanguage: French only for now
-		m_title = new SpriteObj("GamePausedTitleText_Sprite_FR");
+		// Game.ChangeBitmapLanguage: the title of the chosen language
+		m_title = new SpriteObj(Text::Loc::Sprite("GamePausedTitleText_Sprite").c_str());
 		m_title->ForceDraw(true);
 		m_screen.Position(Vector2(SCREEN_W / 2, SCREEN_H / 2));
 		m_screen.Zoom(1.0f);

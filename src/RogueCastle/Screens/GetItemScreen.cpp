@@ -90,7 +90,10 @@ namespace RogueCastle
 		if (!SpriteSystem::SpriteLibrary::ContainsSprite("BlueprintFoundBG_Sprite"))
 			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "uiExtraSpritesheet") && ok;
 		m_bg = Make("BlueprintFoundBG_Sprite");
-		m_found = Make("BlueprintFoundText_Sprite_FR");   // Game.ChangeBitmapLanguage
+		// The translated "found" texts are on the language sheet
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite(Text::Loc::Sprite("BlueprintFoundText_Sprite").c_str()))
+			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "languageSpritesheet") && ok;
+		m_found = Make(Text::Loc::Sprite("BlueprintFoundText_Sprite").c_str());   // Game.ChangeBitmapLanguage
 		for (SpriteObj *&s : m_items) s = Make("BlueprintIcon_Sprite");
 		for (SpriteObj *&s : m_particles) s = Make("LevelUpParticleFX_Sprite");
 		m_camera.Position(Vector2(660, 360));
@@ -144,14 +147,14 @@ void GetItemScreen::Open(const GetItem::Reward &reward, float camX, float camY, 
 		{
 		case GetItem::Blueprint:
 			m_items[0]->ChangeSprite("BlueprintIcon_Sprite");
-			m_found->ChangeSprite("BlueprintFoundText_Sprite_FR");
+			m_found->ChangeSprite(Text::Loc::Sprite("BlueprintFoundText_Sprite").c_str());
 			m_texts[0] = Text::Loc::Format("LOC_ID_EQUIPMENT_BASE_FORMAT",
 				Text::Loc::Get(LocIDs::EquipmentBaseType_ToStringID(reward.y)),
 				Text::Loc::Get(LocIDs::EquipmentCategoryType_ToStringID(reward.x)));
 			break;
 		case GetItem::Rune:
 			m_items[0]->ChangeSprite("RuneIcon_Sprite");
-			m_found->ChangeSprite("RuneFoundText_Sprite_FR");
+			m_found->ChangeSprite(Text::Loc::Sprite("RuneFoundText_Sprite").c_str());
 			m_texts[0] = Text::Loc::Format("LOC_ID_RUNE_BASE_FORMAT",
 				Text::Loc::Get(LocIDs::EquipmentAbilityType_ToStringID(reward.y)),
 				Text::Loc::Get("LOC_ID_ENCHANTRESS_SCREEN_13"));
@@ -160,17 +163,17 @@ void GetItemScreen::Open(const GetItem::Reward &reward, float camX, float camY, 
 		case GetItem::Spell:
 			/* GetItemScreen.cs line 204: the spell's icon and name */
 			m_items[0]->ChangeSprite(SpellIcon(reward.x));
-			m_found->ChangeSprite("SpellFoundText_Sprite_FR");
+			m_found->ChangeSprite(Text::Loc::Sprite("SpellFoundText_Sprite").c_str());
 			m_texts[0] = Text::Loc::Get(LocIDs::SpellType_ToStringID(reward.x));
 			break;
 		case GetItem::SpecialItem:
 			/* GetItemScreen.cs line 199: the icon and name of the item */
 			m_items[0]->ChangeSprite(SpecialItemType::SpriteName((uint8_t) reward.x));
-			m_found->ChangeSprite("ItemFoundText_Sprite_FR");
+			m_found->ChangeSprite(Text::Loc::Sprite("ItemFoundText_Sprite").c_str());
 			m_texts[0] = Text::Loc::Get(SpecialItemLocID(reward.x));
 			break;
 		default:
-			m_found->ChangeSprite("StatFoundText_Sprite_FR");
+			m_found->ChangeSprite(Text::Loc::Sprite("StatFoundText_Sprite").c_str());
 			m_items[0]->ChangeSprite(StatSprite(reward.x));
 			m_texts[0] = StatText(reward.x, timesCastleBeaten);
 			if (reward.type == GetItem::TripStatDrop)

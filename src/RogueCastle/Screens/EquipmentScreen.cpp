@@ -349,7 +349,7 @@ namespace RogueCastle
 		// Hints
 		std::string confirm = WithButtons(Text::Loc::Get(blacksmith ? "LOC_ID_BLACKSMITH_SCREEN_8_NEW" : "LOC_ID_ENCHANTRESS_SCREEN_6_NEW"));
 		std::string leave = WithButtons(Text::Loc::Get(blacksmith ? "LOC_ID_BLACKSMITH_SCREEN_9_NEW" : "LOC_ID_ENCHANTRESS_SCREEN_7_NEW"));
-		m_font.DrawOutlined(frame, (confirm + "   L1/R1 : catégorie").c_str(), 10, SCREEN_H - 44, 0.28f, GREY, BLACK, 1);
+		m_font.DrawOutlined(frame, (confirm + "   " + Text::Loc::Get(Text::Loc::Port::CategoryHelp)).c_str(), 10, SCREEN_H - 44, 0.28f, GREY, BLACK, 1);
 		m_font.DrawOutlined(frame, leave.c_str(), 10, SCREEN_H - 24, 0.28f, GREY, BLACK, 1);
 		(void) SX;
 		(void) SY;

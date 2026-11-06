@@ -65,7 +65,7 @@ namespace RogueCastle
 		// "[Input:0]" -> the Miyoo button that does it
 		std::string WithButtons(std::string s)
 		{
-			static const char *const tags[][2] = { { "[Input:0]", "B" }, { "[Input:9]", "X" }, { "[Input:24]", "Y" }, { "[Input:16]", "Haut/Bas" }, { "[Input:18]", "Gauche/Droite" }, { "[Button:LeftStick]", "Gauche/Droite" } };
+			const char *const tags[][2] = { { "[Input:0]", "B" }, { "[Input:9]", "X" }, { "[Input:24]", "Y" }, { "[Input:16]", Text::Loc::Get(Text::Loc::Port::UpDown) }, { "[Input:18]", Text::Loc::Get(Text::Loc::Port::LeftRight) }, { "[Button:LeftStick]", Text::Loc::Get(Text::Loc::Port::LeftRight) } };
 			for (const auto &t : tags)
 			{
 				size_t p = s.find(t[0]);
@@ -98,8 +98,11 @@ namespace RogueCastle
 		if (!SpriteSystem::SpriteLibrary::ContainsSprite("DaggerIcon_Sprite"))
 			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "startingRoomSpritesheet") && ok;
 		static const char *const sheets[][2] = { { "LineageScreenFrame_Sprite", "parallaxBGSpritesheet" },
-			{ "LineageScreenPlate_Sprite", "getItemScreenSpritesheet" }, { "BlacksmithUI_IconBG_Sprite", "blacksmithUISpritesheet" },
-			{ "LineageTitleText_Sprite_FR", "languageSpritesheet" } };
+			{ "LineageScreenPlate_Sprite", "getItemScreenSpritesheet" }, { "BlacksmithUI_IconBG_Sprite", "blacksmithUISpritesheet" } };
+		// The translated titles are on the language sheet (the English one
+		// is on the parallax sheet too): check the chosen language's
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite(Text::Loc::Sprite("LineageTitleText_Sprite").c_str()))
+			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "languageSpritesheet") && ok;
 		m_assetsDir = assetsDir;
 		for (const auto &sh : sheets)
 			if (!SpriteSystem::SpriteLibrary::ContainsSprite(sh[0]))
@@ -116,7 +119,7 @@ namespace RogueCastle
 		// x11 in the original's 720 lines; taller here, the screen shows 960
 		m_shadow = Make("LineageScreenShadow_Sprite", 11, 14);
 		if (m_shadow != nullptr) { m_shadow->Opacity(0.9f); m_shadow->Position(Vector2(1320 / 2.0f, 720 / 2.0f - 10)); }
-		m_title = Make("LineageTitleText_Sprite_FR", 1, 1);
+		m_title = Make(Text::Loc::Sprite("LineageTitleText_Sprite").c_str(), 1, 1);
 		if (m_title == nullptr) m_title = Make("LineageTitleText_Sprite", 1, 1);
 		if (m_title != nullptr) m_title->Position(Vector2(1320 / 2.0f, 720 * 0.1f));
 		m_plate = Make("LineageScreenPlate_Sprite", 1, 1);

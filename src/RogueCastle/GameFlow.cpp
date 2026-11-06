@@ -24,7 +24,7 @@ namespace RogueCastle
 	{
 		m_assets = assetsDir;
 		m_savePath = savePath;
-		Text::Loc::Load(assetsDir, "fr");
+		Text::Loc::Load(assetsDir, OptionsScreen::ConfigLanguage("config.txt").c_str());   // English by default
 		Audio::Init(assetsDir);
 		m_options.LoadContent(assetsDir, "config.txt");
 		m_generator = Lineage::Generator((uint32_t) time(nullptr));

@@ -51,9 +51,13 @@ namespace Text
 			}
 		}
 
+		std::string current = "en";
+
 		bool Load(const char *assetsDir, const char *language)
 		{
 			char path[512];
+			texts.clear();
+			current = language;
 			snprintf(path, sizeof(path), "%s/lang/en.txt", assetsDir);
 			LoadFile(path, fallback);
 			snprintf(path, sizeof(path), "%s/lang/%s.txt", assetsDir, language);
@@ -84,6 +88,42 @@ namespace Text
 					out += s[i];
 			}
 			return out;
+		}
+	
+		const char *const LANGUAGES[LANGUAGE_COUNT] = { "en", "fr", "de", "es", "pl", "pt", "ru", "zh" };
+		const char *const LANGUAGE_NAMES[LANGUAGE_COUNT] = {
+			"LOC_ID_OPTIONS_LANGUAGE_ENGLISH", "LOC_ID_OPTIONS_LANGUAGE_FRENCH", "LOC_ID_OPTIONS_LANGUAGE_GERMAN",
+			"LOC_ID_OPTIONS_LANGUAGE_SPANISH", "LOC_ID_OPTIONS_LANGUAGE_POLISH", "LOC_ID_OPTIONS_LANGUAGE_PORTUGUESE",
+			"LOC_ID_OPTIONS_LANGUAGE_RUSSIAN", "LOC_ID_OPTIONS_LANGUAGE_CHINESE" };
+
+		const char *Language() { return current.c_str(); }
+
+		std::string Sprite(const char *baseName)
+		{
+			// The suffixes of the language sheet's pictures
+			static const char *const SUFFIXES[LANGUAGE_COUNT] = { "", "_FR", "_DE", "_SP", "_PO", "_BR", "_RU", "_ZH" };
+			for (int i = 0; i < LANGUAGE_COUNT; i++)
+				if (current == LANGUAGES[i]) return std::string(baseName) + SUFFIXES[i];
+			return baseName;
+		}
+	
+		const char *Get(Port text)
+		{
+			// en, fr, de, es, pl, pt, ru, zh (the order of LANGUAGES)
+			static const char *const TEXTS[5][LANGUAGE_COUNT] = {
+				{ "Up/Down", "Haut/Bas", "Oben/Unten", "Arriba/Abajo", "Góra/Dół", "Cima/Baixo", "Вверх/Вниз", "上/下" },
+				{ "Left/Right", "Gauche/Droite", "Links/Rechts", "Izquierda/Derecha", "Lewo/Prawo", "Esquerda/Direita", "Влево/Вправо", "左/右" },
+				{ "Left/Right: choose, A: travel", "Gauche/Droite : choisir, A : voyager", "Links/Rechts: wählen, A: reisen",
+				  "Izquierda/Derecha: elegir, A: viajar", "Lewo/Prawo: wybierz, A: podróżuj", "Esquerda/Direita: escolher, A: viajar",
+				  "Влево/Вправо: выбор, A: перемещение", "左/右：选择，A：传送" },
+				{ "L1/R1: category", "L1/R1 : catégorie", "L1/R1: Kategorie", "L1/R1: categoría", "L1/R1: kategoria",
+				  "L1/R1: categoria", "L1/R1: категория", "L1/R1：类别" },
+				{ "Critical!", "Critique !", "Kritisch!", "¡Crítico!", "Krytyk!", "Crítico!", "Крит!", "暴击！" },
+			};
+			int language = 0;
+			for (int i = 0; i < LANGUAGE_COUNT; i++)
+				if (current == LANGUAGES[i]) language = i;
+			return TEXTS[(int) text][language];
 		}
 	}
 }

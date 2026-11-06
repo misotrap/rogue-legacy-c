@@ -483,7 +483,7 @@ void EnemyObj::CollisionResponse(CollisionBox *thisBox, CollisionBox *otherBox, 
 					{
 						damage = (int) (damage * m_target->TotalCriticalDamage());
 						if (m_levelScreen != nullptr)
-							m_levelScreen->AddPopup("Critique !", X(), (float) Bounds().Top() - 20, 0xFFFFFF00u);
+							m_levelScreen->AddPopup(Text::Loc::Get(Text::Loc::Port::Critical), X(), (float) Bounds().Top() - 20, 0xFFFFFF00u);
 					}
 					if (isProjectile)
 						m_invincibleCounterProjectile = InvincibilityTime;

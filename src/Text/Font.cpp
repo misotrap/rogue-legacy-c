@@ -1,4 +1,5 @@
 #include "Font.h"
+#include "Loc.h"
 
 #include "../platform.h"
 
@@ -40,6 +41,10 @@ namespace Text
 	{
 		char path[512];
 		Free();
+		/* The Chinese texts need the font with their characters
+		 * (Game.NotoSansSCFont); Junicode already has the Cyrillic ones */
+		if (strcmp(Loc::Language(), "zh") == 0 && (strcmp(name, "Junicode") == 0 || strcmp(name, "JunicodeLarge") == 0))
+			name = "NotoSansSC";
 		snprintf(path, sizeof(path), "%s/fonts/%s.tex", assetsDir, name);
 		if (!gfx_load_texture(&sheet, path)) return false;
 		snprintf(path, sizeof(path), "%s/fonts/%s.fnt", assetsDir, name);

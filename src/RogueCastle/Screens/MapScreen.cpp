@@ -94,7 +94,8 @@ namespace RogueCastle
 		/* TeleporterTitleText_Sprite: the localized bitmap of the
 		 * selection screen (Game.ChangeBitmapLanguage); the port speaks
 		 * French, like Loc::Load("fr"). */
-		const char *title = "TeleporterTitleText_Sprite_FR";
+		const std::string titleName = Text::Loc::Sprite("TeleporterTitleText_Sprite");
+		const char *title = titleName.c_str();
 		if (!SpriteSystem::SpriteLibrary::ContainsSprite(title))
 			SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "language2Spritesheet");
 		if (!SpriteSystem::SpriteLibrary::ContainsSprite(title))
@@ -246,7 +247,7 @@ namespace RogueCastle
 			 * teleporter icons centred on the selected one, the title and
 			 * the player marker (MapObj DrawTeleportersOnly). */
 			DrawTeleporters(castle);
-			m_font.DrawOutlined(frame, "Gauche/Droite : choisir, A : voyager",
+			m_font.DrawOutlined(frame, Text::Loc::Get(Text::Loc::Port::TeleporterHelp),
 				SCREEN_W / 2, SCREEN_H - 50, 0.26f, WHITE, BLACK, 1, Text::Align::Centre);
 			m_font.DrawOutlined(frame, close.c_str(), SCREEN_W / 2, SCREEN_H - 30, 0.26f, GOLD, BLACK, 1, Text::Align::Centre);
 		}

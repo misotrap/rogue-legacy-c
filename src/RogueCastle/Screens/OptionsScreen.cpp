@@ -6,6 +6,7 @@
 #include "../../platform.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 using DS2DEngine::ObjContainer;
@@ -17,7 +18,7 @@ namespace RogueCastle
 	{
 		const uint32_t WHITE = 0xFFFFFFFFu, BLACK = 0xFF000000u, YELLOW = 0xFFFFFF00u;
 		const char *const NAMES[] = { "LOC_ID_MUSICVOL_OPTIONS_1", "LOC_ID_SFXVOL_OPTIONS_1",
-			"LOC_ID_BACK_TO_MENU_OPTIONS_1", "LOC_ID_EXIT_ROGUE_LEGACY_OPTIONS_1" };
+			"LOC_ID_OPTIONS_LANGUAGE_TITLE", "LOC_ID_BACK_TO_MENU_OPTIONS_1", "LOC_ID_EXIT_ROGUE_LEGACY_OPTIONS_1" };
 		const float ITEM_X = 420, TEXT_OFFSET = 300;   // OptionsObj.X, m_optionsTextOffset
 
 		float SX(float x) { return (x - 660) * 0.5f + SCREEN_W / 2; }
@@ -41,13 +42,19 @@ namespace RogueCastle
 	bool OptionsScreen::LoadContent(const char *assetsDir, const char *configPath)
 	{
 		m_configPath = configPath;
+		m_assetsDir = assetsDir;
+		for (int i = 0; i < Text::Loc::LANGUAGE_COUNT; i++)
+			if (strcmp(Text::Loc::Language(), Text::Loc::LANGUAGES[i]) == 0) m_language = i;
 		bool ok = m_font.Load(assetsDir, "Junicode");
 		if (!SpriteSystem::SpriteLibrary::ContainsSprite("OptionsBar_Sprite"))
 			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "uiExtraSpritesheet") && ok;
 		m_plate = new ObjContainer("SkillUnlockPlate_Character");
 		m_plate->ForceDraw(true);
 		m_plate->Position(Vector2(1320 / 2.0f, 720 / 2.0f));
-		m_title = Make("OptionsScreenTitle_Sprite_FR");   // Game.ChangeBitmapLanguage
+		// The translated titles are on the language sheet
+		if (!SpriteSystem::SpriteLibrary::ContainsSprite(Text::Loc::Sprite("OptionsScreenTitle_Sprite").c_str()))
+			ok = SpriteSystem::SpriteLibrary::LoadSheet(assetsDir, "languageSpritesheet") && ok;
+		m_title = Make(Text::Loc::Sprite("OptionsScreenTitle_Sprite").c_str());   // Game.ChangeBitmapLanguage
 		m_title->Position(Vector2(1320 / 2.0f, 720 / 2.0f - m_plate->Width() / 2 + 60));
 		m_bar = Make("OptionsBar_Sprite");
 		m_volumeBG = Make("OptionsScreenVolumeBG_Sprite");
@@ -58,12 +65,11 @@ namespace RogueCastle
 		FILE *f = fopen(configPath, "r");
 		if (f != nullptr)
 		{
-			char key[32];
-			float v;
-			while (fscanf(f, "%31s %f", key, &v) == 2)
+			char key[32], value[32];
+			while (fscanf(f, "%31s %31s", key, value) == 2)
 			{
-				if (strcmp(key, "music") == 0) m_music = Clamp(v);
-				else if (strcmp(key, "sfx") == 0) m_sfx = Clamp(v);
+				if (strcmp(key, "music") == 0) m_music = Clamp((float) atof(value));
+				else if (strcmp(key, "sfx") == 0) m_sfx = Clamp((float) atof(value));
 			}
 			fclose(f);
 		}
@@ -77,11 +83,26 @@ namespace RogueCastle
 		Audio::SetVolumes(m_sfx, m_music * 0.625f);
 	}
 
+	std::string OptionsScreen::ConfigLanguage(const char *configPath)
+	{
+		std::string language = "en";   // the default: English
+		if (FILE *f = fopen(configPath, "r"))
+		{
+			char key[32], value[32];
+			while (fscanf(f, "%31s %31s", key, value) == 2)
+				if (strcmp(key, "language") == 0)
+					for (int i = 0; i < Text::Loc::LANGUAGE_COUNT; i++)
+						if (strcmp(value, Text::Loc::LANGUAGES[i]) == 0) language = value;
+			fclose(f);
+		}
+		return language;
+	}
+
 	void OptionsScreen::SaveConfig() const
 	{
 		FILE *f = fopen(m_configPath.c_str(), "w");
 		if (f == nullptr) return;
-		fprintf(f, "music %.2f\nsfx %.2f\n", m_music, m_sfx);
+		fprintf(f, "music %.2f\nsfx %.2f\nlanguage %s\n", m_music, m_sfx, Text::Loc::LANGUAGES[m_language]);
 		fclose(f);
 	}
 
@@ -107,6 +128,16 @@ namespace RogueCastle
 			v = Clamp(v + delta);
 			Apply();
 			if (m_selected == SFX) Audio::PlaySound("frame_swap");
+		}
+		if ((pressed & (BTN_LEFT | BTN_RIGHT)) && m_selected == LANGUAGE)
+		{
+			// The texts change now; the title pictures and the Chinese font
+			// when they are next loaded (a restart for some)
+			int n = Text::Loc::LANGUAGE_COUNT;
+			m_language = (m_language + ((pressed & BTN_RIGHT) ? 1 : n - 1)) % n;
+			Text::Loc::Load(m_assetsDir.c_str(), Text::Loc::LANGUAGES[m_language]);
+			SaveConfig();
+			Audio::PlaySound("frame_swap");
 		}
 		if (pressed & BTN_A)
 		{
@@ -155,6 +186,9 @@ namespace RogueCastle
 				m_volume->ScaleX(i == MUSIC ? m_music : m_sfx);
 				if ((i == MUSIC ? m_music : m_sfx) > 0) m_volume->Draw(&m_camera);
 			}
+			if (i == LANGUAGE)
+				m_font.DrawOutlined(frame, Text::Loc::Get(Text::Loc::LANGUAGE_NAMES[m_language]), SX(ITEM_X + TEXT_OFFSET), SY(y + 4), 0.3f,
+					i == m_selected ? YELLOW : WHITE, BLACK, 1);
 		}
 
 		// The key hints, bottom right of the plate

@@ -18,5 +18,21 @@ namespace Text
 		const char *Get(const char *id);
 		// Get() with {0}, {1}... replaced by the arguments (string.Format)
 		std::string Format(const char *id, const std::string &a0 = "", const std::string &a1 = "", const std::string &a2 = "");
+
+		// The languages of the original game: their codes (assets/lang/<code>.txt)
+		// and the LOC_ID_OPTIONS_LANGUAGE_* name of each, English first
+		constexpr int LANGUAGE_COUNT = 8;
+		extern const char *const LANGUAGES[LANGUAGE_COUNT];
+		extern const char *const LANGUAGE_NAMES[LANGUAGE_COUNT];
+		// The code loaded last ("en" before any Load)
+		const char *Language();
+		// Game.ChangeBitmapLanguage: the variant of a picture with text in it
+		// for the current language ("LineageTitleText_Sprite" -> "..._FR";
+		// English keeps the plain name)
+		std::string Sprite(const char *baseName);
+		// The few texts of the port itself (the console's buttons...),
+		// which the original has no translation for
+		enum class Port { UpDown, LeftRight, TeleporterHelp, CategoryHelp, Critical };
+		const char *Get(Port text);
 	}
 }

@@ -24,12 +24,17 @@ namespace RogueCastle
 		~OptionsScreen();
 		// configPath: e.g. "config.txt"; applies the saved volumes
 		bool LoadContent(const char *assetsDir, const char *configPath);
+		// The language saved in config.txt ("en" when there is none), read
+		// before anything loads its texts and fonts
+		static std::string ConfigLanguage(const char *configPath);
 		void Open(bool inCastle);
 		Result Update(uint32_t pressed, double dt);
 		void Draw(uint32_t *frame);
 
 	private:
-		enum Entry { MUSIC, SFX, BACK_TO_TITLE, QUIT, COUNT };
+		enum Entry { MUSIC, SFX, LANGUAGE, BACK_TO_TITLE, QUIT, COUNT };
+		std::string m_assetsDir;
+		int m_language = 0;   // in Text::Loc::LANGUAGES
 		std::string m_configPath;
 		Text::Font m_font;
 		DS2DEngine::Camera2D m_camera;   // the 1320x720 screen at zoom 0.5
